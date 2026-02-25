@@ -691,6 +691,11 @@ model applicant_software {
   software_id  Int       @db.UnsignedInt
   created_at   DateTime? @db.Timestamp(0)
   updated_at   DateTime? @db.Timestamp(0)
+
+  applicant    applicants @relation(fields: [applicant_id], references: [id])
+  software      softwares   @relation(fields: [software_id], references: [id])
+
+  @@unique([applicant_id, software_id])
 }
 
 model applicant_statuses {
@@ -726,6 +731,11 @@ model applicant_tools {
   hide         Int
   created_at   DateTime @default(now()) @db.Timestamp(0)
   updated_at   DateTime @default(now()) @db.Timestamp(0)
+
+  applicant    applicants @relation(fields: [applicant_id], references: [id])
+  tools      tools   @relation(fields: [tool_id], references: [id])
+
+  @@unique([applicant_id, tool_id])
 }
 
 model applicant_trainings {
@@ -771,8 +781,11 @@ model applicants {
    referees                applicant_referees[]      @relation("ApplicantReferees")
    correspondences   correspondences[]
    applicant_knowledges applicant_skills[]
+   
   // Many-to-many cultures
-  applicant_cultures      applicant_cultures[]
+   applicant_cultures       applicant_cultures[]
+   applicant_tools          applicant_tools[]
+   applicant_software       applicant_software[]
  
 }
 
@@ -3161,6 +3174,7 @@ model softwares {
   deleted_at    DateTime? @db.Timestamp(0)
   created_at    DateTime? @db.Timestamp(0)
   updated_at    DateTime? @db.Timestamp(0)
+  applicant_software applicant_software[]
 }
 
 model stages {
@@ -3362,7 +3376,7 @@ model title_prefixes {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model tools {
-  id         Int       @db.UnsignedInt
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
   tool_name  String    @db.VarChar(30)
   hide       Int
   created_at DateTime  @default(now()) @db.Timestamp(0)
@@ -3371,7 +3385,7 @@ model tools {
   updator_id Int
   deleted_at DateTime? @db.Timestamp(0)
 
-  @@ignore
+  applicant_tools applicant_tools[]
 }
 
 model trains {

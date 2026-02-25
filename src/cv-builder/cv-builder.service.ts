@@ -29,6 +29,19 @@ export class CvBuilderService {
           },
           orderBy: { created_at: 'desc' },
           },
+
+          applicant_tools: {
+          include: {
+          tools: true, // fetch the linked culture
+          },
+          orderBy: { created_at: 'desc' },
+          },
+          applicant_software: {
+          include: {
+          software: true,
+          },
+         orderBy: { created_at: 'desc' },
+         },        
           referees: true
         // training: { where: { hide: false } },
         // careers: true,
@@ -39,6 +52,9 @@ export class CvBuilderService {
     if (!applicant) throw new NotFoundException('Applicant not found');
      
     const cultures = applicant.applicant_cultures.map(ac => ac.culture);
+    const softwares = applicant.applicant_software.map(as => as.software);
+    const tools = applicant.applicant_tools.map(at => at.tools);
+
     // Prepare minimal CV data
     const data = {
       id: applicant.id,
@@ -58,9 +74,9 @@ export class CvBuilderService {
       // proficiencies: applicant.proficiencies,
       // knowledge: applicant.knowledge,
       // personalities: applicant.personalities,
-      // tools: applicant.tools,
-      // software: applicant.software,
-        cultures,
+       tools,
+       softwares,
+       cultures,
        referees: applicant.referees,
       // training: applicant.training,
       // careers: applicant.careers,
