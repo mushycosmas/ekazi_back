@@ -19,17 +19,25 @@ export class CvBuilderService {
         // positions: { where: { hide: false }, include: { position: true, level: true, industry: true, employer: { include: { region: { include: { country: true } } } } }, orderBy: { start_date: 'desc' } },
         // languages: { where: { hide: false }, include: { language: true, read: true, write: true, speak: true, understand: true }, orderBy: { created_at: 'desc' } },
         // proficiencies: { where: { hide: false }, include: { proficiency: true, organization: true }, orderBy: { created_at: 'desc' } },   
-          applicant_cultures: { // optional, if you have a `hide` field in pivot
+          applicant_cultures: { 
           include: {
-          culture: true, // fetch the linked culture
+          culture: true, 
           },
           orderBy: { created_at: 'desc' },
           },
 
           applicant_tools: {
           include: {
-          tools: true, // fetch the linked culture
+          tools: true,
           },
+          orderBy: { created_at: 'desc' },
+          },
+          applicant_personalities: {
+
+          include: {
+          personality: true,
+          },
+
           orderBy: { created_at: 'desc' },
           },
           applicant_software: {
@@ -43,7 +51,16 @@ export class CvBuilderService {
            knowledge: true,
           },
           orderBy: { created_at: 'desc' },
-         },      
+         },  
+          applicant_proficiencies: {
+          include: {
+            proficiency: true,
+            organization: true,
+            college: true,
+          },
+          orderBy: { created_at: 'desc' },
+         },
+    
           referees: true
         // training: { where: { hide: false } },
         // careers: true,
@@ -57,6 +74,14 @@ export class CvBuilderService {
     const softwares = applicant.applicant_software.map(as => as.software);
     const tools = applicant.applicant_tools.map(at => at.tools);
     const knowledges = applicant.applicant_knowledge.map(ak => ak.knowledge);
+    const personalities = applicant.applicant_personalities.map(ap => ap.personality);
+
+     const proficiencies = applicant.applicant_proficiencies.map(ap => ({
+      ...ap,
+      proficiencyName: ap.proficiency?.proficiency_name,
+      organizationName: ap.organization?.organization_name,
+      collegeName: ap.college?.college_name,
+    }));
 
     // Prepare minimal CV data
     const data = {
@@ -74,13 +99,13 @@ export class CvBuilderService {
       // education: applicant.education,
       // positions: applicant.positions,
       // languages: applicant.languages,
-      // proficiencies: applicant.proficiencies,
-       knowledges,
-      // personalities: applicant.personalities,
-       tools,
-       softwares,
-       cultures,
-       referees: applicant.referees,
+        proficiencies,
+        knowledges,
+        personalities,
+        tools,
+        softwares,
+        cultures,
+        referees: applicant.referees,
       // training: applicant.training,
       // careers: applicant.careers,
       // subscriptions: applicant.subscriptions,

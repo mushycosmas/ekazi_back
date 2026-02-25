@@ -504,15 +504,20 @@ model applicant_other_certificates {
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+
 model applicant_personalities {
-  id             Int       @db.UnsignedInt
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
   applicant_id   Int       @db.UnsignedInt
   personality_id Int       @db.UnsignedInt
   created_at     DateTime? @db.Timestamp(0)
   updated_at     DateTime? @db.Timestamp(0)
 
-  @@ignore
+  applicant   applicants    @relation(fields: [applicant_id], references: [id])
+  personality personalities @relation(fields: [personality_id], references: [id])
+
+  @@unique([applicant_id, personality_id])
 }
+
 
 model applicant_phones {
   id           Int      @id @default(autoincrement()) @db.UnsignedInt
@@ -573,14 +578,21 @@ model applicant_proficiencies {
   organization_id Int       @db.UnsignedInt
   college_id      Int       @db.UnsignedInt
   proficiency_id  Int       @db.UnsignedInt
+  applicant_id    Int       @db.UnsignedInt
+
   started         DateTime? @db.Timestamp(0)
   ended           DateTime? @db.Timestamp(0)
   course          String?   @db.VarChar(255)
   award           String?   @db.VarChar(255)
-  applicant_id    Int       @db.UnsignedInt
   attachment      String?   @db.VarChar(255)
   created_at      DateTime  @default(now()) @db.Timestamp(0)
   updated_at      DateTime  @default(now()) @db.Timestamp(0)
+
+  // ✅ RELATIONS
+  proficiency     proficiencies @relation(fields: [proficiency_id], references: [id])
+  organization    organizations @relation(fields: [organization_id], references: [id])
+  college         colleges      @relation(fields: [college_id], references: [id])
+  applicant       applicants    @relation(fields: [applicant_id], references: [id])
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -789,9 +801,12 @@ model applicants {
 
   // Many-to-many cultures
    applicant_cultures       applicant_cultures[]
+   applicant_personalities  applicant_personalities[]
    applicant_tools          applicant_tools[]
    applicant_software       applicant_software[]
    applicant_knowledge applicant_knowledge[]
+   applicant_proficiencies applicant_proficiencies[]
+   
  
 }
 
@@ -1233,17 +1248,20 @@ model college_industries {
 }
 
 model colleges {
-  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  id           Int                       @id @default(autoincrement()) @db.UnsignedInt
   region_id    Int
-  town         String   @db.VarChar(100)
-  reg          String   @db.VarChar(45)
-  college_name String   @db.VarChar(100)
-  status       String   @db.VarChar(256)
-  created_at   DateTime @default(now()) @db.Timestamp(0)
-  updated_at   DateTime @default(now()) @db.Timestamp(0)
+  town         String                    @db.VarChar(100)
+  reg          String                    @db.VarChar(45)
+  college_name String                    @db.VarChar(100)
+  status       String                    @db.VarChar(256)
+  created_at   DateTime                  @default(now()) @db.Timestamp(0)
+  updated_at   DateTime                  @default(now()) @db.Timestamp(0)
   creator_id   Int?
   updator_id   Int?
-  hide         Boolean  @default(false)
+  hide         Boolean                   @default(false)
+
+  // Reverse relation for applicant_proficiencies
+  applicant_proficiencies applicant_proficiencies[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -2791,13 +2809,16 @@ model official_notes {
 }
 
 model organizations {
-  id                Int      @id @default(autoincrement())
-  organization_name String   @db.VarChar(200)
-  hide              Boolean  @default(false)
-  created_at        DateTime @default(now()) @db.Timestamp(0)
-  updated_at        DateTime @default(now()) @db.Timestamp(0)
+  id                Int                       @id @default(autoincrement()) @db.UnsignedInt
+  organization_name String                    @db.VarChar(200)
+  hide              Boolean                   @default(false)
+  created_at        DateTime                  @default(now()) @db.Timestamp(0)
+  updated_at        DateTime                  @default(now()) @db.Timestamp(0)
   updator_id        Int?
   creator_id        Int?
+
+  // Reverse relation for applicant_proficiencies
+  applicant_proficiencies applicant_proficiencies[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -2876,8 +2897,9 @@ model personal_access_tokens {
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+
 model personalities {
-  id               Int       @db.UnsignedInt
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
   creator_id       Int
   updator_id       Int
   personality_name String?   @db.VarChar(100)
@@ -2886,7 +2908,7 @@ model personalities {
   updated_at       DateTime? @db.Timestamp(0)
   deleted_at       DateTime? @db.Timestamp(0)
 
-  @@ignore
+  applicant_personalities applicant_personalities[]
 }
 
 model plan_features {
@@ -3017,12 +3039,15 @@ model professionals {
 }
 
 model proficiencies {
-  id               Int      @id @default(autoincrement()) @db.UnsignedInt
-  proficiency_name String   @db.VarChar(200)
-  hide             Boolean  @default(false)
-  created_at       DateTime @default(now()) @db.Timestamp(0)
-  updated_at       DateTime @default(now()) @db.Timestamp(0)
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  proficiency_name String    @db.VarChar(200)
+  hide             Boolean   @default(false)
+  created_at       DateTime  @default(now()) @db.Timestamp(0)
+  updated_at       DateTime  @default(now()) @db.Timestamp(0)
+
+  applicant_proficiencies applicant_proficiencies[]
 }
+
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model recruitment_stage_email_templates {
