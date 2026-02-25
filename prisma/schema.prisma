@@ -411,6 +411,11 @@ model applicant_knowledge {
   knowledge_id Int       @db.UnsignedInt
   created_at   DateTime? @db.Timestamp(0)
   updated_at   DateTime? @db.Timestamp(0)
+
+  applicant    applicants @relation(fields: [applicant_id], references: [id])
+  knowledge      knowledge   @relation(fields: [knowledge_id], references: [id])
+
+  @@unique([applicant_id, knowledge_id])
 }
 
 model applicant_languages {
@@ -682,7 +687,7 @@ model applicant_skills {
   applicant_id Int      @db.UnsignedInt
   created_at   DateTime @default(now()) @db.Timestamp(0)
   updated_at   DateTime @default(now()) @db.Timestamp(0)
-  applicant    applicants @relation(fields: [applicant_id], references: [id])
+ 
 }
 
 model applicant_software {
@@ -780,12 +785,13 @@ model applicants {
    user                    users                     @relation(fields: [user_id], references: [id])
    referees                applicant_referees[]      @relation("ApplicantReferees")
    correspondences   correspondences[]
-   applicant_knowledges applicant_skills[]
    
+
   // Many-to-many cultures
    applicant_cultures       applicant_cultures[]
    applicant_tools          applicant_tools[]
    applicant_software       applicant_software[]
+   applicant_knowledge applicant_knowledge[]
  
 }
 
@@ -2583,6 +2589,8 @@ model knowledge {
   updator_id     Int?      @db.UnsignedInt
   created_at     DateTime? @default(now()) @db.Timestamp(0)
   updated_at     DateTime? @default(now()) @db.Timestamp(0)
+
+  applicant_knowledge applicant_knowledge[]
 }
 
 model language_reads {

@@ -10,19 +10,15 @@ export class CvBuilderService {
       where: { id: applicantId },
       include: {
         // Uncomment when you add these tables/relations in Prisma schema
-         marital: true,               
-         gender: true,                // like Laravel gender()
-         user: true,                  // like Laravel user()
+          marital: true,               
+          gender: true,                // like Laravel gender()
+          user: true,                  // like Laravel user()
         // addresses: { include: { region: { include: { country: true } } } },
         // phones: true,
         // education: { where: { hide: false }, include: { college: true, major: true, level: true, course: true } },
         // positions: { where: { hide: false }, include: { position: true, level: true, industry: true, employer: { include: { region: { include: { country: true } } } } }, orderBy: { start_date: 'desc' } },
         // languages: { where: { hide: false }, include: { language: true, read: true, write: true, speak: true, understand: true }, orderBy: { created_at: 'desc' } },
-        // proficiencies: { where: { hide: false }, include: { proficiency: true, organization: true }, orderBy: { created_at: 'desc' } },
-        // knowledge: { where: { hide: false }, include: { knowledge: true }, orderBy: { created_at: 'desc' } },
-        // personalities: { where: { hide: false }, include: { personality: true }, orderBy: { created_at: 'desc' } },
-        // tools: { where: { hide: false }, include: { tool: true }, orderBy: { created_at: 'desc' } },
-        // software: { where: { hide: false }, include: { software: true }, orderBy: { created_at: 'desc' } },
+        // proficiencies: { where: { hide: false }, include: { proficiency: true, organization: true }, orderBy: { created_at: 'desc' } },   
           applicant_cultures: { // optional, if you have a `hide` field in pivot
           include: {
           culture: true, // fetch the linked culture
@@ -40,8 +36,14 @@ export class CvBuilderService {
           include: {
           software: true,
           },
-         orderBy: { created_at: 'desc' },
-         },        
+          orderBy: { created_at: 'desc' },
+          }, 
+          applicant_knowledge: {
+          include: {
+           knowledge: true,
+          },
+          orderBy: { created_at: 'desc' },
+         },      
           referees: true
         // training: { where: { hide: false } },
         // careers: true,
@@ -54,14 +56,15 @@ export class CvBuilderService {
     const cultures = applicant.applicant_cultures.map(ac => ac.culture);
     const softwares = applicant.applicant_software.map(as => as.software);
     const tools = applicant.applicant_tools.map(at => at.tools);
+    const knowledges = applicant.applicant_knowledge.map(ak => ak.knowledge);
 
     // Prepare minimal CV data
     const data = {
-      id: applicant.id,
-      fullName: `${applicant.first_name || ''} ${applicant.middle_name || ''} ${applicant.last_name || ''}`.trim(),
-      dob: applicant.dob,
-      picture: applicant.picture,
-      backgroundPicture: applicant.background_picture,
+       id: applicant.id,
+       fullName: `${applicant.first_name || ''} ${applicant.middle_name || ''} ${applicant.last_name || ''}`.trim(),
+       dob: applicant.dob,
+       picture: applicant.picture,
+       backgroundPicture: applicant.background_picture,
       // Uncomment these if included above
        maritalStatus: applicant.marital,
        gender: applicant.gender,
@@ -72,7 +75,7 @@ export class CvBuilderService {
       // positions: applicant.positions,
       // languages: applicant.languages,
       // proficiencies: applicant.proficiencies,
-      // knowledge: applicant.knowledge,
+       knowledges,
       // personalities: applicant.personalities,
        tools,
        softwares,
