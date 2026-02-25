@@ -596,19 +596,22 @@ model applicant_referee_phones {
 }
 
 model applicant_referees {
-  id               Int      @id @default(autoincrement()) @db.UnsignedInt
+  id               Int        @id @default(autoincrement()) @db.UnsignedInt
   created_by       Int?
   applicant_id     Int
-  first_name       String?  @db.VarChar(100)
-  middle_name      String?  @db.VarChar(100)
-  last_name        String?  @db.VarChar(100)
-  employer         String?  @db.VarChar(255)
-  referee_position String?  @db.VarChar(100)
-  email            String?  @db.VarChar(255)
-  phone            String?  @db.VarChar(255)
-  type             String?  @db.VarChar(15)
-  created_at       DateTime @default(now()) @db.Timestamp(0)
-  updated_at       DateTime @default(now()) @db.Timestamp(0)
+  first_name       String?    @db.VarChar(100)
+  middle_name      String?    @db.VarChar(100)
+  last_name        String?    @db.VarChar(100)
+  employer         String?    @db.VarChar(255)
+  referee_position String?    @db.VarChar(100)
+  email            String?    @db.VarChar(255)
+  phone            String?    @db.VarChar(255)
+  type             String?    @db.VarChar(15)
+  created_at       DateTime   @default(now()) @db.Timestamp(0)
+  updated_at       DateTime   @default(now()) @db.Timestamp(0)
+
+  // Relation back to applicant
+  applicant        applicants @relation(fields: [applicant_id], references: [id], name: "ApplicantReferees")
 }
 
 model applicant_reference_checks {
@@ -674,6 +677,7 @@ model applicant_skills {
   applicant_id Int      @db.UnsignedInt
   created_at   DateTime @default(now()) @db.Timestamp(0)
   updated_at   DateTime @default(now()) @db.Timestamp(0)
+  applicant    applicants @relation(fields: [applicant_id], references: [id])
 }
 
 model applicant_software {
@@ -758,9 +762,10 @@ model applicants {
    marital          marital_statuses?          @relation(fields: [marital_id], references: [id])
    gender                  genders?                  @relation(fields: [gender_id], references: [id])
  // nationality             countries                 @relation(fields: [nationality_id], references: [id])
- // user                    users                     @relation(fields: [user_id], references: [id])
-  correspondences   correspondences[]
-
+   user                    users                     @relation(fields: [user_id], references: [id])
+   referees                applicant_referees[]      @relation("ApplicantReferees")
+   correspondences   correspondences[]
+   applicant_knowledges applicant_skills[]
   
 }
 
@@ -3442,6 +3447,7 @@ model users {
   last_activity_at        DateTime?                 @db.Timestamp(0)
   client_id               Int?
   article_comment_replies article_comment_replies[]
+  applicants  applicants[] 
 }
 
 model wallets {

@@ -12,7 +12,7 @@ export class CvBuilderService {
         // Uncomment when you add these tables/relations in Prisma schema
          marital: true,               
          gender: true,                // like Laravel gender()
-        // user: true,                  // like Laravel user()
+         user: true,                  // like Laravel user()
         // addresses: { include: { region: { include: { country: true } } } },
         // phones: true,
         // education: { where: { hide: false }, include: { college: true, major: true, level: true, course: true } },
@@ -24,7 +24,7 @@ export class CvBuilderService {
         // tools: { where: { hide: false }, include: { tool: true }, orderBy: { created_at: 'desc' } },
         // software: { where: { hide: false }, include: { software: true }, orderBy: { created_at: 'desc' } },
         // cultures: { where: { hide: false }, include: { culture: true }, orderBy: { created_at: 'desc' } },
-        // referees: { where: { hide: false } },
+          referees: true
         // training: { where: { hide: false } },
         // careers: true,
         // subscriptions: { where: { verify: 1, end_date: { gte: new Date() }, plan: { cv_used: { lt: 'cv_limit' } } } },
@@ -43,7 +43,7 @@ export class CvBuilderService {
       // Uncomment these if included above
        maritalStatus: applicant.marital,
        gender: applicant.gender,
-      // email: applicant.user?.email,
+       email: applicant.user?.email,
       // addresses: applicant.addresses,
       // phones: applicant.phones,
       // education: applicant.education,
@@ -55,7 +55,7 @@ export class CvBuilderService {
       // tools: applicant.tools,
       // software: applicant.software,
       // cultures: applicant.cultures,
-      // referees: applicant.referees,
+       referees: applicant.referees,
       // training: applicant.training,
       // careers: applicant.careers,
       // subscriptions: applicant.subscriptions,
