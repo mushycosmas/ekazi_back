@@ -23,7 +23,12 @@ export class CvBuilderService {
         // personalities: { where: { hide: false }, include: { personality: true }, orderBy: { created_at: 'desc' } },
         // tools: { where: { hide: false }, include: { tool: true }, orderBy: { created_at: 'desc' } },
         // software: { where: { hide: false }, include: { software: true }, orderBy: { created_at: 'desc' } },
-        // cultures: { where: { hide: false }, include: { culture: true }, orderBy: { created_at: 'desc' } },
+          applicant_cultures: { // optional, if you have a `hide` field in pivot
+          include: {
+          culture: true, // fetch the linked culture
+          },
+          orderBy: { created_at: 'desc' },
+          },
           referees: true
         // training: { where: { hide: false } },
         // careers: true,
@@ -32,7 +37,8 @@ export class CvBuilderService {
     });
 
     if (!applicant) throw new NotFoundException('Applicant not found');
-
+     
+    const cultures = applicant.applicant_cultures.map(ac => ac.culture);
     // Prepare minimal CV data
     const data = {
       id: applicant.id,
@@ -54,7 +60,7 @@ export class CvBuilderService {
       // personalities: applicant.personalities,
       // tools: applicant.tools,
       // software: applicant.software,
-      // cultures: applicant.cultures,
+        cultures,
        referees: applicant.referees,
       // training: applicant.training,
       // careers: applicant.careers,

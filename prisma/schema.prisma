@@ -192,6 +192,11 @@ model applicant_cultures {
   culture_id   Int       @db.UnsignedInt
   created_at   DateTime? @db.Timestamp(0)
   updated_at   DateTime? @db.Timestamp(0)
+   // Relations
+  applicant    applicants @relation(fields: [applicant_id], references: [id])
+  culture      cultures   @relation(fields: [culture_id], references: [id])
+
+  @@unique([applicant_id, culture_id]) // ensures one culture per applicant only once
 }
 
 model applicant_education {
@@ -766,7 +771,9 @@ model applicants {
    referees                applicant_referees[]      @relation("ApplicantReferees")
    correspondences   correspondences[]
    applicant_knowledges applicant_skills[]
-  
+  // Many-to-many cultures
+  applicant_cultures      applicant_cultures[]
+ 
 }
 
 model applicnt_save_jobs {
@@ -1365,6 +1372,9 @@ model cultures {
   hide         Boolean
   created_at   DateTime? @default(now()) @db.Timestamp(0)
   updated_at   DateTime? @default(now()) @db.Timestamp(0)
+
+  applicant_cultures applicant_cultures[]
+  
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
