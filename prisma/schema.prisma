@@ -209,16 +209,23 @@ model applicant_cultures {
 model applicant_education {
   id                 Int       @id @default(autoincrement()) @db.UnsignedInt
   college_id         Int?      @db.UnsignedInt
-  started            DateTime? @default(now()) @db.Timestamp(0)
-  ended              DateTime? @default(now()) @db.Timestamp(0)
-  course_id          Int
-  major_id           Int
+  course_id          Int       @db.UnsignedInt
+  major_id           Int       @db.UnsignedInt
+  education_level_id Int       @db.UnsignedInt
   name               String?   @db.VarChar(200)
   applicant_id       Int       @db.UnsignedInt
-  education_level_id Int       @db.UnsignedInt
   attachment         String?   @db.Text
+  started            DateTime? @default(now()) @db.Timestamp(0)
+  ended              DateTime? @default(now()) @db.Timestamp(0)
   created_at         DateTime  @default(now()) @db.Timestamp(0)
   updated_at         DateTime  @default(now()) @db.Timestamp(0)
+
+  // Relations
+  applicant          applicants @relation(fields: [applicant_id], references: [id])
+  college            colleges?  @relation(fields: [college_id], references: [id])
+  course             courses    @relation(fields: [course_id], references: [id])
+  major              majors     @relation(fields: [major_id], references: [id])
+  education_level    education_levels @relation(fields: [education_level_id], references: [id])
 }
 
 model applicant_employers {
@@ -826,6 +833,7 @@ model applicants {
    applicant_proficiencies applicant_proficiencies[]
    addresses              applicant_addresses[]
    applicant_phones    applicant_phones[]
+   applicant_education applicant_education[] 
    
  
 }
@@ -1281,7 +1289,8 @@ model colleges {
   hide         Boolean                   @default(false)
 
   // Reverse relation for applicant_proficiencies
-  applicant_proficiencies applicant_proficiencies[]
+   applicant_proficiencies applicant_proficiencies[]
+   applicant_education applicant_education[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -1409,6 +1418,7 @@ model courses {
   created_at            DateTime @default(now()) @db.Timestamp(0)
   updated_at            DateTime @default(now()) @db.Timestamp(0)
   hide                  Boolean  @default(false)
+  applicant_education applicant_education[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -1473,15 +1483,17 @@ model e_mails {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model education_levels {
-  id              Int      @db.UnsignedInt
-  industry_id     Int      @db.UnsignedInt
-  education_level String   @db.VarChar(100)
-  hide            Boolean
-  created_at      DateTime @default(now()) @db.Timestamp(0)
-  updated_at      DateTime @default(now()) @db.Timestamp(0)
+  id              Int       @id @default(autoincrement()) @db.UnsignedInt
+  industry_id     Int       @db.UnsignedInt
+  education_level String    @db.VarChar(100)
+  hide            Boolean   @default(false)
+  created_at      DateTime  @default(now()) @db.Timestamp(0)
+  updated_at      DateTime  @default(now()) @db.Timestamp(0)
 
-  @@ignore
+  // Opposite relation: all applicant_education records pointing to this level
+  applicant_education applicant_education[]
 }
+
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model email_template_types {
@@ -2693,6 +2705,7 @@ model majors {
   updator_id Int?
   created_at DateTime @default(now()) @db.Timestamp(0)
   updated_at DateTime @default(now()) @db.Timestamp(0)
+  applicant_education applicant_education[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.

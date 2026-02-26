@@ -16,7 +16,16 @@ export class CvBuilderService {
           addresses: { include: { region: { include: { country: true } } } },
           applicant_phones: true,
 
-        // education: { where: { hide: false }, include: { college: true, major: true, level: true, course: true } },
+          applicant_education: {
+          include: {
+            college: true,
+            course: true,
+            major: true,
+            education_level: true,
+          },
+          orderBy: { started: 'desc' },
+         },
+
         // positions: { where: { hide: false }, include: { position: true, level: true, industry: true, employer: { include: { region: { include: { country: true } } } } }, orderBy: { start_date: 'desc' } },
         // languages: { where: { hide: false }, include: { language: true, read: true, write: true, speak: true, understand: true }, orderBy: { created_at: 'desc' } },
           
@@ -97,6 +106,17 @@ export class CvBuilderService {
 
     const phones = applicant.applicant_phones.map(p => p.phone_number);
 
+     const education = applicant.applicant_education.map(ed => ({
+      ...ed,
+      collegeName: ed.college?.college_name,
+      courseName: ed.course?.course_name,
+      majorName: ed.major?.name,
+      levelName: ed.education_level?.education_level,
+      started: ed.started,
+      ended: ed.ended,
+      attachment: ed.attachment,
+    }));
+
 
     // Prepare minimal CV data
     const data = {
@@ -111,7 +131,7 @@ export class CvBuilderService {
         email: applicant.user?.email,
         addresses: applicant.addresses,
         phones,
-      // education: applicant.education,
+        education,
       // positions: applicant.positions,
       // languages: applicant.languages,
         proficiencies,
