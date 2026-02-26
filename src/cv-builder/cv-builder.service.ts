@@ -60,9 +60,11 @@ export class CvBuilderService {
           },
           orderBy: { created_at: 'desc' },
          },
-    
+         applicant_trainings: {
+          where: { hide: false },
+          orderBy: { created_at: 'desc' },
+        },
           referees: true
-        // training: { where: { hide: false } },
         // careers: true,
         // subscriptions: { where: { verify: 1, end_date: { gte: new Date() }, plan: { cv_used: { lt: 'cv_limit' } } } },
       },
@@ -82,6 +84,16 @@ export class CvBuilderService {
       organizationName: ap.organization?.organization_name,
       collegeName: ap.college?.college_name,
     }));
+    const trainings = applicant.applicant_trainings.map(at => ({
+      ...at,
+      started: at.started,
+      ended: at.ended,
+      name: at.name,
+      institution: at.institution,
+      description: at.description,
+      attachment: at.attachment,
+    }));
+
 
     // Prepare minimal CV data
     const data = {
@@ -105,8 +117,8 @@ export class CvBuilderService {
         tools,
         softwares,
         cultures,
+        trainings,
         referees: applicant.referees,
-      // training: applicant.training,
       // careers: applicant.careers,
       // subscriptions: applicant.subscriptions,
     };
