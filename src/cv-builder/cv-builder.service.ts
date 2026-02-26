@@ -15,10 +15,11 @@ export class CvBuilderService {
           user: true,                  // like Laravel user()
           addresses: { include: { region: { include: { country: true } } } },
           applicant_phones: true,
+
         // education: { where: { hide: false }, include: { college: true, major: true, level: true, course: true } },
         // positions: { where: { hide: false }, include: { position: true, level: true, industry: true, employer: { include: { region: { include: { country: true } } } } }, orderBy: { start_date: 'desc' } },
         // languages: { where: { hide: false }, include: { language: true, read: true, write: true, speak: true, understand: true }, orderBy: { created_at: 'desc' } },
-        // proficiencies: { where: { hide: false }, include: { proficiency: true, organization: true }, orderBy: { created_at: 'desc' } },   
+          
           applicant_cultures: { 
           include: {
           culture: true, 
@@ -64,8 +65,8 @@ export class CvBuilderService {
           where: { hide: false },
           orderBy: { created_at: 'desc' },
         },
-          referees: true
-        // careers: true,
+          referees: true,
+          applicant_career: true, 
         // subscriptions: { where: { verify: 1, end_date: { gte: new Date() }, plan: { cv_used: { lt: 'cv_limit' } } } },
       },
     });
@@ -121,7 +122,7 @@ export class CvBuilderService {
         cultures,
         trainings,
         referees: applicant.referees,
-      // careers: applicant.careers,
+        careers: applicant.applicant_career,
       // subscriptions: applicant.subscriptions,
     };
 

@@ -109,10 +109,13 @@ model applicant_applications {
 
 model applicant_careers {
   id           Int      @id @default(autoincrement()) @db.UnsignedInt
-  applicant_id Int      @db.UnsignedInt
+  applicant_id Int      @db.UnsignedInt @unique
   career       String   @db.Text
   created_at   DateTime @default(now()) @db.Timestamp(0)
   updated_at   DateTime @default(now()) @db.Timestamp(0)
+
+  // Relation
+  applicant    applicants @relation(fields: [applicant_id], references: [id])
 }
 
 model applicant_consents {
@@ -811,6 +814,7 @@ model applicants {
    referees                applicant_referees[]      @relation("ApplicantReferees")
    correspondences   correspondences[]
    
+    applicant_career  applicant_careers?  
 
   // Many-to-many cultures
    applicant_trainings  applicant_trainings[]
