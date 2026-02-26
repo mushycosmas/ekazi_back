@@ -9,14 +9,13 @@ export class CvBuilderService {
     const applicant = await this.prisma.applicants.findUnique({
       where: { id: applicantId },
       include: {
-        // Uncomment when you add these tables/relations in Prisma schema
-          marital: true,               
-          gender: true,                // like Laravel gender()
-          user: true,                  // like Laravel user()
-          addresses: { include: { region: { include: { country: true } } } },
-          applicant_phones: true,
+        marital: true,
+        gender: true,
+        user: true,
+        addresses: { include: { region: { include: { country: true } } } },
+        applicant_phones: true,
 
-          applicant_education: {
+        applicant_education: {
           include: {
             college: true,
             course: true,
@@ -24,76 +23,66 @@ export class CvBuilderService {
             education_level: true,
           },
           orderBy: { started: 'desc' },
-         },
+        },
 
-        // positions: { where: { hide: false }, include: { position: true, level: true, industry: true, employer: { include: { region: { include: { country: true } } } } }, orderBy: { start_date: 'desc' } },
-        // languages: { where: { hide: false }, include: { language: true, read: true, write: true, speak: true, understand: true }, orderBy: { created_at: 'desc' } },
+        // Current positions with all nested relations
+        positions: {
+          where: { end_date: null },
+          include: {
+            position: true,
+            position_level: true,
+            industry: true,
           
-          applicant_cultures: { 
-          include: {
-          culture: true, 
+            start_salary: true,
+            end_salary: true,
+            current_salary: true,
           },
-          orderBy: { created_at: 'desc' },
-          },
+          orderBy: { start_date: 'desc' },
+        },
 
-          applicant_tools: {
-          include: {
-          tools: true,
-          },
-          orderBy: { created_at: 'desc' },
-          },
-          applicant_personalities: {
-
-          include: {
-          personality: true,
-          },
-
-          orderBy: { created_at: 'desc' },
-          },
-          applicant_software: {
-          include: {
-          software: true,
-          },
-          orderBy: { created_at: 'desc' },
-          }, 
-          applicant_knowledge: {
-          include: {
-           knowledge: true,
-          },
-          orderBy: { created_at: 'desc' },
-         },  
-          applicant_proficiencies: {
-          include: {
-            proficiency: true,
-            organization: true,
-            college: true,
-          },
-          orderBy: { created_at: 'desc' },
-         },
-         applicant_trainings: {
-          where: { hide: false },
+        applicant_cultures: { include: { culture: true }, orderBy: { created_at: 'desc' } },
+        applicant_tools: { include: { tools: true }, orderBy: { created_at: 'desc' } },
+        applicant_personalities: { include: { personality: true }, orderBy: { created_at: 'desc' } },
+        applicant_software: { include: { software: true }, orderBy: { created_at: 'desc' } },
+        applicant_knowledge: { include: { knowledge: true }, orderBy: { created_at: 'desc' } },
+        applicant_proficiencies: {
+          include: { proficiency: true, organization: true, college: true },
           orderBy: { created_at: 'desc' },
         },
-          referees: true,
-          applicant_career: true, 
-        // subscriptions: { where: { verify: 1, end_date: { gte: new Date() }, plan: { cv_used: { lt: 'cv_limit' } } } },
+        applicant_trainings: { where: { hide: false }, orderBy: { created_at: 'desc' } },
+        referees: true,
+        applicant_career: true,
       },
     });
 
     if (!applicant) throw new NotFoundException('Applicant not found');
-     
+
+    // Map positions
+    const positions = applicant.positions.map(pos => ({
+      ...pos,
+      positionName: pos.position?.position_name,
+      positionLevel: pos.position_level,
+      industry: pos.industry,
+      
+      startSalary: pos.start_salary,
+      endSalary: pos.end_salary,
+      currentSalary: pos.current_salary,
+    }));
+
+    // Map other nested data
     const cultures = applicant.applicant_cultures.map(ac => ac.culture);
     const softwares = applicant.applicant_software.map(as => as.software);
     const tools = applicant.applicant_tools.map(at => at.tools);
     const knowledges = applicant.applicant_knowledge.map(ak => ak.knowledge);
     const personalities = applicant.applicant_personalities.map(ap => ap.personality);
 
-     const proficiencies = applicant.applicant_proficiencies.map(ap => ({
+    const proficiencies = applicant.applicant_proficiencies.map(ap => ({
       ...ap,
       proficiencyName: ap.proficiency?.proficiency_name,
       organizationName: ap.organization?.organization_name,
       collegeName: ap.college?.college_name,
     }));
+
     const trainings = applicant.applicant_trainings.map(at => ({
       ...at,
       started: at.started,
@@ -106,7 +95,7 @@ export class CvBuilderService {
 
     const phones = applicant.applicant_phones.map(p => p.phone_number);
 
-     const education = applicant.applicant_education.map(ed => ({
+    const education = applicant.applicant_education.map(ed => ({
       ...ed,
       collegeName: ed.college?.college_name,
       courseName: ed.course?.course_name,
@@ -117,33 +106,29 @@ export class CvBuilderService {
       attachment: ed.attachment,
     }));
 
-
-    // Prepare minimal CV data
+    // Prepare final CV data
     const data = {
-       id: applicant.id,
-       fullName: `${applicant.first_name || ''} ${applicant.middle_name || ''} ${applicant.last_name || ''}`.trim(),
-       dob: applicant.dob,
-       picture: applicant.picture,
-       backgroundPicture: applicant.background_picture,
-      // Uncomment these if included above
-        maritalStatus: applicant.marital,
-        gender: applicant.gender,
-        email: applicant.user?.email,
-        addresses: applicant.addresses,
-        phones,
-        education,
-      // positions: applicant.positions,
-      // languages: applicant.languages,
-        proficiencies,
-        knowledges,
-        personalities,
-        tools,
-        softwares,
-        cultures,
-        trainings,
-        referees: applicant.referees,
-        careers: applicant.applicant_career,
-      // subscriptions: applicant.subscriptions,
+      id: applicant.id,
+      fullName: `${applicant.first_name || ''} ${applicant.middle_name || ''} ${applicant.last_name || ''}`.trim(),
+      dob: applicant.dob,
+      picture: applicant.picture,
+      backgroundPicture: applicant.background_picture,
+      maritalStatus: applicant.marital,
+      gender: applicant.gender,
+      email: applicant.user?.email,
+      addresses: applicant.addresses,
+      phones,
+      education,
+      positions,           // Include mapped positions here
+      proficiencies,
+      knowledges,
+      personalities,
+      tools,
+      softwares,
+      cultures,
+      trainings,
+      referees: applicant.referees,
+      careers: applicant.applicant_career,
     };
 
     return { data };

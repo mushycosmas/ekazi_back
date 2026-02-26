@@ -6,7 +6,8 @@ import { UserModule } from './user/user.module';
 import { CvBuilderModule } from './cv-builder/cv-builder.module';
 
 @Module({
-  imports: [PrismaModule, UserModule, CvBuilderModule],
+  imports: [
+    PrismaModule, UserModule, CvBuilderModule],
   controllers: [AppController],
   providers: [AppService],
 })

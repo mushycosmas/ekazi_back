@@ -553,7 +553,6 @@ model applicant_position_experiences {
   created_at   DateTime? @db.DateTime(0)
   updated_at   DateTime? @db.DateTime(0)
 }
-
 model applicant_positions {
   id                    Int       @id @default(autoincrement()) @db.UnsignedInt
   applicant_id          Int       @db.UnsignedInt
@@ -572,6 +571,14 @@ model applicant_positions {
   sub_location          String?   @db.Text
   created_at            DateTime  @default(now()) @db.Timestamp(0)
   updated_at            DateTime  @default(now()) @db.Timestamp(0)
+
+  current_salary  salary_ranges? @relation("CurrentSalary", fields: [salary_id], references: [id])
+  start_salary    salary_ranges  @relation("StartSalary", fields: [start_salary_id], references: [id])
+  end_salary      salary_ranges  @relation("EndSalary", fields: [end_salary_id], references: [id])
+  applicant applicants @relation(fields: [applicant_id], references: [id])
+  position positions @relation(fields: [position_id], references: [id])
+  position_level position_levels @relation(fields: [position_level_id], references: [id])
+  industry    industries @relation(fields: [industry_id], references: [id])
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -833,7 +840,8 @@ model applicants {
    applicant_proficiencies applicant_proficiencies[]
    addresses              applicant_addresses[]
    applicant_phones    applicant_phones[]
-   applicant_education applicant_education[] 
+   applicant_education applicant_education[]
+   positions applicant_positions[]
    
  
 }
@@ -856,8 +864,8 @@ model applicnt_saved_resume {
 }
 
 model article_comment_replies {
-  id                 BigInt                          @id @default(autoincrement()) @db.UnsignedBigInt
-  article_comment_id BigInt                          @db.UnsignedBigInt
+  id                 Int                          @id @default(autoincrement()) @db.UnsignedInt
+  article_comment_id Int                          @db.UnsignedInt
   user_id            Int                             @db.UnsignedInt
   reply              String                          @db.Text
   status             article_comment_replies_status? @default(pending)
@@ -871,8 +879,8 @@ model article_comment_replies {
 }
 
 model article_comments {
-  id                      BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
-  article_id              BigInt                    @db.UnsignedBigInt
+  id                      Int                    @id @default(autoincrement()) @db.UnsignedInt
+  article_id              Int                    @db.UnsignedInt
   name                    String?                   @db.VarChar(150)
   email                   String?                   @db.VarChar(150)
   comment                 String                    @db.Text
@@ -886,8 +894,8 @@ model article_comments {
 }
 
 model article_images {
-  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  article_id BigInt   @db.UnsignedBigInt
+  id         Int   @id @default(autoincrement()) @db.UnsignedInt
+  article_id Int   @db.UnsignedInt
   image_path String   @db.VarChar(255)
   created_at DateTime @default(now()) @db.Timestamp(0)
   articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_images_ibfk_1")
@@ -896,8 +904,8 @@ model article_images {
 }
 
 model article_industry {
-  article_id  BigInt     @db.UnsignedBigInt
-  industry_id BigInt     @db.UnsignedBigInt
+  article_id  Int     @db.UnsignedInt
+  industry_id Int     @db.UnsignedInt
   articles    articles   @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_industry_ibfk_1")
   industries  industries @relation(fields: [industry_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_industry_ibfk_2")
 
@@ -907,8 +915,8 @@ model article_industry {
 }
 
 model article_tag {
-  article_id BigInt   @db.UnsignedBigInt
-  tag_id     BigInt   @db.UnsignedBigInt
+  article_id Int   @db.UnsignedInt
+  tag_id     Int   @db.UnsignedInt
   articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_tag_ibfk_1")
   tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_tag_ibfk_2")
 
@@ -917,7 +925,7 @@ model article_tag {
 }
 
 model articles {
-  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  id               Int             @id @default(autoincrement()) @db.UnsignedInt
   title            String             @db.VarChar(255)
   slug             String             @unique(map: "slug") @db.VarChar(255)
   excerpt          String?            @db.Text
@@ -925,8 +933,8 @@ model articles {
   featured_image   String?            @db.VarChar(255)
   status           articles_status?   @default(draft)
   published_at     DateTime?          @db.DateTime(0)
-  author_id        BigInt             @db.UnsignedBigInt
-  views            BigInt?            @default(0) @db.UnsignedBigInt
+  author_id        Int               @db.UnsignedInt
+  views            Int?            @default(0) @db.UnsignedInt
   created_at       DateTime?          @default(now()) @db.Timestamp(0)
   updated_at       DateTime?          @default(now()) @db.Timestamp(0)
   article_comments article_comments[]
@@ -1848,7 +1856,7 @@ model incomplete_log_emails {
 }
 
 model industries {
-  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  id               Int             @id @default(autoincrement()) @db.UnsignedInt
   creator_id       Int?               @db.UnsignedInt
   updator_id       Int?               @db.UnsignedInt
   industry_name    String?            @db.VarChar(100)
@@ -1857,6 +1865,7 @@ model industries {
   created_at       DateTime?          @db.DateTime(0)
   updated_at       DateTime?          @db.DateTime(0)
   article_industry article_industry[]
+  applicant_positions applicant_positions[]
 }
 
 model interview_actions {
@@ -3027,8 +3036,10 @@ model position_levels {
   deleted_at    DateTime?                     @db.Timestamp(0)
   created_at    DateTime                      @default(now()) @db.Timestamp(0)
   updated_at    DateTime                      @default(now()) @db.Timestamp(0)
-}
 
+  // ← Add this to point back to applicant_positions
+  applicant_positions applicant_positions[]
+}
 model positions {
   id            Int       @id @default(autoincrement()) @db.UnsignedInt
   creator_id    Int
@@ -3040,6 +3051,9 @@ model positions {
   created_at    DateTime  @default(now()) @db.Timestamp(0)
   updated_at    DateTime  @default(now()) @db.Timestamp(0)
   deleted_at    DateTime? @db.Timestamp(0)
+
+  // back-relation
+  applicant_positions applicant_positions[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -3186,6 +3200,10 @@ model salary_ranges {
   high       Int
   updated_at DateTime @default(now()) @db.Timestamp(0)
   created_at DateTime @default(now()) @db.Timestamp(0)
+
+  current_positions applicant_positions[] @relation("CurrentSalary")
+  start_positions   applicant_positions[] @relation("StartSalary")
+  end_positions     applicant_positions[] @relation("EndSalary")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -3317,7 +3335,7 @@ model subscription_payment_clients {
 }
 
 model tags {
-  id          BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  id          Int        @id @default(autoincrement()) @db.UnsignedInt
   name        String        @db.VarChar(100)
   slug        String        @unique(map: "slug") @db.VarChar(100)
   article_tag article_tag[]
