@@ -13,8 +13,8 @@ export class CvBuilderService {
           marital: true,               
           gender: true,                // like Laravel gender()
           user: true,                  // like Laravel user()
-        // addresses: { include: { region: { include: { country: true } } } },
-        // phones: true,
+          addresses: { include: { region: { include: { country: true } } } },
+          applicant_phones: true,
         // education: { where: { hide: false }, include: { college: true, major: true, level: true, course: true } },
         // positions: { where: { hide: false }, include: { position: true, level: true, industry: true, employer: { include: { region: { include: { country: true } } } } }, orderBy: { start_date: 'desc' } },
         // languages: { where: { hide: false }, include: { language: true, read: true, write: true, speak: true, understand: true }, orderBy: { created_at: 'desc' } },
@@ -94,6 +94,8 @@ export class CvBuilderService {
       attachment: at.attachment,
     }));
 
+    const phones = applicant.applicant_phones.map(p => p.phone_number);
+
 
     // Prepare minimal CV data
     const data = {
@@ -103,11 +105,11 @@ export class CvBuilderService {
        picture: applicant.picture,
        backgroundPicture: applicant.background_picture,
       // Uncomment these if included above
-       maritalStatus: applicant.marital,
-       gender: applicant.gender,
-       email: applicant.user?.email,
-      // addresses: applicant.addresses,
-      // phones: applicant.phones,
+        maritalStatus: applicant.marital,
+        gender: applicant.gender,
+        email: applicant.user?.email,
+        addresses: applicant.addresses,
+        phones,
       // education: applicant.education,
       // positions: applicant.positions,
       // languages: applicant.languages,

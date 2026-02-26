@@ -72,13 +72,17 @@ model applicant_abilities {
 
 model applicant_addresses {
   id           Int      @id @default(autoincrement()) @db.UnsignedInt
-  applicant_id Int
-  region_id    Int
+  applicant_id Int      @db.UnsignedInt
+  region_id    Int      @db.UnsignedInt
   sub_location String   @db.VarChar(100)
   address      String   @db.Text
   postal       String   @db.VarChar(200)
   created_at   DateTime @default(now()) @db.Timestamp(0)
   updated_at   DateTime @default(now()) @db.Timestamp(0)
+
+  // Relations
+  applicant applicants @relation(fields: [applicant_id], references: [id])
+  region    regions    @relation(fields: [region_id], references: [id])
 }
 
 model applicant_application_experiences {
@@ -520,12 +524,16 @@ model applicant_personalities {
 
 
 model applicant_phones {
-  id           Int      @id @default(autoincrement()) @db.UnsignedInt
-  applicant_id Int      @db.UnsignedInt
-  phone_number String   @db.VarChar(100)
-  created_at   DateTime @default(now()) @db.Timestamp(0)
-  updated_at   DateTime @default(now()) @db.Timestamp(0)
+  id           Int        @id @default(autoincrement()) @db.UnsignedInt
+  applicant_id Int        @db.UnsignedInt
+  phone_number String     @db.VarChar(100)
+  created_at   DateTime   @default(now()) @db.Timestamp(0)
+  updated_at   DateTime   @default(now()) @db.Timestamp(0)
+
+  // Relation to applicants
+  applicant    applicants @relation(fields: [applicant_id], references: [id])
 }
+
 
 model applicant_position_experiences {
   id           Int       @id @default(autoincrement()) @db.UnsignedInt
@@ -812,6 +820,8 @@ model applicants {
    applicant_software       applicant_software[]
    applicant_knowledge applicant_knowledge[]
    applicant_proficiencies applicant_proficiencies[]
+   addresses              applicant_addresses[]
+   applicant_phones    applicant_phones[]
    
  
 }
@@ -1356,6 +1366,7 @@ model countries {
   created_at   DateTime @default(now()) @db.Timestamp(0)
   updated_at   DateTime @default(now()) @db.Timestamp(0)
   hide         Boolean  @default(false)
+  regions   regions[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -3083,16 +3094,20 @@ model reference_questionnaires {
 }
 
 model regions {
-  id          Int       @id @default(autoincrement())
+  id          Int       @id @default(autoincrement()) @db.UnsignedInt
   country_id  Int       @db.UnsignedInt
   region_name String    @db.VarChar(100)
   slug        String    @db.VarChar(200)
-  hide        Int       @default(0) @db.TinyInt
-  updator_id  Int
-  creator_id  Int
+  hide        Boolean   @default(false)
+  updator_id  Int?
+  creator_id  Int?
   deleted_at  DateTime? @db.Timestamp(0)
   created_at  DateTime  @default(now()) @db.Timestamp(0)
   updated_at  DateTime  @default(now()) @db.Timestamp(0)
+
+  // Relations
+  country              countries @relation(fields: [country_id], references: [id])
+  applicant_addresses  applicant_addresses[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
