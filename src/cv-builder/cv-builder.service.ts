@@ -16,23 +16,18 @@ export class CvBuilderService {
         applicant_phones: true,
 
         applicant_education: {
-          include: {
-            college: true,
-            course: true,
-            major: true,
-            education_level: true,
-          },
+          include: { college: true, course: true, major: true, education_level: true },
           orderBy: { started: 'desc' },
         },
 
-        // Current positions with all nested relations
         positions: {
           where: { end_date: null },
           include: {
             position: true,
             position_level: true,
             industry: true,
-          
+            applicant_employer: true,
+            region: { include: { country: true } },
             start_salary: true,
             end_salary: true,
             current_salary: true,
@@ -52,74 +47,107 @@ export class CvBuilderService {
         applicant_trainings: { where: { hide: false }, orderBy: { created_at: 'desc' } },
         referees: true,
         applicant_career: true,
+
+        // Applicant languages
+        applicant_languages: {
+          include: {
+            language: true,
+            read: true,
+            write: true,
+            speak: true,
+            understand: true,
+          },
+          orderBy: { created_at: 'desc' },
+        },
       },
     });
 
     if (!applicant) throw new NotFoundException('Applicant not found');
 
-    // Map positions
-    const positions = applicant.positions.map(pos => ({
+    const positions = (applicant.positions || []).map(pos => ({
       ...pos,
-      positionName: pos.position?.position_name,
-      positionLevel: pos.position_level,
-      industry: pos.industry,
-      
-      startSalary: pos.start_salary,
-      endSalary: pos.end_salary,
-      currentSalary: pos.current_salary,
+      positionName: pos.position?.position_name || null,
+      positionLevel: pos.position_level || null,
+      industry: pos.industry || null,
+      employer: pos.applicant_employer || null,
+      region: pos.region || null,
+      startSalary: pos.start_salary || null,
+      endSalary: pos.end_salary || null,
+      currentSalary: pos.current_salary || null,
     }));
 
-    // Map other nested data
-    const cultures = applicant.applicant_cultures.map(ac => ac.culture);
-    const softwares = applicant.applicant_software.map(as => as.software);
-    const tools = applicant.applicant_tools.map(at => at.tools);
-    const knowledges = applicant.applicant_knowledge.map(ak => ak.knowledge);
-    const personalities = applicant.applicant_personalities.map(ap => ap.personality);
+    const cultures = (applicant.applicant_cultures || [])
+      .map(ac => ac.culture)
+      .filter(c => c != null);
 
-    const proficiencies = applicant.applicant_proficiencies.map(ap => ({
+    const softwares = (applicant.applicant_software || [])
+      .map(as => as.software)
+      .filter(s => s != null);
+
+    const tools = (applicant.applicant_tools || [])
+      .map(at => at.tools)
+      .filter(t => t != null);
+
+    const knowledges = (applicant.applicant_knowledge || [])
+      .map(ak => ak.knowledge)
+      .filter(k => k != null);
+
+    const personalities = (applicant.applicant_personalities || [])
+      .map(ap => ap.personality)
+      .filter(p => p != null);
+
+    const proficiencies = (applicant.applicant_proficiencies || []).map(ap => ({
       ...ap,
-      proficiencyName: ap.proficiency?.proficiency_name,
-      organizationName: ap.organization?.organization_name,
-      collegeName: ap.college?.college_name,
+      proficiencyName: ap.proficiency?.proficiency_name || null,
+      organizationName: ap.organization?.organization_name || null,
+      collegeName: ap.college?.college_name || null,
     }));
 
-    const trainings = applicant.applicant_trainings.map(at => ({
+    const trainings = (applicant.applicant_trainings || []).map(at => ({
       ...at,
-      started: at.started,
-      ended: at.ended,
-      name: at.name,
-      institution: at.institution,
-      description: at.description,
-      attachment: at.attachment,
+      started: at.started || null,
+      ended: at.ended || null,
+      name: at.name || null,
+      institution: at.institution || null,
+      description: at.description || null,
+      attachment: at.attachment || null,
     }));
 
-    const phones = applicant.applicant_phones.map(p => p.phone_number);
+    const phones = (applicant.applicant_phones || []).map(p => p.phone_number || null);
 
-    const education = applicant.applicant_education.map(ed => ({
+    const education = (applicant.applicant_education || []).map(ed => ({
       ...ed,
-      collegeName: ed.college?.college_name,
-      courseName: ed.course?.course_name,
-      majorName: ed.major?.name,
-      levelName: ed.education_level?.education_level,
-      started: ed.started,
-      ended: ed.ended,
-      attachment: ed.attachment,
+      collegeName: ed.college?.college_name || null,
+      courseName: ed.course?.course_name || null,
+      majorName: ed.major?.name || null,
+      levelName: ed.education_level?.education_level || null,
+      started: ed.started || null,
+      ended: ed.ended || null,
+      attachment: ed.attachment || null,
     }));
 
-    // Prepare final CV data
+    const languages = (applicant.applicant_languages || []).map(al => ({
+      languageName: al.language?.language_name || null,
+      readAbility: al.read?.read_ability || null,
+      writeAbility: al.write?.write_ability || null,
+      speakAbility: al.speak?.speak_ability || null,
+      understandAbility: al.understand?.understand_ability || null,
+    }));
+
     const data = {
       id: applicant.id,
       fullName: `${applicant.first_name || ''} ${applicant.middle_name || ''} ${applicant.last_name || ''}`.trim(),
-      dob: applicant.dob,
-      picture: applicant.picture,
-      backgroundPicture: applicant.background_picture,
-      maritalStatus: applicant.marital,
-      gender: applicant.gender,
-      email: applicant.user?.email,
-      addresses: applicant.addresses,
+      dob: applicant.dob || null,
+      picture: applicant.picture || null,
+      backgroundPicture: applicant.background_picture || null,
+      maritalStatus: applicant.marital || null,
+      gender: applicant.gender || null,
+      email: applicant.user?.email || null,
+      addresses: applicant.addresses || [],
       phones,
       education,
-      positions,           // Include mapped positions here
+      positions,
+      languages,
       proficiencies,
       knowledges,
       personalities,
@@ -127,8 +155,8 @@ export class CvBuilderService {
       softwares,
       cultures,
       trainings,
-      referees: applicant.referees,
-      careers: applicant.applicant_career,
+      referees: applicant.referees || [],
+      careers: applicant.applicant_career || [],
     };
 
     return { data };

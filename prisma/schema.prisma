@@ -235,6 +235,8 @@ model applicant_employers {
   sub_location  String   @db.VarChar(100)
   created_at    DateTime @default(now()) @db.Timestamp(0)
   updated_at    DateTime @default(now()) @db.Timestamp(0)
+
+  positions applicant_positions[]
 }
 
 model applicant_evaluations {
@@ -442,6 +444,14 @@ model applicant_languages {
   language_id   Int      @db.UnsignedInt
   created_at    DateTime @default(now()) @db.Timestamp(0)
   updated_at    DateTime @default(now()) @db.Timestamp(0)
+
+  // Relations
+  applicant        applicants       @relation(fields: [applicant_id], references: [id])
+  language         languages        @relation(fields: [language_id], references: [id])
+  read             language_reads   @relation(fields: [read_id], references: [id])
+  write            language_writes  @relation(fields: [write_id], references: [id])
+  speak            language_speaks  @relation(fields: [speak_id], references: [id])
+  understand       language_understands @relation(fields: [understand_id], references: [id])
 }
 
 model applicant_list_statuses {
@@ -579,6 +589,8 @@ model applicant_positions {
   position positions @relation(fields: [position_id], references: [id])
   position_level position_levels @relation(fields: [position_level_id], references: [id])
   industry    industries @relation(fields: [industry_id], references: [id])
+  region           regions?          @relation(fields: [region_id], references: [id])
+  applicant_employer applicant_employers @relation(fields: [applicant_employer_id], references: [id])
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -842,6 +854,7 @@ model applicants {
    applicant_phones    applicant_phones[]
    applicant_education applicant_education[]
    positions applicant_positions[]
+  applicant_languages     applicant_languages[]  
    
  
 }
@@ -2653,6 +2666,8 @@ model knowledge {
   applicant_knowledge applicant_knowledge[]
 }
 
+
+
 model language_reads {
   id           Int      @id @default(autoincrement()) @db.UnsignedInt
   language_id  Int      @db.UnsignedInt
@@ -2662,49 +2677,73 @@ model language_reads {
   hide         Boolean  @default(false)
   created_at   DateTime @default(now()) @db.Timestamp(0)
   updated_at   DateTime @default(now()) @db.Timestamp(0)
+
+  // Relation
+  language     languages @relation(fields: [language_id], references: [id])
+  applicants   applicant_languages[]
+}
+
+model language_writes {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  language_id   Int      @db.UnsignedInt
+  write_ability String   @db.VarChar(100)
+  creator_id    Int?     @db.UnsignedInt
+  updator_id    Int?     @db.UnsignedInt
+  hide          Boolean  @default(false)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  updated_at    DateTime @default(now()) @db.Timestamp(0)
+
+  // Relation
+  language      languages @relation(fields: [language_id], references: [id])
+  applicants    applicant_languages[]
 }
 
 model language_speaks {
-  id            Int      @id @db.UnsignedInt
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
   language_id   Int      @db.UnsignedInt
   speak_ability String   @db.VarChar(100)
-  created_at    DateTime @default(now()) @db.Timestamp(0)
-  updated_at    DateTime @default(now()) @db.Timestamp(0)
-  hide          Boolean  @default(false)
   creator_id    Int?     @db.UnsignedInt
   updator_id    Int?     @db.UnsignedInt
+  hide          Boolean  @default(false)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  updated_at    DateTime @default(now()) @db.Timestamp(0)
+
+  // Relation
+  language      languages @relation(fields: [language_id], references: [id])
+  applicants    applicant_languages[]
 }
 
 model language_understands {
   id                 Int      @id @default(autoincrement()) @db.UnsignedInt
   language_id        Int      @db.UnsignedInt
+  understand_ability String   @db.VarChar(100)
   creator_id         Int?
   updator_id         Int?
   hide               Boolean  @default(false)
-  understand_ability String   @db.VarChar(100)
   created_at         DateTime @default(now()) @db.Timestamp(0)
   updated_at         DateTime @default(now()) @db.Timestamp(0)
+
+  // Relation
+  language           languages @relation(fields: [language_id], references: [id])
+  applicants         applicant_languages[]
 }
 
-model language_writes {
-  id            Int      @id @default(autoincrement()) @db.UnsignedInt
-  langauge_id   Int      @db.UnsignedInt
-  write_ability String   @db.VarChar(100)
-  created_at    DateTime @default(now()) @db.Timestamp(0)
-  updated_at    DateTime @default(now()) @db.Timestamp(0)
-  creator_id    Int?     @db.UnsignedInt
-  updator_id    Int?     @db.UnsignedInt
-  hide          Boolean  @default(false)
-}
 
 model languages {
-  id            Int      @id @default(autoincrement()) @db.UnsignedInt
-  creator_id    Int?     @db.UnsignedInt
-  updator_id    Int?     @db.UnsignedInt
-  hide          Boolean  @default(false)
-  language_name String   @db.VarChar(100)
-  created_at    DateTime @default(now()) @db.Timestamp(0)
-  updated_at    DateTime @default(now()) @db.Timestamp(0)
+  id            Int                  @id @default(autoincrement()) @db.UnsignedInt
+  language_name String               @db.VarChar(100)
+  hide          Boolean              @default(false)
+  creator_id    Int?                 @db.UnsignedInt
+  updator_id    Int?                 @db.UnsignedInt
+  created_at    DateTime             @default(now()) @db.Timestamp(0)
+  updated_at    DateTime             @default(now()) @db.Timestamp(0)
+
+  // Relations
+  reads         language_reads[]
+  writes        language_writes[]
+  speaks        language_speaks[]
+  understands   language_understands[]
+  applicants    applicant_languages[]
 }
 
 model majors {
@@ -3139,6 +3178,7 @@ model regions {
   // Relations
   country              countries @relation(fields: [country_id], references: [id])
   applicant_addresses  applicant_addresses[]
+  positions applicant_positions[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
