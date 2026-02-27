@@ -25,7 +25,7 @@ export class CvbuilderService {
         // 'applicant_education',
          'applicant_career',
         // 'applicant_trainings',
-        //  'referees',
+          'referees',
          'applicant_tools',
         // 'applicant_software',
         //  'applicant_knowledge',
