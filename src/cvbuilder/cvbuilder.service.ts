@@ -8,6 +8,12 @@ import { ApplicantPhones } from 'src/entities/applicants/applicant-phones.entity
 import { ApplicantReferees } from 'src/entities/applicants/applicant-referees.entity';
 import { ApplicantCultures } from 'src/entities/applicants/applicant-cultures.entity';
 import { ApplicantKnowledge } from 'src/entities/applicants/applicant-knowledge.entity';
+import { ApplicantSoftware } from 'src/entities/applicants/applicant-software.entity';
+import { ApplicantProficiencies } from 'src/entities/applicants/applicant-proficiencies.entity';
+import { ApplicantTrainings } from 'src/entities/applicants/applicant-trainings.entity';
+import { ApplicantEducation } from 'src/entities/applicants/applicant-education.entity';
+import { ApplicantLanguages } from 'src/entities/applicants/applicant-languages.entity';
+import { ApplicantPositions } from 'src/entities/applicants/applicant-positions.entity';
 
 @Injectable()
 export class CvbuilderService {
@@ -18,30 +24,18 @@ export class CvbuilderService {
   ) {}
 
   async getApplicantCv(applicantId: number) {
-    // ---------------- Step 1: main applicant ----------------
+    // ---------------- Step 1: Load basic applicant ----------------
     const applicant = await this.applicantsRepo
       .createQueryBuilder('applicant')
       .leftJoinAndSelect('applicant.user', 'user')
       .leftJoinAndSelect('applicant.marital', 'marital')
       .leftJoinAndSelect('applicant.gender', 'gender')
-      .select([
-        'applicant.id',
-        'applicant.first_name',
-        'applicant.middle_name',
-        'applicant.last_name',
-        'applicant.dob',
-        'applicant.picture',
-        'applicant.background_picture',
-        'user.email',
-        'marital.marital_status',
-        'gender.gender_name',
-      ])
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
 
     if (!applicant) throw new NotFoundException('Applicant not found');
 
-    // ---------------- Step 2: parallel section queries ----------------
+    // ---------------- Step 2: Load all sections in parallel ----------------
     const [
       careers,
       tools,
@@ -49,6 +43,12 @@ export class CvbuilderService {
       referees,
       cultures,
       knowledge,
+      software,
+      proficiencies,
+      trainings,
+      education,
+      languages,
+      positions,
     ] = await Promise.all([
       this.getCareers(applicantId),
       this.getTools(applicantId),
@@ -56,19 +56,31 @@ export class CvbuilderService {
       this.getReferees(applicantId),
       this.getCultures(applicantId),
       this.getKnowledge(applicantId),
+      this.getSoftware(applicantId),
+      this.getProficiencies(applicantId),
+      this.getTrainings(applicantId),
+      this.getEducation(applicantId),
+      this.getLanguages(applicantId),
+      this.getPositions(applicantId),
     ]);
 
-    // ---------------- Step 3: structured response ----------------
+    // ---------------- Step 3: Return nested applicant structure ----------------
     return {
-      applicant,
-      careers,
-      tools,
-      phones,
-      referees,
-      cultures,
-      knowledge,
+      ...applicant,
+      applicant_career: careers,
+      applicant_tools: tools,
+      applicant_phones: phones,
+      referees: referees,
+      applicant_cultures: cultures,
+      applicant_knowledge: knowledge,
+      applicant_software: software,
+      applicant_proficiencies: proficiencies,
+      applicant_trainings: trainings,
+      applicant_education: education,
+      applicant_languages: languages,
+      positions: positions,
       marital_status: applicant.marital?.marital_status,
-      current_position: applicant['currentPosition'] || null,
+      current_position: positions.length ? positions[0] : null,
     };
   }
 
@@ -77,7 +89,6 @@ export class CvbuilderService {
     return this.dataSource
       .getRepository(ApplicantCareers)
       .createQueryBuilder('career')
-      .select(['career.id', 'career.career'])
       .where('career.applicant_id = :id', { id: applicantId })
       .getMany();
   }
@@ -87,7 +98,6 @@ export class CvbuilderService {
       .getRepository(ApplicantTools)
       .createQueryBuilder('at')
       .leftJoinAndSelect('at.tools', 'tool')
-      .select(['tool.id', 'tool.tool_name'])
       .where('at.applicant_id = :id', { id: applicantId })
       .getMany();
   }
@@ -96,7 +106,6 @@ export class CvbuilderService {
     return this.dataSource
       .getRepository(ApplicantPhones)
       .createQueryBuilder('phone')
-      .select(['phone.id', 'phone.phone_number'])
       .where('phone.applicant_id = :id', { id: applicantId })
       .getMany();
   }
@@ -105,16 +114,6 @@ export class CvbuilderService {
     return this.dataSource
       .getRepository(ApplicantReferees)
       .createQueryBuilder('ref')
-      .select([
-        'ref.id',
-        'ref.first_name',
-        'ref.middle_name',
-        'ref.last_name',
-        'ref.employer',
-        'ref.referee_position',
-        'ref.email',
-        'ref.phone',
-      ])
       .where('ref.applicant_id = :id', { id: applicantId })
       .getMany();
   }
@@ -124,7 +123,6 @@ export class CvbuilderService {
       .getRepository(ApplicantCultures)
       .createQueryBuilder('ac')
       .leftJoinAndSelect('ac.culture', 'culture')
-      .select(['culture.id', 'culture.culture_name'])
       .where('ac.applicant_id = :id', { id: applicantId })
       .getMany();
   }
@@ -134,8 +132,70 @@ export class CvbuilderService {
       .getRepository(ApplicantKnowledge)
       .createQueryBuilder('ak')
       .leftJoinAndSelect('ak.knowledge', 'knowledge')
-      .select(['knowledge.id', 'knowledge.knowledge_name'])
       .where('ak.applicant_id = :id', { id: applicantId })
+      .getMany();
+  }
+
+  private async getSoftware(applicantId: number) {
+    return this.dataSource
+      .getRepository(ApplicantSoftware)
+      .createQueryBuilder('asw')
+      .leftJoinAndSelect('asw.software', 'software')
+      .where('asw.applicant_id = :id', { id: applicantId })
+      .getMany();
+  }
+
+  private async getProficiencies(applicantId: number) {
+    return this.dataSource
+      .getRepository(ApplicantProficiencies)
+      .createQueryBuilder('ap')
+      .leftJoinAndSelect('ap.proficiency', 'prof')
+      .leftJoinAndSelect('ap.organization', 'org')
+      .where('ap.applicant_id = :id', { id: applicantId })
+      .getMany();
+  }
+
+  private async getTrainings(applicantId: number) {
+    return this.dataSource
+      .getRepository(ApplicantTrainings)
+      .createQueryBuilder('at')
+      .where('at.applicant_id = :id', { id: applicantId })
+      .getMany();
+  }
+
+  private async getEducation(applicantId: number) {
+    return this.dataSource
+      .getRepository(ApplicantEducation)
+      .createQueryBuilder('ae')
+      .leftJoinAndSelect('ae.college', 'college')
+      .leftJoinAndSelect('ae.major', 'major')
+      .leftJoinAndSelect('ae.education_level', 'level')
+      .leftJoinAndSelect('ae.course', 'course')
+      .where('ae.applicant_id = :id', { id: applicantId })
+      .getMany();
+  }
+
+  private async getLanguages(applicantId: number) {
+    return this.dataSource
+      .getRepository(ApplicantLanguages)
+      .createQueryBuilder('al')
+      .leftJoinAndSelect('al.language', 'language')
+      .where('al.applicant_id = :id', { id: applicantId })
+      .getMany();
+  }
+
+  private async getPositions(applicantId: number) {
+    return this.dataSource
+      .getRepository(ApplicantPositions)
+      .createQueryBuilder('pos')
+      .leftJoinAndSelect('pos.position', 'position')
+      .leftJoinAndSelect('pos.industry', 'industry')
+      .leftJoinAndSelect('pos.level', 'level')
+      .leftJoinAndSelect('pos.employer', 'employer')
+      .leftJoinAndSelect('employer.region', 'region')
+      .leftJoinAndSelect('region.country', 'country')
+      .where('pos.applicant_id = :id', { id: applicantId })
+      .orderBy('pos.id', 'DESC')
       .getMany();
   }
 }
