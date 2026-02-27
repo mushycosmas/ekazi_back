@@ -11,35 +11,87 @@ export class CvbuilderService {
     private readonly applicantsRepo: Repository<Applicants>,
   ) {}
 
-  // Fetch full applicant CV
   async getApplicantCv(applicantId: number) {
-    const applicant = await this.applicantsRepo.findOne({
-      where: { id: applicantId },
-      relations: [
-        'user',
-        'marital',
-        'gender',
-        // 'applicant_cultures',
-        //  'applicant_languages',
-        //  'positions',
-        // 'applicant_education',
-         'applicant_career',
-        // 'applicant_trainings',
-          'referees',
-         'applicant_tools',
-        // 'applicant_software',
-        //  'applicant_knowledge',
-        // 'applicant_proficiencies',
-        // 'addresses',
-        'applicant_phones',
-        // 'applicant_personalities',
-      ],
-    });
+    const applicant = await this.applicantsRepo
+      .createQueryBuilder('applicant')
+      // -------------------------------
+      // Main applicant info
+      // -------------------------------
+      .select([
+        'applicant.id',
+        'applicant.first_name',
+        'applicant.middle_name',
+        'applicant.last_name',
+        'applicant.dob',
+        'applicant.email',
+        'applicant.nationality',
+      ])
+      // -------------------------------
+      // Relations
+      // -------------------------------
+      .leftJoinAndSelect('applicant.user', 'user')
+      .leftJoinAndSelect('applicant.marital', 'marital')
+      .leftJoinAndSelect('applicant.gender', 'gender')
+      .leftJoinAndSelect('applicant.applicant_career', 'career')
+      .leftJoinAndSelect('applicant.applicant_trainings', 'training')
+      .leftJoinAndSelect('applicant.referees', 'referee')
+      .leftJoinAndSelect('applicant.applicant_tools', 'tool')
+      .leftJoinAndSelect('applicant.applicant_phones', 'phone')
+      .leftJoinAndSelect('applicant.addresses', 'address')
+      .leftJoinAndSelect('applicant.applicant_languages', 'language')
+      .leftJoinAndSelect('applicant.applicant_knowledge', 'knowledge')
+      .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
+      .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
+      // -------------------------------
+      // Select only needed columns for each relation
+      // -------------------------------
+      .addSelect([
+        'referee.id',
+        'referee.first_name',
+        'referee.middle_name',
+        'referee.last_name',
+        'referee.employer',
+        'referee.referee_position',
+        'referee.email',
+        'referee.phone',
 
-    if (!applicant) {
-      return null;
-    }
+        'phone.id',
+        'phone.phone_number',
 
-    return applicant;
+        'training.id',
+        'training.name',
+        'training.institution',
+        'training.started',
+        'training.ended',
+        'training.attachment',
+
+        'tool.id',
+        'tool.name',
+
+        'address.id',
+        'address.street',
+        'address.city',
+        'address.region',
+
+        'language.id',
+        'language.name',
+        'language.level',
+
+        'knowledge.id',
+        'knowledge.name',
+        'knowledge.level',
+
+        'proficiency.id',
+        'proficiency.name',
+        'proficiency.level',
+
+        'personality.id',
+        'personality.name',
+      ])
+      // -------------------------------
+      .where('applicant.id = :id', { id: applicantId })
+      .getOne();
+
+    return applicant || null;
   }
 }
