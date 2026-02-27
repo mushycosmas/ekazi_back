@@ -7,7 +7,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Applicants } from './applicants.entity';
-
 @Entity('applicant_trainings')
 export class ApplicantTrainings {
   @PrimaryGeneratedColumn({ unsigned: true })
@@ -43,15 +42,6 @@ export class ApplicantTrainings {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updated_at: Date;
 
-  @Column({ type: 'int' })
-  train_id: number;
-
-  @Column({ type: 'int' })
-  institution_id: number;
-
-  // ----------------------
-  // Relation back to applicant (optional)
-  // ----------------------
   @ManyToOne(() => Applicants, (applicant) => applicant.applicant_trainings, {
     nullable: true,
   })
