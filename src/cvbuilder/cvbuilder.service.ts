@@ -20,15 +20,18 @@ export class CvbuilderService {
         'gender',
         'applicant_career',
         'applicant_tools',
-        'applicant_tools.tools', // include tools relation
+        'applicant_tools.tools', // tools relation
         'applicant_phones',
-        // add more relations if needed (referees, trainings, addresses, etc.)
+        'referees',
+        'applicant_cultures',
+        'applicant_cultures.culture', // culture relation
+        'applicant_knowledge',
+        'applicant_knowledge.knowledge', // knowledge relation
       ],
     });
 
     if (!applicant) return null;
 
-    // Clean data output
     return {
       id: applicant.id,
       first_name: applicant.first_name,
@@ -61,10 +64,27 @@ export class CvbuilderService {
       })),
       applicant_tools: applicant.applicant_tools?.map((t) => ({
         tool_id: t.tool_id,
-        tool_name: t.tools?.tool_name, // get tool name from relation
+        tool_name: t.tools?.tool_name,
       })),
       applicant_phones: applicant.applicant_phones?.map((p) => ({
         phone_number: p.phone_number,
+      })),
+      referees: applicant.referees?.map((r) => ({
+        first_name: r.first_name,
+        middle_name: r.middle_name,
+        last_name: r.last_name,
+        employer: r.employer,
+        referee_position: r.referee_position,
+        email: r.email,
+        phone: r.phone,
+      })),
+      applicant_cultures: applicant.applicant_cultures?.map((c) => ({
+        culture_id: c.culture_id,
+        culture_name: c.culture?.culture_name
+      })),
+      applicant_knowledge: applicant.applicant_knowledge?.map((k) => ({
+        knowledge_id: k.knowledge_id,
+        knowledge_name: k.knowledge?.knowledge_name,
       })),
     };
   }
