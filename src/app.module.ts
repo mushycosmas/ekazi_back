@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { UserModule } from './user/user.module';
-import { CvBuilderModule } from './cv-builder/cv-builder.module';
+import { DatabaseModule } from './db/database.module'; // Your DB config module
+import { TestModule } from 'test/test.module';
 
 @Module({
   imports: [
-    PrismaModule, UserModule, CvBuilderModule],
+    DatabaseModule, TestModule
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
