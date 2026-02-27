@@ -23,7 +23,7 @@ export class CvbuilderService {
         //  'applicant_languages',
         //  'positions',
         // 'applicant_education',
-        // 'applicant_career',
+        'applicant_career',
         // 'applicant_trainings',
         //  'referees',
         // 'applicant_tools',
