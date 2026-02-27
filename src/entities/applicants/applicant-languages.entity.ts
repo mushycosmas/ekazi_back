@@ -39,8 +39,8 @@ export class ApplicantLanguages {
   // ---------------------
   // Relations
   // ---------------------
-//   @ManyToOne(() => Applicants, (applicant) => applicant.languages)
-//   applicant: Applicants;
+  @ManyToOne(() => Applicants, (applicant) => applicant)
+  applicant: Applicants;
 
   @ManyToOne(() => Languages, (language) => language.applicants)
   language: Languages;

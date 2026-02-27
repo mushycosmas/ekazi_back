@@ -24,6 +24,7 @@ import { ApplicantAddresses } from './applicant-addresses.entity';
 import { ApplicantPositions } from './applicant-positions.entity';
 import { ApplicantPhones } from './applicant-phones.entity';
 import { ApplicantEducation } from './applicant-education.entity';
+
 import { ApplicantLanguages } from './applicant-languages.entity';
 
 @Entity('applicants')
@@ -137,7 +138,6 @@ export class Applicants {
   @OneToMany(() => ApplicantPositions, (pos) => pos.applicant)
   positions: ApplicantPositions[];
 
-//   @OneToMany(() => ApplicantLanguages, (l) => l.applicant)
-//   applicant_languages: ApplicantLanguages[];
-
- }
+  @OneToMany(() => ApplicantLanguages, (l) => l.applicant)
+  applicant_languages: ApplicantLanguages[];
+}

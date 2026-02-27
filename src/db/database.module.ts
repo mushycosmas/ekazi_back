@@ -61,7 +61,7 @@ import { Languages } from 'src/entities/languages.entity';
       host: 'localhost',
       port: 3306,
       username: 'root',
-      password: '',
+      password: 'root123',
       database: 'ekazi',
       entities: [
         // Applicant-related
