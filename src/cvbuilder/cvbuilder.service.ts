@@ -23,8 +23,8 @@ export class CvbuilderService {
         'applicant.middle_name',
         'applicant.last_name',
         'applicant.dob',
-        'applicant.email',
-        'applicant.nationality',
+        // 'applicant.email',
+        // 'applicant.nationality',
       ])
       // -------------------------------
       // Relations
@@ -35,10 +35,11 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicant.applicant_career', 'career')
       .leftJoinAndSelect('applicant.applicant_trainings', 'training')
       .leftJoinAndSelect('applicant.referees', 'referee')
-      .leftJoinAndSelect('applicant.applicant_tools', 'tool')
+        .leftJoinAndSelect('applicant.applicant_tools', 'applicant_tool')
+      .leftJoinAndSelect('applicant_tool.tools', 'tools') 
       .leftJoinAndSelect('applicant.applicant_phones', 'phone')
       .leftJoinAndSelect('applicant.addresses', 'address')
-      .leftJoinAndSelect('applicant.applicant_languages', 'language')
+      // .leftJoinAndSelect('applicant.applicant_languages', 'language')
       .leftJoinAndSelect('applicant.applicant_knowledge', 'knowledge')
       .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
       .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
@@ -65,28 +66,30 @@ export class CvbuilderService {
         'training.ended',
         'training.attachment',
 
-        'tool.id',
-        'tool.name',
+        'applicant_tool.id',
+        'applicant_tool.applicant_id',
+        'tools.id',
+        'tools.tool_name',
 
-        'address.id',
-        'address.street',
-        'address.city',
-        'address.region',
+        // 'address.id',
+        // 'address.street',
+        // 'address.city',
+        // 'address.region',
 
-        'language.id',
-        'language.name',
-        'language.level',
+        // 'language.id',
+        // 'language.name',
+        // 'language.level',
 
-        'knowledge.id',
-        'knowledge.name',
-        'knowledge.level',
+        // 'knowledge.id',
+        // 'knowledge.name',
+        // 'knowledge.level',
 
-        'proficiency.id',
-        'proficiency.name',
-        'proficiency.level',
+        // 'proficiency.id',
+        // 'proficiency.name',
+        // 'proficiency.level',
 
-        'personality.id',
-        'personality.name',
+        // 'personality.id',
+        // 'personality.personality_name',
       ])
       // -------------------------------
       .where('applicant.id = :id', { id: applicantId })
