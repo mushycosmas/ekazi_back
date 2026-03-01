@@ -1,6 +1,5 @@
-// src/entities/applicants/language-reads.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
-import { Languages } from './languages.entity';
+// src/entities/language-reads.entity.ts
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { ApplicantLanguages } from './applicants/applicant-languages.entity';
 
 @Entity('language_reads')
@@ -8,16 +7,13 @@ export class LanguageReads {
   @PrimaryGeneratedColumn({ unsigned: true })
   id: number;
 
-  @Column({ type: 'int', unsigned: true, name: 'language_id' })
-  language_id: number;
-
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, name: 'read_ability' })
   read_ability: string;
 
-  @Column({ type: 'int', unsigned: true, nullable: true })
+  @Column({ type: 'int', unsigned: true, nullable: true, name: 'creator_id' })
   creator_id: number | null;
 
-  @Column({ type: 'int', unsigned: true, nullable: true })
+  @Column({ type: 'int', unsigned: true, nullable: true, name: 'updator_id' })
   updator_id: number | null;
 
   @Column({ type: 'boolean', default: false })
@@ -29,11 +25,9 @@ export class LanguageReads {
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updated_at: Date;
 
-  // FIXED: Add JoinColumn to explicitly specify the foreign key column name
-  @ManyToOne(() => Languages, (language) => language.reads)
-  @JoinColumn({ name: 'language_id' })  // This tells TypeORM to use 'language_id' instead of 'languageId'
-  language: Languages;
-
+  // ---------------------
+  // Relations
+  // ---------------------
   @OneToMany(() => ApplicantLanguages, (applicantLang) => applicantLang.read)
   applicants: ApplicantLanguages[];
 }

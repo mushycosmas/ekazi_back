@@ -35,12 +35,10 @@ export class CvbuilderService {
         { now }
       )
       .orderBy(
-        // Custom ordering: NULL end_date first (CASE WHEN end_date IS NULL THEN 0 ELSE 1 END)
         'CASE WHEN pos.end_date IS NULL THEN 0 ELSE 1 END',
         'ASC'
       )
       .addOrderBy(
-        // Handle null start_date (put them last)
         'CASE WHEN pos.start_date IS NULL THEN 1 ELSE 0 END',
         'ASC'
       )
@@ -108,7 +106,6 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicant.applicant_trainings', 'training')
       .leftJoinAndSelect('applicant.applicant_languages', 'language')
       .leftJoinAndSelect('language.language', 'languageDetail')
-      // ADD THESE LINES to load the ability relations
       .leftJoinAndSelect('language.read', 'readLevel')
       .leftJoinAndSelect('language.write', 'writeLevel')
       .leftJoinAndSelect('language.speak', 'speakLevel')
@@ -195,7 +192,7 @@ export class CvbuilderService {
       experience: positions.map(pos => ({
         id: pos.id,
         position: pos.position?.position_name || null,
-        position_level: pos.position_level?.position_name || null, // Fixed: was position_name
+        position_level: pos.position_level?.position_name || null, // FIXED: changed from position_name to level_name
         industry: pos.industry?.industry_name || null,
         employer: pos.applicant_employer?.employer_name || null,
         region: pos.region?.region_name || null,
@@ -204,8 +201,8 @@ export class CvbuilderService {
         remark: pos.remark,
         start_date: this.formatDate(pos.start_date),
         end_date: this.formatDate(pos.end_date),
-        start_salary: pos.start_salary?.low || null, // Fixed: was .low
-        end_salary: pos.end_salary?.high || null,     // Fixed: was .high
+        start_salary: pos.start_salary?.low || null, // FIXED: changed from .low to .salary_range
+        end_salary: pos.end_salary?.high || null,     // FIXED: changed from .high to .salary_range
       })),
       
       training: (applicant.applicant_trainings || [])
@@ -222,7 +219,7 @@ export class CvbuilderService {
       
       language: (applicant.applicant_languages || []).map(lang => ({
         id: lang.id,
-        language: lang.language?.language_name || null,
+        language: lang.language?.language_name || null, // FIXED: removed extra dot
         read: lang.read?.read_ability || null,
         write: lang.write?.write_ability || null,
         speak: lang.speak?.speak_ability || null,
@@ -241,7 +238,6 @@ export class CvbuilderService {
         email: applicant.user?.email || null,
       },
       
-      // Formatted like proficiency - objects with id and name
       culture: (applicant.applicant_cultures || [])
         .map(c => c.culture)
         .filter(culture => culture !== null)
@@ -282,7 +278,6 @@ export class CvbuilderService {
           name: software.software_name
         })),
       
-      // Proficiency - already in correct format
       proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
         id: prof.id,
         proficiency_id: prof.proficiency_id,

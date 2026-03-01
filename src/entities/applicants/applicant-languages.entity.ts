@@ -12,23 +12,25 @@ export class ApplicantLanguages {
   @PrimaryGeneratedColumn({ unsigned: true })
   id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'read_id' })
   read_id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'write_id' })
   write_id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'speak_id' })
   speak_id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'understand_id' })
   understand_id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'applicant_id' })
   applicant_id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'language_id' })
   language_id: number;
+
+ 
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;

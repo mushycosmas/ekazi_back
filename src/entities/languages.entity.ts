@@ -1,26 +1,22 @@
 // src/entities/languages.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { ApplicantLanguages } from './applicants/applicant-languages.entity';
-import { LanguageReads } from './language-reads.entity';
-import { LanguageWrites } from './language-writes.entity';
-import { LanguageSpeaks } from './language-speaks.entity';
-import { LanguageUnderstands } from './language-understands.entity';
 
 @Entity('languages')
 export class Languages {
   @PrimaryGeneratedColumn({ unsigned: true })
   id: number;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, name: 'language_name' })
   language_name: string;
 
   @Column({ type: 'boolean', default: false })
   hide: boolean;
 
-  @Column({ type: 'int', unsigned: true, nullable: true })
+  @Column({ type: 'int', unsigned: true, nullable: true, name: 'creator_id' })
   creator_id: number | null;
 
-  @Column({ type: 'int', unsigned: true, nullable: true })
+  @Column({ type: 'int', unsigned: true, nullable: true, name: 'updator_id' })
   updator_id: number | null;
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
@@ -32,18 +28,6 @@ export class Languages {
   // ---------------------
   // Relations
   // ---------------------
-  @OneToMany(() => LanguageReads, (read) => read.language)
-  reads: LanguageReads[];
-
-  @OneToMany(() => LanguageWrites, (write) => write.language)
-  writes: LanguageWrites[];
-
-  @OneToMany(() => LanguageSpeaks, (speak) => speak.language)
-  speaks: LanguageSpeaks[];
-
-  @OneToMany(() => LanguageUnderstands, (understand) => understand.language)
-  understands: LanguageUnderstands[];
-
-  @OneToMany(() => ApplicantLanguages, (appLang) => appLang.language)
+  @OneToMany(() => ApplicantLanguages, (applicantLang) => applicantLang.language)
   applicant_languages: ApplicantLanguages[];
 }
