@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
 } from 'typeorm';
-import { ApplicantProficiencies } from './applicants/applicant-proficiencies.entity';
+
 import { ApplicantEducation } from './applicants/applicant-education.entity';
 
 @Entity('colleges')
@@ -46,11 +46,7 @@ export class Colleges {
   // ----------------------
   // Reverse relations
   // ----------------------
-  @OneToMany(
-    () => ApplicantProficiencies,
-    (applicantProficiency) => applicantProficiency.college,
-  )
-  applicant_proficiencies: ApplicantProficiencies[];
+
 
   @OneToMany(
     () => ApplicantEducation,
