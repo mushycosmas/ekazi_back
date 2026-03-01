@@ -1,7 +1,7 @@
 // src/cvbuilder/cvbuilder.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { ApplicantPositions } from 'src/entities/applicants/applicant-positions.entity';
 
@@ -16,11 +16,12 @@ export class CvbuilderService {
   ) {}
 
   // Helper function to format position name (like ucwords in PHP)
-     private formatPositionName(positionName: string): string | null {
-      if (!positionName) return null;
-     // Convert to lowercase then uppercase first letter of each word
-      return positionName.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
-     }
+  private formatPositionName(positionName: string): string | null {
+    if (!positionName) return null;
+    // Convert to lowercase then uppercase first letter of each word
+    return positionName.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+  }
+
   // Method to get current position (matching PHP logic)
   private async getCurrentPosition(applicantId: number): Promise<string | null> {
     const now = new Date();
@@ -54,31 +55,31 @@ export class CvbuilderService {
     return null;
   }
 
-  async getApplicantCv(applicantId: number) {
-    // Date formatter helper
-    const formatDate = (dateValue: any): string | null => {
-      if (!dateValue) return null;
-      
-      try {
-        if (dateValue instanceof Date) {
-          const year = dateValue.getFullYear();
-          const month = String(dateValue.getMonth() + 1).padStart(2, '0');
-          const day = String(dateValue.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        }
-        
-        const date = new Date(dateValue);
-        if (isNaN(date.getTime())) return null;
-        
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+  // Date formatter helper
+  private formatDate(dateValue: any): string | null {
+    if (!dateValue) return null;
+    
+    try {
+      if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-      } catch {
-        return null;
       }
-    };
+      
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return null;
+      
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return null;
+    }
+  }
 
+  async getApplicantCv(applicantId: number) {
     // ---------------------
     // 1️⃣ Load applicant main info + relations
     // ---------------------
@@ -107,10 +108,6 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicant.applicant_trainings', 'training')
       .leftJoinAndSelect('applicant.applicant_languages', 'language')
       .leftJoinAndSelect('language.language', 'languageDetail')
-      .leftJoinAndSelect('language.read', 'readLevel')
-      .leftJoinAndSelect('language.write', 'writeLevel')
-      .leftJoinAndSelect('language.speak', 'speakLevel')
-      .leftJoinAndSelect('language.understand', 'understandLevel')
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
 
@@ -149,156 +146,153 @@ export class CvbuilderService {
       .filter(software => software !== null);
 
     // ---------------------
-    // 5️⃣ Build the final response object matching PHP structure
+    // 5️⃣ Build the final response object
     // ---------------------
-   // ---------------------
-// 5️⃣ Build the final response object matching the proficiency format
-// ---------------------
-const data = {
-  // Top-level fields
-  address: (applicant.applicant_addresses || []).map(address => ({
-    id: address.id,
-    region: address.region?.region_name || null,
-    sub_location: address.sub_location,
-    postal: address.postal
-  })),
-  
-  phone: (applicant.applicant_phones || []).map(phone => ({
-    id: phone.id,
-    phone_number: phone.phone_number
-  })),
-  
-  objective: applicant.applicant_objectives?.[0]?.objective || null,
-  
-  education: (applicant.applicant_education || []).map(edu => ({
-    id: edu.id,
-    college_id: edu.college_id,
-    course_id: edu.course_id,
-    major_id: edu.major_id,
-    education_level_id: edu.education_level_id,
-    attachment: edu.attachment,
-    started: formatDate(edu.started),
-    ended: formatDate(edu.ended)
-  })),
-  
-  referees: (applicant.referees || []).map(referee => ({
-    id: referee.id,
-    first_name: referee.first_name,
-    middle_name: referee.middle_name,
-    last_name: referee.last_name,
-    employer: referee.employer,
-    position: referee.referee_position,
-    email: referee.email,
-    phone: referee.phone,
-    type: referee.type
-  })),
-  
-  experience: positions.map(pos => ({
-    id: pos.id,
-    position: pos.position?.position_name || null,
-    position_level: pos.position_level?.position_name || null,
-    industry: pos.industry?.industry_name || null,
-    employer: pos.applicant_employer?.employer_name || null,
-    region: pos.region?.region_name || null,
-    sub_location: pos.sub_location,
-    responsibility: pos.responsibility,
-    remark: pos.remark,
-    start_date: formatDate(pos.start_date),
-    end_date: formatDate(pos.end_date),
-    start_salary: pos.start_salary?.low || null,
-    end_salary: pos.end_salary?.high || null,
-  })),
-  
-  training: (applicant.applicant_trainings || [])
-    .filter(training => !training.hide)
-    .map(training => ({
-      id: training.id,
-      name: training.name,
-      institution: training.institution,
-      description: training.description,
-      started: formatDate(training.started),
-      ended: formatDate(training.ended),
-      attachment: training.attachment
-    })),
-  
-  language: (applicant.applicant_languages || []).map(lang => ({
-    id: lang.id,
-    language: lang.language?.language_name || null,
-    read: lang.read?.read_ability || null,
-    write: lang.write?.write_ability || null,
-    speak: lang.speak?.speak_ability || null,
-    understand: lang.understand?.understand_ability || null
-  })),
-  
-  applicant_profile: {
-    id: applicant.id,
-    first_name: applicant.first_name,
-    middle_name: applicant.middle_name,
-    last_name: applicant.last_name,
-    dob: formatDate(applicant.dob),
-    nationality_id: applicant.nationality_id || null,
-    picture: applicant.picture,
-    background_picture: applicant.background_picture,
-    email: applicant.user?.email || null,
-  },
-  
-  // ✅ FORMATTED LIKE PROFICIENCY - Objects with id and name/value
-  culture: (applicant.applicant_cultures || [])
-    .map(c => c.culture)
-    .filter(culture => culture !== null)
-    .map(culture => ({
-      id: culture.id,
-      name: culture.culture_name
-    })),
-  
-  tools: tools
-    .filter(tool => tool && tool.hide === 0)
-    .map(tool => ({
-      id: tool.id,
-      name: tool.tool_name
-    })),
-  
-  applicant_personality: (applicant.applicant_personalities || [])
-    .map(ap => ap.personality)
-    .filter((personality): personality is NonNullable<typeof personality> => 
-      personality !== null && personality !== undefined
-    )
-    .map(personality => ({
-      id: personality.id,
-      name: personality.personality_name
-    })),
-  
-  knowledge: (applicant.applicant_knowledge || [])
-    .map(k => k.knowledge)
-    .filter(knowledge => knowledge && !knowledge.hide)
-    .map(knowledge => ({
-      id: knowledge.id,
-      name: knowledge.knowledge_name
-    })),
-  
-  software: software
-    .filter(software => software && !software.hide)
-    .map(software => ({
-      id: software.id,
-      name: software.software_name
-    })),
-  
-  // ✅ PROFICIENCY - Already in correct format
-  proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
-    id: prof.id,
-    proficiency_id: prof.proficiency_id,
-    started: formatDate(prof.started),
-    ended: formatDate(prof.ended),
-    award: prof.award,
-    attachment: prof.attachment
-  })),
-  
-  careers: applicant.applicant_career?.[0]?.career || null,
-  
-  marital_status: applicant.marital?.marital_status || null,
-  
-  current_position: current_position,
-};
+    const data = {
+      // Top-level fields
+      address: (applicant.applicant_addresses || []).map(address => ({
+        id: address.id,
+        region: address.region?.region_name || null,
+        sub_location: address.sub_location,
+        postal: address.postal
+      })),
+      
+      phone: (applicant.applicant_phones || []).map(phone => ({
+        id: phone.id,
+        phone_number: phone.phone_number
+      })),
+      
+      objective: applicant.applicant_objectives?.[0]?.objective || null,
+      
+      education: (applicant.applicant_education || []).map(edu => ({
+        id: edu.id,
+        college_id: edu.college_id,
+        course_id: edu.course_id,
+        major_id: edu.major_id,
+        education_level_id: edu.education_level_id,
+        attachment: edu.attachment,
+        started: this.formatDate(edu.started),
+        ended: this.formatDate(edu.ended)
+      })),
+      
+      referees: (applicant.referees || []).map(referee => ({
+        id: referee.id,
+        first_name: referee.first_name,
+        middle_name: referee.middle_name,
+        last_name: referee.last_name,
+        employer: referee.employer,
+        position: referee.referee_position,
+        email: referee.email,
+        phone: referee.phone,
+        type: referee.type
+      })),
+      
+      experience: positions.map(pos => ({
+        id: pos.id,
+        position: pos.position?.position_name || null,
+        position_level: pos.position_level?.position_name || null, // Fixed: was position_name
+        industry: pos.industry?.industry_name || null,
+        employer: pos.applicant_employer?.employer_name || null,
+        region: pos.region?.region_name || null,
+        sub_location: pos.sub_location,
+        responsibility: pos.responsibility,
+        remark: pos.remark,
+        start_date: this.formatDate(pos.start_date),
+        end_date: this.formatDate(pos.end_date),
+        start_salary: pos.start_salary?.low || null, // Fixed: was .low
+        end_salary: pos.end_salary?.high || null,     // Fixed: was .high
+      })),
+      
+      training: (applicant.applicant_trainings || [])
+        .filter(training => !training.hide)
+        .map(training => ({
+          id: training.id,
+          name: training.name,
+          institution: training.institution,
+          description: training.description,
+          started: this.formatDate(training.started),
+          ended: this.formatDate(training.ended),
+          attachment: training.attachment
+        })),
+      
+      language: (applicant.applicant_languages || []).map(lang => ({
+        id: lang.id,
+        language: lang.language?.language_name || null,
+        read: lang.read?.read_ability || null,
+        write: lang.write?.write_ability || null,
+        speak: lang.speak?.speak_ability || null,
+        understand: lang.understand?.understand_ability || null
+      })),
+      
+      applicant_profile: {
+        id: applicant.id,
+        first_name: applicant.first_name,
+        middle_name: applicant.middle_name,
+        last_name: applicant.last_name,
+        dob: this.formatDate(applicant.dob),
+        nationality_id: applicant.nationality_id || null,
+        picture: applicant.picture,
+        background_picture: applicant.background_picture,
+        email: applicant.user?.email || null,
+      },
+      
+      // Formatted like proficiency - objects with id and name
+      culture: (applicant.applicant_cultures || [])
+        .map(c => c.culture)
+        .filter(culture => culture !== null)
+        .map(culture => ({
+          id: culture.id,
+          name: culture.culture_name
+        })),
+      
+      tools: tools
+        .filter(tool => tool && tool.hide === 0)
+        .map(tool => ({
+          id: tool.id,
+          name: tool.tool_name
+        })),
+      
+      applicant_personality: (applicant.applicant_personalities || [])
+        .map(ap => ap.personality)
+        .filter((personality): personality is NonNullable<typeof personality> => 
+          personality !== null && personality !== undefined
+        )
+        .map(personality => ({
+          id: personality.id,
+          name: personality.personality_name
+        })),
+      
+      knowledge: (applicant.applicant_knowledge || [])
+        .map(k => k.knowledge)
+        .filter(knowledge => knowledge && !knowledge.hide)
+        .map(knowledge => ({
+          id: knowledge.id,
+          name: knowledge.knowledge_name
+        })),
+      
+      software: software
+        .filter(software => software && !software.hide)
+        .map(software => ({
+          id: software.id,
+          name: software.software_name
+        })),
+      
+      // Proficiency - already in correct format
+      proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
+        id: prof.id,
+        proficiency_id: prof.proficiency_id,
+        started: this.formatDate(prof.started),
+        ended: this.formatDate(prof.ended),
+        award: prof.award,
+        attachment: prof.attachment
+      })),
+      
+      careers: applicant.applicant_career?.[0]?.career || null,
+      
+      marital_status: applicant.marital?.marital_status || null,
+      
+      current_position: current_position,
+    };
 
     return data;
   }
