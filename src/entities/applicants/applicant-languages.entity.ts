@@ -39,9 +39,9 @@ export class ApplicantLanguages {
   // ---------------------
   // Relations
   // ---------------------
-  // @ManyToOne(() => Applicants, (applicant) => applicant.languages)
-  // @JoinColumn({ name: 'applicant_id' })
-  // applicant: Applicants;
+  @ManyToOne(() => Applicants, (applicant) => applicant.applicant_languages)
+  @JoinColumn({ name: 'applicant_id' })
+  applicant: Applicants;
 
   @ManyToOne(() => Languages, (language) => language.applicant_languages)
   @JoinColumn({ name: 'language_id' })

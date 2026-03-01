@@ -141,6 +141,6 @@ export class Applicants {
   @OneToMany(() => ApplicantObjective, (objective) => objective.applicant)
 applicant_objectives: ApplicantObjective[];
 
-//   @OneToMany(() => ApplicantLanguages, (appLang) => appLang.applicant)
-// applicant_languages: ApplicantLanguages[];
+  @OneToMany(() => ApplicantLanguages, (appLang) => appLang.applicant)
+applicant_languages: ApplicantLanguages[];
 }
