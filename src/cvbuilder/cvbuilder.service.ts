@@ -64,6 +64,7 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicant.applicant_education', 'education')
       .leftJoinAndSelect('applicant.applicant_objectives', 'objective')
       .leftJoinAndSelect('applicant.applicant_addresses', 'address')
+      .leftJoinAndSelect('applicant.applicant_trainings', 'training')
       .leftJoinAndSelect('address.region', 'addressRegion') // Join region for addresses
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
@@ -130,6 +131,8 @@ export class CvbuilderService {
         id: phone.id,
         phone_number: phone.phone_number
       })),
+
+      
       
       referees: (applicant.referees || []).map(referee => ({
         id: referee.id,
@@ -192,7 +195,17 @@ export class CvbuilderService {
         started: formatDate(edu.started),
         ended: formatDate(edu.ended)
       })),
-      
+      trainings: (applicant.applicant_trainings || [])
+        .filter(training => !training.hide) // Filter out hidden trainings
+        .map(training => ({
+          id: training.id,
+          name: training.name,
+          institution: training.institution,
+          description: training.description,
+          started: formatDate(training.started),
+          ended: formatDate(training.ended),
+          attachment: training.attachment
+        })),
       positions: positions
         .filter(pos => pos !== null && pos !== undefined)
         .map(pos => ({
