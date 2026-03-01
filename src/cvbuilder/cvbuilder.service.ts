@@ -108,6 +108,11 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicant.applicant_trainings', 'training')
       .leftJoinAndSelect('applicant.applicant_languages', 'language')
       .leftJoinAndSelect('language.language', 'languageDetail')
+      // ADD THESE LINES to load the ability relations
+      .leftJoinAndSelect('language.read', 'readLevel')
+      .leftJoinAndSelect('language.write', 'writeLevel')
+      .leftJoinAndSelect('language.speak', 'speakLevel')
+      .leftJoinAndSelect('language.understand', 'understandLevel')
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
 
