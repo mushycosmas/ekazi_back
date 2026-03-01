@@ -16,6 +16,30 @@ export class CvbuilderService {
   ) {}
 
   async getApplicantCv(applicantId: number) {
+    // Date formatter helper
+    const formatDate = (dateValue: any): string | null => {
+      if (!dateValue) return null;
+      
+      try {
+        if (dateValue instanceof Date) {
+          const year = dateValue.getFullYear();
+          const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+          const day = String(dateValue.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+        
+        const date = new Date(dateValue);
+        if (isNaN(date.getTime())) return null;
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch {
+        return null;
+      }
+    };
+
     // ---------------------
     // 1️⃣ Load applicant main info + relations
     // ---------------------
@@ -33,6 +57,7 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicantCultures.culture', 'culture')
       .leftJoinAndSelect('applicant.applicant_knowledge', 'applicantKnowledge')
       .leftJoinAndSelect('applicantKnowledge.knowledge', 'knowledge')
+      .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
       .leftJoinAndSelect('applicant.applicant_software', 'applicantSoftware')
       .leftJoinAndSelect('applicantSoftware.software', 'software')
       .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
@@ -43,45 +68,34 @@ export class CvbuilderService {
     if (!applicant) return null;
 
     // ---------------------
-    // 2️⃣ Filter out null entries and clean the data
+    // 2️⃣ Load applicant positions separately with all relations
+    // ---------------------
+    const positions = await this.applicantPositionsRepo
+      .createQueryBuilder('pos')
+      .leftJoinAndSelect('pos.position', 'position')
+      .leftJoinAndSelect('pos.position_level', 'position_level')
+      .leftJoinAndSelect('pos.industry', 'industry')
+      .leftJoinAndSelect('pos.region', 'region')
+      .leftJoinAndSelect('pos.applicant_employer', 'employer')
+      .leftJoinAndSelect('pos.start_salary', 'startSalary')
+      .leftJoinAndSelect('pos.end_salary', 'endSalary')
+      .where('pos.applicant_id = :id', { id: applicantId })
+      .orderBy('pos.start_date', 'DESC')
+      .getMany();
+
+    // ---------------------
+    // 3️⃣ Filter out null entries and clean the data
     // ---------------------
     const tools = (applicant.applicant_tools || [])
       .map(t => t.tools)
       .filter(tool => tool !== null);
 
     const software = (applicant.applicant_software || [])
-      .map(s => ({
-        id: s.id,
-        software_id: s.software_id,
-      }));
-
-    // Helper function to safely format dates
-    const formatDate = (dateValue: any): string | null => {
-      if (!dateValue) return null;
-      
-      try {
-        // If it's already a Date object
-        if (dateValue instanceof Date) {
-          return dateValue.toISOString().split('T')[0];
-        }
-        
-        // If it's a string or number, create a new Date object
-        const date = new Date(dateValue);
-        
-        // Check if the date is valid
-        if (isNaN(date.getTime())) {
-          return null;
-        }
-        
-        return date.toISOString().split('T')[0];
-      } catch (error) {
-        console.error('Error formatting date:', dateValue, error);
-        return null;
-      }
-    };
+      .map(s => s.software)
+      .filter(software => software !== null);
 
     // ---------------------
-    // 3️⃣ Build the final response object
+    // 4️⃣ Build the final response object
     // ---------------------
     const data = {
       basic_info: {
@@ -121,25 +135,34 @@ export class CvbuilderService {
           .map(k => k.knowledge)
           .filter(knowledge => knowledge && !knowledge.hide)
           .map(knowledge => knowledge.knowledge_name),
-         software: (applicant.applicant_software || [])
-         .map(s => s.software)
-         .filter(software => software && !software.hide)
-         .map(software => software.software_name),
+        software: software
+          .filter(software => software && !software.hide)
+          .map(software => software.software_name),
       },
       cultures: (applicant.applicant_cultures || [])
         .map(c => c.culture)
-        .filter(culture => culture !== null),
-      personalities: applicant.applicant_personalities || [],
-      // FIXED: Use the safe date formatter for proficiency dates
-//      proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
-//   id: prof.id,
-//   proficiency_id: prof.proficiency_id,
-//   started: prof.started ? prof.started.toISOString().split('T')[0] : null,
-//   ended: prof.ended ? prof.ended.toISOString().split('T')[0] : null,
-//   award: prof.award,
-//   attachment: prof.attachment
-// })),
-      // FIXED: Also fix education dates to use the same formatter
+        .filter(culture => culture !== null)
+        .map(culture => culture.culture_name),
+      
+      // FIXED: Safer personalities mapping with optional chaining
+      personalities: (applicant.applicant_personalities || [])
+        .map(ap => ap.personality)
+        .filter(personality => personality !== null && personality !== undefined)
+        .map(personality => ({
+          id: personality?.id,
+          name: personality?.personality_name
+        }))
+        .filter(p => p.id !== undefined), // Remove any that still have undefined id
+      
+      proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
+        id: prof.id,
+        proficiency_id: prof.proficiency_id,
+        started: formatDate(prof.started),
+        ended: formatDate(prof.ended),
+        award: prof.award,
+        attachment: prof.attachment
+      })),
+      
       education: (applicant.applicant_education || []).map(edu => ({
         id: edu.id,
         college_id: edu.college_id,
@@ -150,6 +173,25 @@ export class CvbuilderService {
         started: formatDate(edu.started),
         ended: formatDate(edu.ended)
       })),
+      
+      // FIXED: Safer positions mapping
+      positions: positions
+        .filter(pos => pos !== null && pos !== undefined)
+        .map(pos => ({
+          id: pos.id,
+          position: pos.position?.position_name || null,
+          position_level: pos.position_level?.applicant_positions || null,
+          industry: pos.industry?.industry_name || null,
+          employer: pos.applicant_employer?.employer_name || null,
+          region: pos.region?.region_name || null,
+          sub_location: pos.sub_location,
+          responsibility: pos.responsibility,
+          remark: pos.remark,
+          start_date: formatDate(pos.start_date),
+          end_date: formatDate(pos.end_date),
+          start_salary: pos.start_salary?.low || null,
+          end_salary: pos.end_salary?.high || null,
+        })),
     };
 
     return data;
