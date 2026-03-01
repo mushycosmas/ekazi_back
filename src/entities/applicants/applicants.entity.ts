@@ -138,6 +138,6 @@ export class Applicants {
   @OneToMany(() => ApplicantPositions, (pos) => pos.applicant)
   positions: ApplicantPositions[];
 
-  @OneToMany(() => ApplicantLanguages, (l) => l.applicant)
-  applicant_languages: ApplicantLanguages[];
+//   @OneToMany(() => ApplicantLanguages, (appLang) => appLang.applicant)
+// applicant_languages: ApplicantLanguages[];
 }

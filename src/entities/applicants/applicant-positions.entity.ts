@@ -6,15 +6,12 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+
 import { Applicants } from './applicants.entity';
 import { Positions } from '../positions.entity';
-
 import { PositionLevels } from '../position-levels.entity';
-
 import { Industries } from '../industries.entity';
-
 import { SalaryRanges } from '../salary-ranges.entity';
-
 import { Regions } from '../regions.entity';
 import { ApplicantEmployers } from './applicant-employers.entity';
 
@@ -74,39 +71,36 @@ export class ApplicantPositions {
   // ---------------------
   // Relations
   // ---------------------
-//   @ManyToOne(() => SalaryRanges, (s) => s.current_applicant_positions, { nullable: true })
-//   @JoinColumn({ name: 'salary_id' })
-//   current_salary: SalaryRanges | null;
 
-  @ManyToOne(() => SalaryRanges, (s) => s.low)
-  @JoinColumn({ name: 'start_salary_id' })
-  start_salary: SalaryRanges;
-
-  @ManyToOne(() => SalaryRanges, (s) => s.high)
-  @JoinColumn({ name: 'end_salary_id' })
-  end_salary: SalaryRanges;
-
-  @ManyToOne(() => Applicants, (a) => a.positions)
+  @ManyToOne(() => Applicants, (a: Applicants) => a.positions)
   @JoinColumn({ name: 'applicant_id' })
   applicant: Applicants;
 
-  @ManyToOne(() => Positions, (p) => p.applicant_positions)
+  @ManyToOne(() => Positions, (p: Positions) => p.applicant_positions)
   @JoinColumn({ name: 'position_id' })
   position: Positions;
 
-  @ManyToOne(() => PositionLevels, (pl) => pl.applicant_positions)
+  @ManyToOne(() => PositionLevels, (pl: PositionLevels) => pl.applicant_positions)
   @JoinColumn({ name: 'position_level_id' })
   position_level: PositionLevels;
 
-  @ManyToOne(() => Industries, (i) => i.applicant_positions)
+  @ManyToOne(() => Industries, (i: Industries) => i.applicant_positions)
   @JoinColumn({ name: 'industry_id' })
   industry: Industries;
 
-  @ManyToOne(() => Regions, (r) => r.positions, { nullable: true })
+  @ManyToOne(() => ApplicantEmployers, (ae: ApplicantEmployers) => ae.positions)
+  @JoinColumn({ name: 'applicant_employer_id' })
+  applicant_employer: ApplicantEmployers;
+
+  @ManyToOne(() => Regions, (r: Regions) => r.positions, { nullable: true })
   @JoinColumn({ name: 'region_id' })
   region: Regions | null;
 
-  @ManyToOne(() => ApplicantEmployers, (ae) => ae.positions)
-  @JoinColumn({ name: 'applicant_employer_id' })
-  applicant_employer: ApplicantEmployers;
+  @ManyToOne(() => SalaryRanges, (s: SalaryRanges) => s.low)
+  @JoinColumn({ name: 'start_salary_id' })
+  start_salary: SalaryRanges;
+
+  @ManyToOne(() => SalaryRanges, (s: SalaryRanges) => s.high)
+  @JoinColumn({ name: 'end_salary_id' })
+  end_salary: SalaryRanges;
 }

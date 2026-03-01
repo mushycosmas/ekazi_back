@@ -1,5 +1,5 @@
-
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+// src/entities/applicants/applicant-languages.entity.ts
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Applicants } from './applicants.entity';
 import { Languages } from '../languages.entity';
 import { LanguageReads } from '../language-reads.entity';
@@ -39,21 +39,27 @@ export class ApplicantLanguages {
   // ---------------------
   // Relations
   // ---------------------
-  @ManyToOne(() => Applicants, (applicant) => applicant)
-  applicant: Applicants;
+  // @ManyToOne(() => Applicants, (applicant) => applicant.languages)
+  // @JoinColumn({ name: 'applicant_id' })
+  // applicant: Applicants;
 
-  @ManyToOne(() => Languages, (language) => language.applicants)
+  @ManyToOne(() => Languages, (language) => language.applicant_languages)
+  @JoinColumn({ name: 'language_id' })
   language: Languages;
 
   @ManyToOne(() => LanguageReads, (read) => read.applicants)
+  @JoinColumn({ name: 'read_id' })
   read: LanguageReads;
 
   @ManyToOne(() => LanguageWrites, (write) => write.applicants)
+  @JoinColumn({ name: 'write_id' })
   write: LanguageWrites;
 
   @ManyToOne(() => LanguageSpeaks, (speak) => speak.applicants)
+  @JoinColumn({ name: 'speak_id' })
   speak: LanguageSpeaks;
 
   @ManyToOne(() => LanguageUnderstands, (understand) => understand.applicants)
+  @JoinColumn({ name: 'understand_id' })
   understand: LanguageUnderstands;
 }
