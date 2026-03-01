@@ -34,7 +34,7 @@ export class ApplicantAddresses {
   // ---------------------
   // Relations
   // ---------------------
-  @ManyToOne(() => Applicants, (applicant) => applicant.addresses)
+  @ManyToOne(() => Applicants, (applicant) => applicant.applicant_addresses)
   @JoinColumn({ name: 'applicant_id' })
   applicant: Applicants;
 

@@ -62,7 +62,9 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicantSoftware.software', 'software')
       .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
       .leftJoinAndSelect('applicant.applicant_education', 'education')
-      .leftJoinAndSelect('applicant.applicant_objectives', 'objective') // Fixed: should be plural to match relation name
+      .leftJoinAndSelect('applicant.applicant_objectives', 'objective')
+      .leftJoinAndSelect('applicant.applicant_addresses', 'address')
+      .leftJoinAndSelect('address.region', 'addressRegion') // Join region for addresses
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
 
@@ -113,8 +115,16 @@ export class CvbuilderService {
         email: applicant.user?.email || null,
       },
       
-      // NEW: Add objective to the response (get first objective if multiple exist)
-      objective: applicant.applicant_objectives?.[0]?.objective || null, // Fixed: was using undefined variable
+      // NEW: Add objective
+      objective: applicant.applicant_objectives?.[0]?.objective || null,
+      
+      // NEW: Add addresses
+      addresses: (applicant.applicant_addresses || []).map(address => ({
+        id: address.id,
+        region: address.region?.region_name || null,
+        sub_location: address.sub_location,
+        postal: address.postal
+      })),
       
       phones: (applicant.applicant_phones || []).map(phone => ({
         id: phone.id,
@@ -188,7 +198,7 @@ export class CvbuilderService {
         .map(pos => ({
           id: pos.id,
           position: pos.position?.position_name || null,
-          position_level: pos.position_level?.position_name || null, // Fixed: should be level_name
+          position_level: pos.position_level?.position_name || null,
           industry: pos.industry?.industry_name || null,
           employer: pos.applicant_employer?.employer_name || null,
           region: pos.region?.region_name || null,
@@ -197,8 +207,8 @@ export class CvbuilderService {
           remark: pos.remark,
           start_date: formatDate(pos.start_date),
           end_date: formatDate(pos.end_date),
-          start_salary: pos.start_salary?.low || null, // Fixed: should be salary_range
-          end_salary: pos.end_salary?.high || null,     // Fixed: should be salary_range
+          start_salary: pos.start_salary?.low || null,
+          end_salary: pos.end_salary?.high || null,
         })),
     };
 

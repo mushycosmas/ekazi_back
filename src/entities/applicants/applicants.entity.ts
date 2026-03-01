@@ -127,7 +127,7 @@ export class Applicants {
   applicant_proficiencies: ApplicantProficiencies[];
 
   @OneToMany(() => ApplicantAddresses, (a) => a.applicant)
-  addresses: ApplicantAddresses[];
+  applicant_addresses: ApplicantAddresses[];
 
   @OneToMany(() => ApplicantPhones, (p) => p.applicant)
   applicant_phones: ApplicantPhones[];
