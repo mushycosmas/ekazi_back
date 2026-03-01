@@ -9,7 +9,6 @@ import {
 import { Applicants } from './applicants.entity';
 import { Proficiencies } from '../proficiencies.entity';
 import { Organizations } from '../organizations.entity';
-import { Colleges } from '../colleges.entity';
 
 @Entity('applicant_proficiencies')
 export class ApplicantProficiencies {
