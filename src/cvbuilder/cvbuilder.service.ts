@@ -121,7 +121,10 @@ export class CvbuilderService {
           .map(k => k.knowledge)
           .filter(knowledge => knowledge && !knowledge.hide)
           .map(knowledge => knowledge.knowledge_name),
-        software: software.map(s => s.software_id)
+         software: (applicant.applicant_software || [])
+         .map(s => s.software)
+         .filter(software => software && !software.hide)
+         .map(software => software.software_name),
       },
       cultures: (applicant.applicant_cultures || [])
         .map(c => c.culture)
