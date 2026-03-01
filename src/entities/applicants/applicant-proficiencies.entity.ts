@@ -19,8 +19,6 @@ export class ApplicantProficiencies {
   @Column({ type: 'int', unsigned: true })
   organization_id: number;
 
-  @Column({ type: 'int', unsigned: true })
-  college_id: number;
 
   @Column({ type: 'int', unsigned: true })
   proficiency_id: number;
@@ -60,9 +58,7 @@ export class ApplicantProficiencies {
   @JoinColumn({ name: 'organization_id' })
   organization: Organizations;
 
-  @ManyToOne(() => Colleges, (college) => college.applicant_proficiencies)
-  @JoinColumn({ name: 'college_id' })
-  college: Colleges;
+  
 
   @ManyToOne(() => Applicants, (applicant) => applicant.applicant_proficiencies)
   @JoinColumn({ name: 'applicant_id' })
