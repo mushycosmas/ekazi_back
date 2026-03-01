@@ -1,0 +1,1 @@
+cat -n /root/.pm2/logs/ekazi-backend-error.log | tail -50
