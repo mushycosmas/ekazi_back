@@ -33,7 +33,7 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicantCultures.culture', 'culture')
       .leftJoinAndSelect('applicant.applicant_knowledge', 'applicantKnowledge')
       .leftJoinAndSelect('applicantKnowledge.knowledge', 'knowledge')
-      .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
+      .leftJoinAndSelect('applicant.applicant_personalities', 'personality', 'personality.applicant_id = applicant.id')
       .leftJoinAndSelect('applicant.applicant_software', 'applicantSoftware')
       .leftJoinAndSelect('applicantSoftware.software', 'software')
       .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
@@ -117,7 +117,12 @@ export class CvbuilderService {
           .map(k => k.knowledge)
           .filter(knowledge => knowledge && !knowledge.hide)
           .map(knowledge => knowledge.knowledge_name),
-        software: software.map(s => s.software_id)
+
+          software: (applicant.applicant_software || [])
+          .map(s => s.software)
+          .filter(software => software && !software.hide)
+          .map(software => software.software_name),
+        // software: software.map(s => s.software_id)
       },
       cultures: (applicant.applicant_cultures || [])
         .map(c => c.culture)

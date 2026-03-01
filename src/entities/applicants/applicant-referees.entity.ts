@@ -13,8 +13,8 @@ export class ApplicantReferees {
   @PrimaryGeneratedColumn({ unsigned: true })
   id: number;
 
-  @Column({ type: 'int', unsigned: true, nullable: true })
-  created_by: number | null;
+  // @Column({ type: 'int', unsigned: true, nullable: true })
+  // created_by: number | null;
 
   @Column({ type: 'int', unsigned: true })
   applicant_id: number;
