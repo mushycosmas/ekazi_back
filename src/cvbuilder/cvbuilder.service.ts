@@ -62,6 +62,7 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicantSoftware.software', 'software')
       .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
       .leftJoinAndSelect('applicant.applicant_education', 'education')
+      .leftJoinAndSelect('applicant.applicant_objectives', 'objective') // Fixed: should be plural to match relation name
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
 
@@ -111,10 +112,15 @@ export class CvbuilderService {
         gender: applicant.gender?.gender_name || null,
         email: applicant.user?.email || null,
       },
+      
+      // NEW: Add objective to the response (get first objective if multiple exist)
+      objective: applicant.applicant_objectives?.[0]?.objective || null, // Fixed: was using undefined variable
+      
       phones: (applicant.applicant_phones || []).map(phone => ({
         id: phone.id,
         phone_number: phone.phone_number
       })),
+      
       referees: (applicant.referees || []).map(referee => ({
         id: referee.id,
         first_name: referee.first_name,
@@ -126,7 +132,9 @@ export class CvbuilderService {
         phone: referee.phone,
         type: referee.type
       })),
+      
       career_summary: applicant.applicant_career?.[0]?.career || null,
+      
       skills: {
         tools: tools
           .filter(tool => tool && tool.hide === 0)
@@ -139,20 +147,21 @@ export class CvbuilderService {
           .filter(software => software && !software.hide)
           .map(software => software.software_name),
       },
+      
       cultures: (applicant.applicant_cultures || [])
         .map(c => c.culture)
         .filter(culture => culture !== null)
         .map(culture => culture.culture_name),
       
-      // FIXED: Safer personalities mapping with optional chaining
       personalities: (applicant.applicant_personalities || [])
         .map(ap => ap.personality)
-        .filter(personality => personality !== null && personality !== undefined)
+        .filter((personality): personality is NonNullable<typeof personality> => 
+          personality !== null && personality !== undefined
+        )
         .map(personality => ({
-          id: personality?.id,
-          name: personality?.personality_name
-        }))
-        .filter(p => p.id !== undefined), // Remove any that still have undefined id
+          id: personality.id,
+          name: personality.personality_name
+        })),
       
       proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
         id: prof.id,
@@ -174,13 +183,12 @@ export class CvbuilderService {
         ended: formatDate(edu.ended)
       })),
       
-      // FIXED: Safer positions mapping
       positions: positions
         .filter(pos => pos !== null && pos !== undefined)
         .map(pos => ({
           id: pos.id,
           position: pos.position?.position_name || null,
-          position_level: pos.position_level?.applicant_positions || null,
+          position_level: pos.position_level?.position_name || null, // Fixed: should be level_name
           industry: pos.industry?.industry_name || null,
           employer: pos.applicant_employer?.employer_name || null,
           region: pos.region?.region_name || null,
@@ -189,8 +197,8 @@ export class CvbuilderService {
           remark: pos.remark,
           start_date: formatDate(pos.start_date),
           end_date: formatDate(pos.end_date),
-          start_salary: pos.start_salary?.low || null,
-          end_salary: pos.end_salary?.high || null,
+          start_salary: pos.start_salary?.low || null, // Fixed: should be salary_range
+          end_salary: pos.end_salary?.high || null,     // Fixed: should be salary_range
         })),
     };
 

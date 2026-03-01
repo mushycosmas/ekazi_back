@@ -51,6 +51,7 @@ import { Colleges } from 'src/entities/colleges.entity';
 import { Proficiencies } from 'src/entities/proficiencies.entity';
 import { Industries } from 'src/entities/industries.entity';
 import { Languages } from 'src/entities/languages.entity';
+import { ApplicantObjective } from 'src/entities/applicants/applicant-objective.entity';
 
 // import { Correspondences } from '../entities/correspondences.entity';
 
@@ -81,6 +82,7 @@ import { Languages } from 'src/entities/languages.entity';
         ApplicantPositions,
         ApplicantLanguages,
         ApplicantEmployers,
+        ApplicantObjective,
 
         // Other main entities
         Users,
@@ -130,6 +132,7 @@ import { Languages } from 'src/entities/languages.entity';
       ApplicantPositions,
       ApplicantLanguages,
       ApplicantEmployers,
+      ApplicantObjective,
 
       Users,
       MaritalStatuses,
