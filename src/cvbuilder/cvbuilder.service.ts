@@ -128,14 +128,14 @@ export class CvbuilderService {
         .filter(culture => culture !== null),
       personalities: applicant.applicant_personalities || [],
       // FIXED: Use the safe date formatter for proficiency dates
-     proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
-  id: prof.id,
-  proficiency_id: prof.proficiency_id,
-  started: prof.started ? prof.started.toISOString().split('T')[0] : null,
-  ended: prof.ended ? prof.ended.toISOString().split('T')[0] : null,
-  award: prof.award,
-  attachment: prof.attachment
-})),
+//      proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
+//   id: prof.id,
+//   proficiency_id: prof.proficiency_id,
+//   started: prof.started ? prof.started.toISOString().split('T')[0] : null,
+//   ended: prof.ended ? prof.ended.toISOString().split('T')[0] : null,
+//   award: prof.award,
+//   attachment: prof.attachment
+// })),
       // FIXED: Also fix education dates to use the same formatter
       education: (applicant.applicant_education || []).map(edu => ({
         id: edu.id,
