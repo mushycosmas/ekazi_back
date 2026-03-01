@@ -18,7 +18,6 @@ export class CvbuilderService {
   // Helper function to format position name (like ucwords in PHP)
   private formatPositionName(positionName: string): string | null {
     if (!positionName) return null;
-    // Convert to lowercase then uppercase first letter of each word
     return positionName.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
   }
 
@@ -49,7 +48,6 @@ export class CvbuilderService {
     if (currentPosition?.position?.position_name) {
       return this.formatPositionName(currentPosition.position.position_name);
     }
-
     return null;
   }
 
@@ -148,24 +146,70 @@ export class CvbuilderService {
       .filter(software => software !== null);
 
     // ---------------------
-    // 5️⃣ Build the final response object
+    // 5️⃣ Build the final response object in CV profile order
     // ---------------------
     const data = {
-      // Top-level fields
+      // =============================================
+      // 1. BASIC INFORMATION
+      // =============================================
+      applicant_profile: {
+        id: applicant.id,
+        first_name: applicant.first_name,
+        middle_name: applicant.middle_name,
+        last_name: applicant.last_name,
+        dob: this.formatDate(applicant.dob),
+        nationality_id: applicant.nationality_id || null,
+        picture: applicant.picture,
+        background_picture: applicant.background_picture,
+        email: applicant.user?.email || null,
+        marital_status: applicant.marital?.marital_status || null,
+        gender: applicant.gender?.gender_name || null,
+      },
+
+      // =============================================
+      // 2. CONTACT INFORMATION
+      // =============================================
+      phone: (applicant.applicant_phones || []).map(phone => ({
+        id: phone.id,
+        phone_number: phone.phone_number
+      })),
+      
       address: (applicant.applicant_addresses || []).map(address => ({
         id: address.id,
         region: address.region?.region_name || null,
         sub_location: address.sub_location,
         postal: address.postal
       })),
-      
-      phone: (applicant.applicant_phones || []).map(phone => ({
-        id: phone.id,
-        phone_number: phone.phone_number
-      })),
-      
+
+      // =============================================
+      // 3. CAREER OBJECTIVE & SUMMARY
+      // =============================================
       objective: applicant.applicant_objectives?.[0]?.objective || null,
-      
+      career_summary: applicant.applicant_career?.[0]?.career || null,
+      current_position: current_position,
+
+      // =============================================
+      // 4. WORK EXPERIENCE
+      // =============================================
+      experience: positions.map(pos => ({
+        id: pos.id,
+        position: pos.position?.position_name || null,
+        position_level: pos.position_level?.position_name || null,
+        industry: pos.industry?.industry_name || null,
+        employer: pos.applicant_employer?.employer_name || null,
+        region: pos.region?.region_name || null,
+        sub_location: pos.sub_location,
+        responsibility: pos.responsibility,
+        remark: pos.remark,
+        start_date: this.formatDate(pos.start_date),
+        end_date: this.formatDate(pos.end_date),
+        start_salary: pos.start_salary?.low || null,
+        end_salary: pos.end_salary?.high || null,
+      })),
+
+      // =============================================
+      // 5. EDUCATION
+      // =============================================
       education: (applicant.applicant_education || []).map(edu => ({
         id: edu.id,
         college_id: edu.college_id,
@@ -176,35 +220,10 @@ export class CvbuilderService {
         started: this.formatDate(edu.started),
         ended: this.formatDate(edu.ended)
       })),
-      
-      referees: (applicant.referees || []).map(referee => ({
-        id: referee.id,
-        first_name: referee.first_name,
-        middle_name: referee.middle_name,
-        last_name: referee.last_name,
-        employer: referee.employer,
-        position: referee.referee_position,
-        email: referee.email,
-        phone: referee.phone,
-        type: referee.type
-      })),
-      
-      experience: positions.map(pos => ({
-        id: pos.id,
-        position: pos.position?.position_name || null,
-        position_level: pos.position_level?.position_name || null, // FIXED: changed from position_name to level_name
-        industry: pos.industry?.industry_name || null,
-        employer: pos.applicant_employer?.employer_name || null,
-        region: pos.region?.region_name || null,
-        sub_location: pos.sub_location,
-        responsibility: pos.responsibility,
-        remark: pos.remark,
-        start_date: this.formatDate(pos.start_date),
-        end_date: this.formatDate(pos.end_date),
-        start_salary: pos.start_salary?.low || null, // FIXED: changed from .low to .salary_range
-        end_salary: pos.end_salary?.high || null,     // FIXED: changed from .high to .salary_range
-      })),
-      
+
+      // =============================================
+      // 6. TRAINING & CERTIFICATIONS
+      // =============================================
       training: (applicant.applicant_trainings || [])
         .filter(training => !training.hide)
         .map(training => ({
@@ -216,41 +235,55 @@ export class CvbuilderService {
           ended: this.formatDate(training.ended),
           attachment: training.attachment
         })),
-      
+
+      // =============================================
+      // 7. SKILLS & PROFICIENCY
+      // =============================================
+      skills: {
+        tools: tools
+          .filter(tool => tool && tool.hide === 0)
+          .map(tool => ({
+            id: tool.id,
+            name: tool.tool_name
+          })),
+        
+        knowledge: (applicant.applicant_knowledge || [])
+          .map(k => k.knowledge)
+          .filter(knowledge => knowledge && !knowledge.hide)
+          .map(knowledge => ({
+            id: knowledge.id,
+            name: knowledge.knowledge_name
+          })),
+        
+        software: software
+          .filter(software => software && !software.hide)
+          .map(software => ({
+            id: software.id,
+            name: software.software_name
+          })),
+      },
+
+      // =============================================
+      // 8. LANGUAGE PROFICIENCY
+      // =============================================
       language: (applicant.applicant_languages || []).map(lang => ({
         id: lang.id,
-        language: lang.language?.language_name || null, // FIXED: removed extra dot
+        language: lang.language?.language_name || null,
         read: lang.read?.read_ability || null,
         write: lang.write?.write_ability || null,
         speak: lang.speak?.speak_ability || null,
         understand: lang.understand?.understand_ability || null
       })),
-      
-      applicant_profile: {
-        id: applicant.id,
-        first_name: applicant.first_name,
-        middle_name: applicant.middle_name,
-        last_name: applicant.last_name,
-        dob: this.formatDate(applicant.dob),
-        nationality_id: applicant.nationality_id || null,
-        picture: applicant.picture,
-        background_picture: applicant.background_picture,
-        email: applicant.user?.email || null,
-      },
-      
+
+      // =============================================
+      // 9. CULTURAL & PERSONALITY TRAITS
+      // =============================================
       culture: (applicant.applicant_cultures || [])
         .map(c => c.culture)
         .filter(culture => culture !== null)
         .map(culture => ({
           id: culture.id,
           name: culture.culture_name
-        })),
-      
-      tools: tools
-        .filter(tool => tool && tool.hide === 0)
-        .map(tool => ({
-          id: tool.id,
-          name: tool.tool_name
         })),
       
       applicant_personality: (applicant.applicant_personalities || [])
@@ -262,22 +295,10 @@ export class CvbuilderService {
           id: personality.id,
           name: personality.personality_name
         })),
-      
-      knowledge: (applicant.applicant_knowledge || [])
-        .map(k => k.knowledge)
-        .filter(knowledge => knowledge && !knowledge.hide)
-        .map(knowledge => ({
-          id: knowledge.id,
-          name: knowledge.knowledge_name
-        })),
-      
-      software: software
-        .filter(software => software && !software.hide)
-        .map(software => ({
-          id: software.id,
-          name: software.software_name
-        })),
-      
+
+      // =============================================
+      // 10. PROFESSIONAL PROFICIENCY
+      // =============================================
       proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
         id: prof.id,
         proficiency_id: prof.proficiency_id,
@@ -286,12 +307,21 @@ export class CvbuilderService {
         award: prof.award,
         attachment: prof.attachment
       })),
-      
-      careers: applicant.applicant_career?.[0]?.career || null,
-      
-      marital_status: applicant.marital?.marital_status || null,
-      
-      current_position: current_position,
+
+      // =============================================
+      // 11. REFERENCES
+      // =============================================
+      referees: (applicant.referees || []).map(referee => ({
+        id: referee.id,
+        first_name: referee.first_name,
+        middle_name: referee.middle_name,
+        last_name: referee.last_name,
+        employer: referee.employer,
+        position: referee.referee_position,
+        email: referee.email,
+        phone: referee.phone,
+        type: referee.type
+      })),
     };
 
     return data;
