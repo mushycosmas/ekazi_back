@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   Unique,
+  JoinColumn,
 } from 'typeorm';
 import { Applicants } from './applicants.entity';
 import { Personalities } from '../personalities.entity';
@@ -15,10 +16,10 @@ export class ApplicantPersonalities {
   @PrimaryGeneratedColumn({ unsigned: true })
   id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'applicant_id' })
   applicant_id: number;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int', unsigned: true, name: 'personality_id' })
   personality_id: number;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', nullable: true })
@@ -31,8 +32,10 @@ export class ApplicantPersonalities {
   // Relations
   // ----------------------
   @ManyToOne(() => Applicants, (applicant) => applicant.applicant_personalities)
+  @JoinColumn({ name: 'applicant_id' })  // Add this line to explicitly specify the column
   applicant: Applicants;
 
   @ManyToOne(() => Personalities, (personality) => personality.applicant_personalities)
+  @JoinColumn({ name: 'personality_id' })  // Add this line to explicitly specify the column
   personality: Personalities;
 }
