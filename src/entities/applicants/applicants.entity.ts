@@ -53,6 +53,9 @@ export class Applicants {
   @Column({ type: 'varchar', length: 40, nullable: true })
   incomplete_notification: string | null;
 
+  // @Column({type:'varchar',length:100 ,nullable:true})
+  // test:string;
+
   @Column({ type: 'int', default: 0 })
   unsubscribe: number;
 
@@ -114,6 +117,9 @@ export class Applicants {
   @OneToMany(() => ApplicantPersonalities, (p) => p.applicant)
   applicant_personalities: ApplicantPersonalities[];
 
+  
+
+
   @OneToMany(() => ApplicantTools, (t) => t.applicant)
   applicant_tools: ApplicantTools[];
 
@@ -133,6 +139,7 @@ export class Applicants {
   applicant_phones: ApplicantPhones[];
 
   @OneToMany(() => ApplicantEducation, (e) => e.applicant)
+  
   applicant_education: ApplicantEducation[];
 
   @OneToMany(() => ApplicantPositions, (pos) => pos.applicant)

@@ -1,9 +1,8 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { GlobalCacheModule } from './cache/cache.module';
-import { CacheService } from './cache/cache.service';
+import { DatabaseModule } from './db/database.module'; // Import your database module
+
 import { CvbuilderModule } from './cvbuilder/cvbuilder.module';
 // ... other imports
 
@@ -12,14 +11,11 @@ import { CvbuilderModule } from './cvbuilder/cvbuilder.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    TypeOrmModule.forRoot({
-      // ... your database config
-    }),
-    GlobalCacheModule, // Make cache available globally
+    DatabaseModule, // Use your database module instead of direct TypeOrmModule
+ 
     CvbuilderModule,
     // ... other modules
   ],
-  providers: [CacheService],
-  exports: [CacheService],
+
 })
 export class AppModule {}
