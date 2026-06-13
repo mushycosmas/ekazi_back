@@ -54,6 +54,8 @@ import { Languages } from 'src/entities/languages.entity';
 import { ApplicantObjective } from 'src/entities/applicants/applicant-objective.entity';
 
 // import { Correspondences } from '../entities/correspondences.entity';
+import { Role } from 'src/entities/role.entity';
+import { Permission } from 'src/entities/permission.entity';
 
 @Module({
   imports: [
@@ -62,7 +64,7 @@ import { ApplicantObjective } from 'src/entities/applicants/applicant-objective.
       host: 'localhost',
       port: 3306,
       username: 'root',
-      password: 'root123',
+      // password: 'root123',
       database: 'ekazi',
       entities: [
         // Applicant-related
@@ -86,6 +88,8 @@ import { ApplicantObjective } from 'src/entities/applicants/applicant-objective.
 
         // Other main entities
         Users,
+        Role,
+        Permission,
         MaritalStatuses,
         Genders,
         Cultures,
@@ -135,6 +139,8 @@ import { ApplicantObjective } from 'src/entities/applicants/applicant-objective.
       ApplicantObjective,
 
       Users,
+      Role,
+      Permission,
       MaritalStatuses,
       Genders,
       Cultures,

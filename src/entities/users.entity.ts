@@ -1,12 +1,16 @@
-// src/entities/users.entity.ts
 import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
   OneToMany,
+  ManyToMany,
+  JoinTable,
+  ManyToOne,
+  JoinColumn // Add this import
 } from 'typeorm';
 import { Applicants } from './applicants/applicants.entity';
-
+import { Role } from './role.entity';
+import { Permission } from './permission.entity';
 
 @Entity('users')
 export class Users {
@@ -77,7 +81,19 @@ export class Users {
   // Relations
   // ----------------------
 
-
   @OneToMany(() => Applicants, (applicant) => applicant.user)
   applicants: Applicants[];
+
+  // FIXED: Many-to-One relationship with Role
+  @ManyToOne(() => Role, (role) => role.users)
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
+
+  // @ManyToMany(() => Permission)
+  // @JoinTable({
+  //   name: 'user_has_permissions',
+  //   joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+  //   inverseJoinColumn: { name: 'permission_id', referencedColumnName: 'id' }
+  // })
+  // permissions: Permission[];
 }
