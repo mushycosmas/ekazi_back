@@ -13,4 +13,4 @@ import { ApplicantPositions } from 'src/entities/applicants/applicant-positions.
   providers: [CvbuilderService],
   controllers: [CvbuilderController],
 })
-export class CvbuilderModule {}
+export class CvbuilderModule {} 

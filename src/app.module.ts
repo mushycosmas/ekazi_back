@@ -6,6 +6,31 @@ import { CvbuilderModule } from './cvbuilder/cvbuilder.module';
 import { EmployerModule } from './employer/employer.module';
 import { EmployerController } from './employer/controllers/employer.controller';
 import { EmployerUserService } from './employer/services/employer-user.service';
+import { RegionsModule } from './regions/regions.module';
+import { RegionsController } from './regions/regions.controller';
+import { RegionsService } from './regions/regions.service';
+import { CountriesController } from './Countries/countries.controller';
+import { CountriesService } from './Countries/countries.service';
+import { CountriesModule } from './Countries/countries.module';
+import { LanguagesModule } from './languages/languages.module';
+import { SoftwaresModule } from './softwares/softwares.module';
+import { ToolsModule } from './tools/tools.module';
+import { CulturesModule } from './cultures/cultures.module';
+import { SalaryRangesModule } from './salaryRanges/salary-ranges.module';
+import { EducationLevelsModule } from './educations/education-levels.module';
+import { CollegesModule } from './colleges/colleges.module';
+import { CoursesModule } from './courses/courses.module';
+import { GendersModule } from './genders/genders.module';
+import { IndustriesModule } from './industries/industries.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
+import { MajorsModule } from './majors/majors.module';
+import { OrganizationsModule } from './organizations/organizations.module';
+import { PersonalitiesModule } from './personalities/personalities.module';
+import { PositionsModule } from './positions/positions.module';
+import { ProficienciesModule } from './proficiencies/proficiencies.module';
+import { MalitalStatusesModule } from './maritalstatuses/malital-statuses.module';
+import { LanguageReadsModule } from './languagereads/language-reads.module';
+import { LanguageSpeaksModule } from './languagespeaks/language-speaks.module';
 // ... other imports
 
 @Module({
@@ -15,11 +40,17 @@ import { EmployerUserService } from './employer/services/employer-user.service';
     }),
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
  
-    CvbuilderModule, EmployerModule,
+    CvbuilderModule, EmployerModule, RegionsModule,CountriesModule,
+    LanguagesModule,SoftwaresModule ,ToolsModule,CulturesModule ,SalaryRangesModule,EducationLevelsModule,
+    CollegesModule,CoursesModule,GendersModule,IndustriesModule,KnowledgeModule,MajorsModule,OrganizationsModule,
+    PersonalitiesModule,PositionsModule,ProficienciesModule,MalitalStatusesModule ,LanguageReadsModule,
+    LanguageSpeaksModule,
+
     // ... other modules
   ],
-  controllers: [EmployerController, EmployerController],
-  providers: [EmployerUserService],
+  controllers: [EmployerController, EmployerController,
+    RegionsController,CountriesController],
+  providers: [EmployerUserService,RegionsService,CountriesService],
 
 })
 export class AppModule {}
