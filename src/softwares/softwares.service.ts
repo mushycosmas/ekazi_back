@@ -25,7 +25,7 @@ export class SoftwaresService {
           'software.software_name as software_name',
         ])
         .groupBy('software.software_name')
-        .orderBy('software.id', 'DESC');
+        .orderBy('id', 'DESC');
 
       if (search) {
         query.andWhere(

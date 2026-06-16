@@ -22,7 +22,7 @@ export class RegionsService {
                 'region.region_name as region_name',
             ])
             .groupBy('region.region_name')
-            .orderBy('region.id', 'DESC');
+            .orderBy('id', 'DESC');
 
         if (search) {
             query.andWhere(

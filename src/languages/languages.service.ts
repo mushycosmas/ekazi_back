@@ -24,7 +24,7 @@ export class LanguagesService {
                     'language.language_name as language_name',
                 ])
                 .groupBy('language.language_name')
-                .orderBy('language.id', 'DESC');
+                .orderBy('id', 'DESC');
 
             if (search) {
                 query.andWhere(

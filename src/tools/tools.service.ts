@@ -24,7 +24,7 @@ export class ToolsService {
           'tool.tool_name as tool_name',
         ])
         .groupBy('tool.tool_name')
-        .orderBy('tool.id', 'DESC');
+        .orderBy('id', 'DESC');
 
       if (search) {
         query.andWhere(

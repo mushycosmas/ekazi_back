@@ -24,7 +24,7 @@ export class CulturesService {
           'culture.culture_name as culture_name',
         ])
         .groupBy('culture.culture_name')
-        .orderBy('culture.id', 'DESC');
+        .orderBy('id', 'DESC');
 
       if (search) {
         query.andWhere(

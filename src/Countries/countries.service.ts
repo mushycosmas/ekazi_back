@@ -24,7 +24,7 @@ export class CountriesService {
           'country.name as ame',
         ])
         .groupBy('country.name')
-        .orderBy('country.id', 'DESC');
+        .orderBy('id', 'DESC');
 
       if (search) {
         query.andWhere(
