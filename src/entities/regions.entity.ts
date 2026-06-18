@@ -9,6 +9,8 @@ import {
 import { Countries } from './countries.entity';
 import { ApplicantAddresses } from './applicants/applicant-addresses.entity';
 import { ApplicantPositions } from './applicants/applicant-positions.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
+import { JobAddresses } from 'src/jobs/entities/job-addresses.entity';
 
 @Entity('regions')
 export class Regions {
@@ -54,4 +56,9 @@ export class Regions {
 
   @OneToMany(() => ApplicantPositions, (position) => position.region)
   positions: ApplicantPositions[];
+
+  @OneToMany(() => Jobs, (job) => job.region)
+  jobs: Jobs[];
+  @OneToMany(() => JobAddresses, (address) => address.region,)
+  jobAddresses: JobAddresses[];
 }

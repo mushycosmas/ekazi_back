@@ -6,6 +6,8 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantEducation } from './applicants/applicant-education.entity';
+import { JobCourses } from 'src/jobs/entities/job-courses.entity';
+import { JobEducation } from 'src/jobs/entities/job-education.entity';
 
 @Entity('courses')
 export class Courses {
@@ -41,4 +43,9 @@ export class Courses {
   // ---------------------
   @OneToMany(() => ApplicantEducation, (education) => education.course)
   applicant_education: ApplicantEducation[];
+  @OneToMany(
+    () => JobCourses, (jobCourse) => jobCourse.course,)
+  jobCourses: JobCourses[];
+  @OneToMany(() => JobEducation, (jobEducation) => jobEducation.course)
+  jobEducation: JobEducation[];
 }

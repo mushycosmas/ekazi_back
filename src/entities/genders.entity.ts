@@ -6,6 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Applicants } from './applicants/applicants.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
 
 @Entity('genders')
 export class Genders {
@@ -26,7 +27,7 @@ export class Genders {
 
   @Column({ type: 'int', unsigned: true, nullable: true })
   updator_id: number | null;
- 
+
 
   @Column({ type: 'boolean', default: false })
   hide: boolean;
@@ -36,4 +37,7 @@ export class Genders {
   // ----------------------
   @OneToMany(() => Applicants, (applicant) => applicant.gender)
   applicants: Applicants[];
+
+  @OneToMany(() => Jobs, (job) => job.gender)
+  jobs: Jobs[];
 }

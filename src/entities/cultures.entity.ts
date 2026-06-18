@@ -6,6 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantCultures } from './applicants/applicant-cultures.entity';
+import { JobCultures } from 'src/jobs/entities/job-cultures.entity';
 
 @Entity('cultures')
 export class Cultures {
@@ -35,4 +36,7 @@ export class Cultures {
   // ----------------------
   @OneToMany(() => ApplicantCultures, (ac) => ac.culture)
   applicant_cultures: ApplicantCultures[];
+
+  @OneToMany( () => JobCultures, (jobCulture) => jobCulture.culture,)
+  jobCultures: JobCultures[];
 }

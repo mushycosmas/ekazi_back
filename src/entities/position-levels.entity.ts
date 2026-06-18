@@ -5,6 +5,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantPositions } from './applicants/applicant-positions.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
 
 @Entity('position_levels')
 export class PositionLevels {
@@ -37,4 +38,7 @@ export class PositionLevels {
   // ---------------------
   @OneToMany(() => ApplicantPositions, (ap) => ap.position_level)
   applicant_positions: ApplicantPositions[];
+
+  @OneToMany(() => Jobs, (job) => job.positionLevel)
+  jobs: Jobs[];
 }

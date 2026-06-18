@@ -6,6 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantKnowledge } from './applicants/applicant-knowledge.entity';
+import { JobKnowledge } from 'src/jobs/entities/job-knowledge.entity';
 
 @Entity('knowledge')
 export class Knowledge {
@@ -38,4 +39,10 @@ export class Knowledge {
     (applicantKnowledge) => applicantKnowledge.knowledge,
   )
   applicant_knowledge: ApplicantKnowledge[];
+
+  @OneToMany(
+    () => JobKnowledge,
+    (jobKnowledge) => jobKnowledge.knowledge,
+  )
+  jobKnowledge: JobKnowledge[];
 }

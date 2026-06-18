@@ -31,6 +31,7 @@ import { ProficienciesModule } from './proficiencies/proficiencies.module';
 import { MalitalStatusesModule } from './maritalstatuses/malital-statuses.module';
 import { LanguageReadsModule } from './languagereads/language-reads.module';
 import { LanguageSpeaksModule } from './languagespeaks/language-speaks.module';
+import { JobsModule } from './jobs/jobs.module';
 // ... other imports
 
 @Module({
@@ -44,7 +45,7 @@ import { LanguageSpeaksModule } from './languagespeaks/language-speaks.module';
     LanguagesModule,SoftwaresModule ,ToolsModule,CulturesModule ,SalaryRangesModule,EducationLevelsModule,
     CollegesModule,CoursesModule,GendersModule,IndustriesModule,KnowledgeModule,MajorsModule,OrganizationsModule,
     PersonalitiesModule,PositionsModule,ProficienciesModule,MalitalStatusesModule ,LanguageReadsModule,
-    LanguageSpeaksModule,
+    LanguageSpeaksModule,JobsModule,
 
     // ... other modules
   ],

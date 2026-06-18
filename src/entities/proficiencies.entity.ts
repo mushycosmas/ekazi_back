@@ -6,6 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantProficiencies } from './applicants/applicant-proficiencies.entity';
+import { JobProficiencies } from 'src/jobs/entities/job-proficiencies.entity';
 
 @Entity('proficiencies')
 export class Proficiencies {
@@ -32,4 +33,8 @@ export class Proficiencies {
     (applicantProficiency) => applicantProficiency.proficiency,
   )
   applicant_proficiencies: ApplicantProficiencies[];
+
+
+  @OneToMany(() => JobProficiencies, (jobProficiency) => jobProficiency.proficiency,)
+  jobProficiencies: JobProficiencies[];
 }

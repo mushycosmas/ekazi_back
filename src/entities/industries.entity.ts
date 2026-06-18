@@ -6,6 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantPositions } from './applicants/applicant-positions.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
 // import { ArticleIndustry } from './article-industry.entity';
 
 @Entity('industries')
@@ -37,9 +38,12 @@ export class Industries {
   // ---------------------
   // Reverse relations
   // ---------------------
-//   @OneToMany(() => ArticleIndustry, (ai) => ai.industry)
-//   article_industry: ArticleIndustry[];
+  //   @OneToMany(() => ArticleIndustry, (ai) => ai.industry)
+  //   article_industry: ArticleIndustry[];
 
   @OneToMany(() => ApplicantPositions, (ap) => ap.industry)
   applicant_positions: ApplicantPositions[];
+  
+  @OneToMany(() => Jobs, (job) => job.industry)
+  jobs: Jobs[];
 }

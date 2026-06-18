@@ -1,6 +1,8 @@
 // src/entities/language-understands.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { ApplicantLanguages } from './applicants/applicant-languages.entity';
+import { JobLanguages } from 'src/jobs/entities/job-languages.entity';
+
 
 @Entity('language_understands')
 export class LanguageUnderstands {
@@ -30,4 +32,8 @@ export class LanguageUnderstands {
   // ---------------------
   @OneToMany(() => ApplicantLanguages, (applicantLang) => applicantLang.understand)
   applicants: ApplicantLanguages[];
+
+  
+  @OneToMany(() => JobLanguages, (jobLanguage) => jobLanguage.understand,)
+  jobLanguages: JobLanguages[];
 }

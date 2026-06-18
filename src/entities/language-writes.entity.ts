@@ -1,6 +1,7 @@
 // src/entities/language-writes.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { ApplicantLanguages } from './applicants/applicant-languages.entity';
+import { JobLanguages } from 'src/jobs/entities/job-languages.entity';
 
 @Entity('language_writes')
 export class LanguageWrites {
@@ -30,4 +31,10 @@ export class LanguageWrites {
   // ---------------------
   @OneToMany(() => ApplicantLanguages, (applicantLang) => applicantLang.write)
   applicants: ApplicantLanguages[];
+
+  @OneToMany(
+    () => JobLanguages,
+    (jobLanguage) => jobLanguage.write,
+  )
+  jobLanguages: JobLanguages[];
 }

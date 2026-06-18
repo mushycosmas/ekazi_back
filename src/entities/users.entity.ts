@@ -11,6 +11,12 @@ import {
 import { Applicants } from './applicants/applicants.entity';
 import { Role } from './role.entity';
 import { Permission } from './permission.entity';
+import { JobEvaluationAptitudes } from 'src/jobs/entities/job-evaluation-aptitudes.entity';
+import { JobEvaluationGenerals } from 'src/jobs/entities/job-evaluation-generals.entity';
+import { JobEvaluationSpecifics } from 'src/jobs/entities/job-evaluation-specifics.entity';
+import { JobLikes } from 'src/jobs/entities/job-likes.entity';
+import { JobServiceInfos } from 'src/jobs/entities/job-service-infos.entity';
+import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
 
 @Entity('users')
 export class Users {
@@ -88,6 +94,27 @@ export class Users {
   @ManyToOne(() => Role, (role) => role.users)
   @JoinColumn({ name: 'role_id' })
   role: Role;
+
+  @OneToMany(() => JobEvaluationAptitudes, (aptitude) => aptitude.user,)
+  evaluationAptitudes: JobEvaluationAptitudes[];
+
+  @OneToMany(() => JobEvaluationGenerals, (general) => general.user,)
+  evaluationGenerals: JobEvaluationGenerals[];
+
+  @OneToMany(() => JobEvaluationSpecifics, (specific) => specific.user,)
+  evaluationSpecifics: JobEvaluationSpecifics[];
+
+  @OneToMany(
+    () => JobLikes,
+    (jobLike) => jobLike.user,
+  )
+  jobLikes: JobLikes[];
+
+  @OneToMany(() => JobServiceInfos, (jobServiceInfo) => jobServiceInfo.user,)
+  jobServiceInfos: JobServiceInfos[];
+
+  @OneToMany(() => JobShortListings, (shortListing) => shortListing.user,)
+  jobShortListings: JobShortListings[];
 
   // @ManyToMany(() => Permission)
   // @JoinTable({

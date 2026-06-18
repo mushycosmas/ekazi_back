@@ -30,4 +30,6 @@ export class LanguageSpeaks {
   // ---------------------
   @OneToMany(() => ApplicantLanguages, (applicantLang) => applicantLang.speak)
   applicants: ApplicantLanguages[];
+
+  
 }

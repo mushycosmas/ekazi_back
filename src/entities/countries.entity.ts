@@ -5,7 +5,9 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
 } from 'typeorm';
+
 import { Regions } from './regions.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
 
 @Entity('countries')
 export class Countries {
@@ -36,6 +38,8 @@ export class Countries {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
+   
+  @Exclude()
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updated_at: Date;
 
@@ -44,4 +48,7 @@ export class Countries {
 
   @OneToMany(() => Regions, (region) => region.country)
   regions: Regions[];
+
+  @OneToMany(() => Jobs, (job) => job.country)
+  jobs: Jobs[];
 }

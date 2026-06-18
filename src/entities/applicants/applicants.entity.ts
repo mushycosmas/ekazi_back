@@ -26,6 +26,9 @@ import { ApplicantPhones } from './applicant-phones.entity';
 import { ApplicantEducation } from './applicant-education.entity';
 import { ApplicantObjective } from './applicant-objective.entity';
 import { ApplicantLanguages } from './applicant-languages.entity';
+import { JobAlerts } from 'src/jobs/entities/job-alerts.entity';
+import { JobCarts } from 'src/jobs/entities/job-carts.entity';
+import { JobMatchNotifications } from 'src/jobs/entities/job-match-notifications.entity';
 
 @Entity('applicants')
 export class Applicants {
@@ -102,8 +105,8 @@ export class Applicants {
   @OneToMany(() => ApplicantReferees, (ref) => ref.applicant)
   referees: ApplicantReferees[];
 
-//   @OneToMany(() => Correspondences, (c) => c.applicant)
-//   correspondences: Correspondences[];
+  //   @OneToMany(() => Correspondences, (c) => c.applicant)
+  //   correspondences: Correspondences[];
 
   @OneToMany(() => ApplicantCareers, (ac) => ac.applicant)
   applicant_career: ApplicantCareers[];
@@ -117,7 +120,7 @@ export class Applicants {
   @OneToMany(() => ApplicantPersonalities, (p) => p.applicant)
   applicant_personalities: ApplicantPersonalities[];
 
-  
+
 
 
   @OneToMany(() => ApplicantTools, (t) => t.applicant)
@@ -139,15 +142,25 @@ export class Applicants {
   applicant_phones: ApplicantPhones[];
 
   @OneToMany(() => ApplicantEducation, (e) => e.applicant)
-  
+
   applicant_education: ApplicantEducation[];
 
   @OneToMany(() => ApplicantPositions, (pos) => pos.applicant)
   positions: ApplicantPositions[];
 
   @OneToMany(() => ApplicantObjective, (objective) => objective.applicant)
-applicant_objectives: ApplicantObjective[];
+  applicant_objectives: ApplicantObjective[];
 
   @OneToMany(() => ApplicantLanguages, (appLang) => appLang.applicant)
-applicant_languages: ApplicantLanguages[];
+  applicant_languages: ApplicantLanguages[];
+  @OneToMany(() => JobAlerts, (jobAlert) => jobAlert.applicant,)
+  jobAlerts: JobAlerts[];
+  @OneToMany(
+    () => JobCarts,
+    (cart) => cart.applicant,
+  )
+  jobCarts: JobCarts[];
+
+  @OneToMany(() => JobMatchNotifications, (notification) => notification.applicant,)
+  matchNotifications: JobMatchNotifications[];
 }
