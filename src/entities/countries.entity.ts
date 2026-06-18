@@ -39,7 +39,7 @@ export class Countries {
   created_at: Date;
 
    
-  @Exclude()
+  
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updated_at: Date;
 
