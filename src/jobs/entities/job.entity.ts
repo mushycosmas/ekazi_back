@@ -46,6 +46,10 @@ import { JobRequirements } from './job-requirements.entity';
 import { JobSalaries } from './job-salaries.entity';
 import { JobServiceInfos } from './job-service-infos.entity';
 import { JobShortListings } from './job-short-listings.entity';
+import { JobTypes } from './job-types.entity';
+import { JobStatistics } from './job-statistics.entity';
+import { JobSoftware } from './job-software.entity';
+import { JobTool } from './job-tool.entity';
 
 
 @Entity('jobs')
@@ -346,4 +350,22 @@ export class Jobs {
 
     @OneToMany(() => JobShortListings, (shortListing) => shortListing.job,)
     shortListings: JobShortListings[];
+
+    @OneToMany(
+        () => JobTypes,
+        (jobType) => jobType.job,
+    )
+    jobTypes: JobTypes[];
+
+    @OneToMany(() => JobStatistics, (stat) => stat.job)
+    jobStatistics: JobStatistics[];
+
+    @OneToMany(
+        () => JobSoftware,
+        (jobSoftware) => jobSoftware.job,
+    )
+    jobSoftwares: JobSoftware[];
+
+    @OneToMany(() => JobTool, (jobTool) => jobTool.job,)
+    jobTools: JobTool[];
 }

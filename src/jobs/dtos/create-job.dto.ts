@@ -1,18 +1,82 @@
-import {
-  IsString,
-  IsOptional,
-  IsNumber,
+ import {
+    IsString,
+    IsNumber,
+    IsOptional,
+    IsBoolean,
+    IsNotEmpty,
+    MaxLength,
 } from 'class-validator';
 
 export class CreateJobDto {
-  @IsString()
-  title: string;
+    @IsNumber()
+    client_id: number;
 
-  @IsOptional()
-  @IsString()
-  description?: string;
+    @IsNumber()
+    category_id: number;
 
-  @IsOptional()
-  @IsNumber()
-  client_id?: number;
+    @IsNumber()
+    country_id: number;
+
+    @IsNumber()
+    creator_id: number;
+
+    @IsNumber()
+    updator_id: number;
+
+    @IsNumber()
+    type_id: number;
+
+    @IsNumber()
+    stage_id: number;
+
+    @IsNumber()
+    position_id: number;
+
+    @IsNumber()
+    position_level_id: number;
+
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(300)
+    title: string;
+
+    @IsString()
+    @IsNotEmpty()
+    duty: string;
+
+    @IsString()
+    @IsNotEmpty()
+    status: string;
+
+    @IsString()
+    @IsNotEmpty()
+    dead_line: string;
+
+    @IsOptional()
+    @IsBoolean()
+    featured?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
+    hide?: boolean;
+
+    @IsOptional()
+    @IsNumber()
+    industry_id?: number;
+
+    @IsOptional()
+    @IsNumber()
+    region_id?: number;
+
+    @IsOptional()
+    @IsNumber()
+    gender_id?: number;
+
+    @IsOptional()
+    @IsNumber()
+    currency_id?: number;
+
+    @IsOptional()
+    @IsNumber()
+    quantity?: number;
 }

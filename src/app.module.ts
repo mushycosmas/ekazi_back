@@ -32,6 +32,11 @@ import { MalitalStatusesModule } from './maritalstatuses/malital-statuses.module
 import { LanguageReadsModule } from './languagereads/language-reads.module';
 import { LanguageSpeaksModule } from './languagespeaks/language-speaks.module';
 import { JobsModule } from './jobs/jobs.module';
+import { JobMetasModule } from './jobs/modules/job-metas.module';
+import { JobEducationModule } from './jobs/modules/job-education.module';
+import { JobLanguagesModule } from './jobs/modules/job-languages.module';
+import { JobReportTosModule } from './jobs/modules/job-report-tos.module';
+ 
 // ... other imports
 
 @Module({
@@ -39,19 +44,20 @@ import { JobsModule } from './jobs/jobs.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    DatabaseModule, // Use your database module instead of direct TypeOrmModule
  
-    CvbuilderModule, EmployerModule, RegionsModule,CountriesModule,
-    LanguagesModule,SoftwaresModule ,ToolsModule,CulturesModule ,SalaryRangesModule,EducationLevelsModule,
-    CollegesModule,CoursesModule,GendersModule,IndustriesModule,KnowledgeModule,MajorsModule,OrganizationsModule,
-    PersonalitiesModule,PositionsModule,ProficienciesModule,MalitalStatusesModule ,LanguageReadsModule,
-    LanguageSpeaksModule,JobsModule,
+    DatabaseModule, // Use your database module instead of direct TypeOrmModule
+
+    CvbuilderModule, EmployerModule, RegionsModule, CountriesModule,
+    LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
+    CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
+    PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
+    LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
 
     // ... other modules
   ],
   controllers: [EmployerController, EmployerController,
-    RegionsController,CountriesController],
-  providers: [EmployerUserService,RegionsService,CountriesService],
+    RegionsController, CountriesController],
+  providers: [EmployerUserService, RegionsService, CountriesService],
 
 })
-export class AppModule {}
+export class AppModule { }

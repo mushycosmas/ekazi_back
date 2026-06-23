@@ -6,6 +6,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantTools } from './applicants/applicant-tools.entity';
+import { JobTool } from 'src/jobs/entities/job-tool.entity';
 
 @Entity('tools')
 export class Tools {
@@ -38,4 +39,7 @@ export class Tools {
   // ----------------------
   @OneToMany(() => ApplicantTools, (at) => at.tools)
   applicant_tools: ApplicantTools[];
+
+  @OneToMany(() => JobTool, (jobTool) => jobTool.tool,)
+  jobTools: JobTool[];
 }

@@ -96,6 +96,11 @@ import { JobRequirements } from 'src/jobs/entities/job-requirements.entity';
 import { JobSalaries } from 'src/jobs/entities/job-salaries.entity';
 import { JobServiceInfos } from 'src/jobs/entities/job-service-infos.entity';
 import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
+import { JobTypes } from 'src/jobs/entities/job-types.entity';
+import { JobUniversalTypes } from 'src/entities/job-universal-types.entity';
+import { JobStatistics } from 'src/jobs/entities/job-statistics.entity';
+import { JobSoftware } from 'src/jobs/entities/job-software.entity';
+import { JobTool } from 'src/jobs/entities/job-tool.entity';
 
 
 @Module({
@@ -105,7 +110,7 @@ import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
       host: 'localhost',
       port: 3306,
       username: 'root',
-      password: 'root123',
+      //password: 'root123',
       database: 'ekazi',
       entities: [
         // Applicant-related
@@ -195,6 +200,11 @@ import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
         JobSalaries,
         JobServiceInfos,
         JobShortListings,
+        JobTypes,
+        JobUniversalTypes,
+        JobStatistics,
+        JobSoftware,
+        JobTool,
         // Correspondences,
       ],
       synchronize: false, // Only for dev! Auto-create tables
@@ -286,6 +296,11 @@ import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
       JobSalaries,
       JobServiceInfos,
       JobShortListings,
+      JobTypes,
+      JobUniversalTypes,
+      JobStatistics,
+      JobSoftware,
+      JobTool,
 
     ]),
   ],
