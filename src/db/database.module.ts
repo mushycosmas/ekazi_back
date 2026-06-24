@@ -110,7 +110,7 @@ import { JobTool } from 'src/jobs/entities/job-tool.entity';
       host: 'localhost',
       port: 3306,
       username: 'root',
-      //password: 'root123',
+      password: 'root123',
       database: 'ekazi',
       entities: [
         // Applicant-related
