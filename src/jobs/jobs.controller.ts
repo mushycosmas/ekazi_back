@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
 } from '@nestjs/common';
 
 import { JobsService } from './jobs.service';
@@ -24,10 +25,22 @@ export class JobsController {
     return this.jobsService.create(createJobDto);
   }
 
-  @Get()
-  findAll() {
-    return this.jobsService.findAll();
-  }
+@Get()
+findAll(
+  @Query('page') page?: string,
+  @Query('limit') limit?: string,
+  @Query('search') search?: string,
+  @Query('industryId') industryId?: string,
+  @Query('onlyActive') onlyActive?: string,
+) {
+  return this.jobsService.findAll(
+    Number(page) || 1,
+    Number(limit) || 20,
+    search,
+    industryId ? Number(industryId) : undefined,
+    onlyActive === 'true',
+  );
+}
 
   @Get(':id')
   findOne(@Param('id') id: string) {

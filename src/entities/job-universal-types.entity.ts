@@ -7,6 +7,7 @@ import {
 
 
 import { JobTypes } from 'src/jobs/entities/job-types.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
 
 @Entity('job_universal_types')
 export class JobUniversalTypes {
@@ -43,4 +44,7 @@ export class JobUniversalTypes {
     (jobType) => jobType.jobUniversalType,
   )
   jobTypes: JobTypes[];
+
+  @OneToMany(() => Jobs, (job) => job.jobUniversalType)
+  jobs: Jobs[];
 }

@@ -50,6 +50,7 @@ import { JobTypes } from './job-types.entity';
 import { JobStatistics } from './job-statistics.entity';
 import { JobSoftware } from './job-software.entity';
 import { JobTool } from './job-tool.entity';
+import { JobUniversalTypes } from 'src/entities/job-universal-types.entity';
 
 
 @Entity('jobs')
@@ -368,4 +369,8 @@ export class Jobs {
 
     @OneToMany(() => JobTool, (jobTool) => jobTool.job,)
     jobTools: JobTool[];
+
+    @ManyToOne(() => JobUniversalTypes)
+    @JoinColumn({ name: 'type_id' })
+    jobUniversalType: JobUniversalTypes;
 }
