@@ -110,7 +110,7 @@ import { JobTool } from 'src/jobs/entities/job-tool.entity';
       host: 'localhost',
       port: 3306,
       username: 'root',
-      gitpassword: 'root123',
+      password: 'root123',
       database: 'ekazi',
       entities: [
         // Applicant-related
