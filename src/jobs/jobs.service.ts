@@ -481,7 +481,7 @@ export class JobsService {
 
         return {
             success: true,
-            message: 'Job profile deleted successfully',
+            message: 'Job profile deleted was successfully ',
         };
     }
 }
