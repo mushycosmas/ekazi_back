@@ -101,6 +101,7 @@ import { JobUniversalTypes } from 'src/entities/job-universal-types.entity';
 import { JobStatistics } from 'src/jobs/entities/job-statistics.entity';
 import { JobSoftware } from 'src/jobs/entities/job-software.entity';
 import { JobTool } from 'src/jobs/entities/job-tool.entity';
+import { JobAbility } from 'src/jobs/entities/job-abilities.entity';
 
 
 @Module({
@@ -205,6 +206,7 @@ import { JobTool } from 'src/jobs/entities/job-tool.entity';
         JobStatistics,
         JobSoftware,
         JobTool,
+        JobAbility,
         // Correspondences,
       ],
       synchronize: false, // Only for dev! Auto-create tables
@@ -301,6 +303,7 @@ import { JobTool } from 'src/jobs/entities/job-tool.entity';
       JobStatistics,
       JobSoftware,
       JobTool,
+      JobAbility,
 
     ]),
   ],
