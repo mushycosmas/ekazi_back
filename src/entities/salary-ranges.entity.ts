@@ -5,6 +5,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ApplicantPositions } from './applicants/applicant-positions.entity';
+import { JobSalaries } from 'src/jobs/entities/job-salaries.entity';
 
 @Entity('salary_ranges')
 export class SalaryRanges {
@@ -26,12 +27,18 @@ export class SalaryRanges {
   // ---------------------
   // Reverse relations
   // ---------------------
-//   @OneToMany(() => ApplicantPositions, (ap) => ap.current_salary, { cascade: true })
-//   current_positions: ApplicantPositions[];
+  //   @OneToMany(() => ApplicantPositions, (ap) => ap.current_salary, { cascade: true })
+  //   current_positions: ApplicantPositions[];
 
   @OneToMany(() => ApplicantPositions, (ap) => ap.start_salary, { cascade: true })
   start_positions: ApplicantPositions[];
 
   @OneToMany(() => ApplicantPositions, (ap) => ap.end_salary, { cascade: true })
   end_positions: ApplicantPositions[];
+
+  @OneToMany(() => JobSalaries, (jobSalary) => jobSalary.fromSalary)
+  jobFromSalaries: JobSalaries[];
+
+  @OneToMany(() => JobSalaries, (jobSalary) => jobSalary.toSalary)
+  jobToSalaries: JobSalaries[];
 }

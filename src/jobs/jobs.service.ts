@@ -4,7 +4,7 @@ import {
     InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets } from 'typeorm';
+import { Repository, Brackets, DataSource } from 'typeorm';
 
 import { Jobs } from './entities/job.entity';
 import { CreateJobDto } from './dtos/create-job.dto';
@@ -17,8 +17,11 @@ import { JobSoftware } from './entities/job-software.entity';
 import { JobTool } from './entities/job-tool.entity';
 import { JobKnowledge } from './entities/job-knowledge.entity';
 import { JobProficiencies } from './entities/job-proficiencies.entity';
-
+import { JobAddresses } from './entities/job-addresses.entity';
+import { Positions } from 'src/entities/positions.entity';
+import { BadRequestException } from '@nestjs/common';
 import { CompleteJobProfileDto } from './dtos/complete-job-profile.dto';
+import { generateSlug } from 'src/utils/slug';
 
 @Injectable()
 export class JobsService {
@@ -46,6 +49,12 @@ export class JobsService {
 
         @InjectRepository(JobProficiencies)
         private readonly jobProficiencyRepository: Repository<JobProficiencies>,
+
+
+        @InjectRepository(JobAddresses)
+        private readonly jobAddressRepository: Repository<JobAddresses>,
+
+        private readonly dataSource: DataSource,
     ) { }
 
     // =========================
@@ -60,19 +69,74 @@ export class JobsService {
             throw new NotFoundException('Client not found');
         }
 
-        const job = this.jobsRepository.create({
-            ...createJobDto,
-            created_at: new Date(),
-            updated_at: new Date(),
-        });
+        const queryRunner = this.dataSource.createQueryRunner();
 
-        const saved = await this.jobsRepository.save(job);
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        return {
-            success: true,
-            message: 'Job created successfully',
-            data: saved,
-        };
+        try {
+            let positionId = createJobDto.position_id;
+
+            // ✅ STEP 1: Check if position_id is string → create position
+            if (typeof positionId === 'string') {
+                const positionName = positionId.trim();
+
+                let position = await queryRunner.manager.findOne(Positions, {
+                    where: { position_name: positionName },
+                });
+
+                // If not exists → create it
+                if (!position) {
+                    position = await queryRunner.manager.save(Positions, {
+                        position_name: positionName,
+                        slug: generateSlug(positionName), // ✅ HERE
+                        creator_id: createJobDto.client_id ?? 1,
+                        updator_id: createJobDto.client_id ?? 1,
+                        industry_id: createJobDto.industry_id ?? 1,
+                        hide: 0,
+                        created_at: new Date(),
+                        updated_at: new Date(),
+                    });
+                }
+
+                positionId = position.id;
+            }
+
+            // Optional: ensure number
+            if (!positionId) {
+                throw new BadRequestException('Position is required');
+            }
+
+            // ✅ STEP 2: Create Job
+            const job = await queryRunner.manager.save(Jobs, {
+                ...createJobDto,
+                position_id: positionId,
+                status: createJobDto.status ?? 'unpublish',
+                created_at: new Date(),
+                updated_at: new Date(),
+            });
+
+            // ✅ STEP 3: Save Job Address
+            await queryRunner.manager.save(JobAddresses, {
+                job_id: job.id,
+                region_id: createJobDto.region_id,
+                sub_location: createJobDto.sub_location,
+            });
+
+            await queryRunner.commitTransaction();
+
+            return {
+                success: true,
+                message: 'Job created successfully',
+                data: job,
+            };
+
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     // =========================
@@ -262,15 +326,83 @@ export class JobsService {
     // FIND ONE
     // =========================
     async findOne(id: number) {
-        const job = await this.jobsRepository.findOne({
-            where: { id },
-        });
+        const job = await this.jobsRepository
+            .createQueryBuilder('job')
+
+            // ======================
+            // RELATIONS
+            // ======================
+
+            .leftJoinAndSelect('job.country', 'country')
+            .leftJoinAndSelect('job.region', 'region')
+            .leftJoinAndSelect('job.industry', 'industry')
+            .leftJoinAndSelect('job.position', 'position')
+            .leftJoinAndSelect('job.addresses', 'addresses')
+            .leftJoinAndSelect('job.positionLevel', 'positionLevel')
+            .leftJoinAndSelect('job.currency', 'currency')
+            .leftJoinAndSelect('job.jobSalaries', 'jobSalaries')
+            .leftJoinAndSelect('jobSalaries.fromSalary', 'fromSalary')
+            .leftJoinAndSelect('jobSalaries.toSalary', 'toSalary')
+
+            .leftJoinAndSelect('job.jobUniversalType', 'jobUniversalType')
+
+            // ======================
+            // SELECT
+            // ======================
+            .select([
+                'job.id',
+                'job.dead_line',
+                'job.quantity',
+
+                'positionLevel.id',
+                'positionLevel.position_name',
+
+                'currency.id',
+                'currency.currency_name',
+
+                'jobSalaries.id',
+
+                'fromSalary.id',
+                'fromSalary.low',
+                'fromSalary.high',
+
+                'toSalary.id',
+                'toSalary.low',
+                'toSalary.high',
+
+                'country.id',
+                'country.name',
+
+                'region.id',
+                'region.region_name',
+
+                'industry.id',
+                'industry.industry_name',
+
+                'position.id',
+                'position.position_name',
+
+                'jobUniversalType.id',
+                'jobUniversalType.type_name',
+
+                'addresses.id',
+                'addresses.sub_location',
+
+
+            ])
+
+            .where('job.id = :id', { id })
+            .getOne();
 
         if (!job) {
             throw new NotFoundException('Job not found');
         }
 
-        return job;
+        return {
+            success: true,
+            message: 'Job retrieved successfully',
+            data: job,
+        };
     }
 
     // =========================
@@ -290,7 +422,14 @@ export class JobsService {
     // DELETE JOB
     // =========================
     async remove(id: number) {
-        const job = await this.findOne(id);
+        const job = await this.jobsRepository.findOne({
+            where: { id },
+        });
+
+        if (!job) {
+            throw new NotFoundException('Job not found');
+        }
+
         await this.jobsRepository.remove(job);
 
         return {

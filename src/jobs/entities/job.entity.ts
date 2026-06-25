@@ -121,13 +121,13 @@ export class Jobs {
     @Column({ default: false })
     show_client_name: boolean;
 
-    @Column({ length: 300 })
+    @Column({ length: 300, nullable: true  })
     title: string;
 
     @Column({ nullable: true })
     quantity: number;
 
-    @Column('text')
+    @Column('text',)
     duty: string;
 
     @Column({ nullable: true, length: 100 })
@@ -151,7 +151,7 @@ export class Jobs {
     @Column({ length: 100, default: '0' })
     published: string;
 
-    @Column({ length: 255 })
+    @Column({ default: 'unpublish' })
     status: string;
 
     @Column({ default: false })

@@ -10,6 +10,7 @@ import { JobPersonalities } from './entities/job-personalities.entity';
 import { JobTool } from './entities/job-tool.entity';
 import { JobSoftware } from './entities/job-software.entity';
 import { JobKnowledge } from './entities/job-knowledge.entity';
+import { JobAddresses } from './entities/job-addresses.entity';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -19,6 +20,7 @@ import { JobKnowledge } from './entities/job-knowledge.entity';
         JobTool,
         JobKnowledge,
         JobProficiencies,
+        JobAddresses,
     ])],
     controllers: [JobsController],
     providers: [JobsService],

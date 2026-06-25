@@ -36,6 +36,8 @@ import { JobMetasModule } from './jobs/modules/job-metas.module';
 import { JobEducationModule } from './jobs/modules/job-education.module';
 import { JobLanguagesModule } from './jobs/modules/job-languages.module';
 import { JobReportTosModule } from './jobs/modules/job-report-tos.module';
+import { JobRequirementsModule } from './jobs/modules/job-requirements.module';
+import { JobOtherRequirementsModule } from './jobs/modules/job-other-requirements.module';
  
 // ... other imports
 
@@ -52,6 +54,7 @@ import { JobReportTosModule } from './jobs/modules/job-report-tos.module';
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
+    JobRequirementsModule,JobOtherRequirementsModule,
 
     // ... other modules
   ],

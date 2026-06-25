@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 
 import { Jobs } from './job.entity';
+import { SalaryRanges } from 'src/entities/salary-ranges.entity';
 
 @Entity('job_salaries')
 export class JobSalaries {
@@ -46,4 +47,12 @@ export class JobSalaries {
   })
   @JoinColumn({ name: 'job_id' })
   job: Jobs;
+
+    @ManyToOne(() => SalaryRanges, { eager: false })
+  @JoinColumn({ name: 'from_salary' })
+  fromSalary: SalaryRanges;
+
+  @ManyToOne(() => SalaryRanges, { eager: false })
+  @JoinColumn({ name: 'to_salary' })
+  toSalary: SalaryRanges;
 }

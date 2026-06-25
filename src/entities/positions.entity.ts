@@ -23,7 +23,7 @@ export class Positions {
   @Column({ type: 'int', unsigned: true, nullable: true })
   industry_id: number | null;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100 ,unique: true})
   position_name: string | null;
 
   @Column({ type: 'text' })
