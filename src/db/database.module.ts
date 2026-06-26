@@ -1,6 +1,7 @@
 // src/db/database.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // ----------------------
 // Applicant Entities
@@ -20,9 +21,8 @@ import { ApplicantPhones } from '../entities/applicants/applicant-phones.entity'
 import { ApplicantEducation } from '../entities/applicants/applicant-education.entity';
 import { ApplicantPositions } from '../entities/applicants/applicant-positions.entity';
 import { ApplicantLanguages } from '../entities/applicants/applicant-languages.entity';
-import { ApplicantEmployers } from 'src/entities/applicants/applicant-employers.entity';
-import { JobCarts } from 'src/jobs/entities/job-carts.entity';
-
+import { ApplicantEmployers } from '../entities/applicants/applicant-employers.entity';
+import { ApplicantObjective } from '../entities/applicants/applicant-objective.entity';
 
 // ----------------------
 // Other Main Entities
@@ -48,265 +48,192 @@ import { Personalities } from '../entities/personalities.entity';
 import { Majors } from '../entities/majors.entity';
 import { Regions } from '../entities/regions.entity';
 import { Countries } from '../entities/countries.entity';
-import { Colleges } from 'src/entities/colleges.entity';
-import { Proficiencies } from 'src/entities/proficiencies.entity';
-import { Industries } from 'src/entities/industries.entity';
-import { Languages } from 'src/entities/languages.entity';
-import { ApplicantObjective } from 'src/entities/applicants/applicant-objective.entity';
+import { Colleges } from '../entities/colleges.entity';
+import { Proficiencies } from '../entities/proficiencies.entity';
+import { Industries } from '../entities/industries.entity';
+import { Languages } from '../entities/languages.entity';
+import { Role } from '../entities/role.entity';
+import { Permission } from '../entities/permission.entity';
+import { Currencies } from '../entities/currencies.entity';
+import { JobMajors } from '../entities/job-majors.entity';
+import { MetaKeywords } from '../entities/meta-keywords.entity';
+import { Plans } from '../entities/plans.entity';
+import { PlanTypes } from '../entities/plan-types.entity';
+import { PaymentMethods } from '../entities/payment-methods.entity';
+import { JobUniversalTypes } from '../entities/job-universal-types.entity';
 
-// import { Correspondences } from '../entities/correspondences.entity';
-import { Role } from 'src/entities/role.entity';
-import { Permission } from 'src/entities/permission.entity';
-import { Jobs } from 'src/jobs/entities/job.entity';
-import { Contacts } from 'src/jobs/entities/contacts.entity';
-import { Currencies } from 'src/entities/currencies.entity';
-import { Clients } from 'src/client/clients.entity';
-import { JobAddresses } from 'src/jobs/entities/job-addresses.entity';
-import { JobAlerts } from 'src/jobs/entities/job-alerts.entity';
-import { JobApplicationModals } from 'src/jobs/entities/job-application-modals.entity';
-import { JobApplicationOptions } from 'src/jobs/entities/job-application-options.entity';
-import { JobApplicationSubscriptions } from 'src/jobs/entities/job-application-subscriptions.entity';
-import { JobApplyConditions } from 'src/jobs/entities/job-apply-conditions.entity';
-import { JobCourses } from 'src/jobs/entities/job-courses.entity';
-import { JobCultures } from 'src/jobs/entities/job-cultures.entity';
-import { JobEducation } from 'src/jobs/entities/job-education.entity';
-import { JobEmails } from 'src/jobs/entities/job-emails.entity';
-import { JobEvaluationAptitudes } from 'src/jobs/entities/job-evaluation-aptitudes.entity';
-import { JobEvaluationGenerals } from 'src/jobs/entities/job-evaluation-generals.entity';
-import { JobEvaluationSpecifics } from 'src/jobs/entities/job-evaluation-specifics.entity';
-import { JobExternalUrls } from 'src/jobs/entities/job-external-urls.entity';
-import { JobKnowledge } from 'src/jobs/entities/job-knowledge.entity';
-import { JobLanguages } from 'src/jobs/entities/job-languages.entity';
-import { JobLikes } from 'src/jobs/entities/job-likes.entity';
-import { JobMajors } from 'src/entities/job-majors.entity';
-import { JobMatchNotifications } from 'src/jobs/entities/job-match-notifications.entity';
-import { MetaKeywords } from 'src/entities/meta-keywords.entity';
-import { JobMetas } from 'src/jobs/entities/job-metas.entity';
-import { JobOtherRequirements } from 'src/jobs/entities/job-other-requirements.entity';
-import { JobPersonalities } from 'src/jobs/entities/job-personalities.entity';
-import { Plans } from 'src/entities/plans.entity';
-import { PlanTypes } from 'src/entities/plan-types.entity';
-import { JobPlans } from 'src/jobs/entities/job-plans.entity';
-import { PaymentMethods } from 'src/entities/payment-methods.entity';
-import { ClientSubscriptionPayments } from 'src/client/client-subscription-payments.entity';
-import { JobPositions } from 'src/jobs/entities/job-positions.entity';
-import { JobProficiencies } from 'src/jobs/entities/job-proficiencies.entity';
-import { JobReportTos } from 'src/jobs/entities/job-report-tos.entity';
-import { JobRequirements } from 'src/jobs/entities/job-requirements.entity';
-import { JobSalaries } from 'src/jobs/entities/job-salaries.entity';
-import { JobServiceInfos } from 'src/jobs/entities/job-service-infos.entity';
-import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
-import { JobTypes } from 'src/jobs/entities/job-types.entity';
-import { JobUniversalTypes } from 'src/entities/job-universal-types.entity';
-import { JobStatistics } from 'src/jobs/entities/job-statistics.entity';
-import { JobSoftware } from 'src/jobs/entities/job-software.entity';
-import { JobTool } from 'src/jobs/entities/job-tool.entity';
-import { JobAbility } from 'src/jobs/entities/job-abilities.entity';
+// ----------------------
+// Job Entities
+// ----------------------
+import { Jobs } from '../jobs/entities/job.entity';
+import { Contacts } from '../jobs/entities/contacts.entity';
+import { Clients } from '../client/clients.entity';
+import { ClientSubscriptionPayments } from '../client/client-subscription-payments.entity';
+import { JobCarts } from '../jobs/entities/job-carts.entity';
+import { JobAddresses } from '../jobs/entities/job-addresses.entity';
+import { JobAlerts } from '../jobs/entities/job-alerts.entity';
+import { JobApplicationModals } from '../jobs/entities/job-application-modals.entity';
+import { JobApplicationOptions } from '../jobs/entities/job-application-options.entity';
+import { JobApplicationSubscriptions } from '../jobs/entities/job-application-subscriptions.entity';
+import { JobApplyConditions } from '../jobs/entities/job-apply-conditions.entity';
+import { JobCourses } from '../jobs/entities/job-courses.entity';
+import { JobCultures } from '../jobs/entities/job-cultures.entity';
+import { JobEducation } from '../jobs/entities/job-education.entity';
+import { JobEmails } from '../jobs/entities/job-emails.entity';
+import { JobEvaluationAptitudes } from '../jobs/entities/job-evaluation-aptitudes.entity';
+import { JobEvaluationGenerals } from '../jobs/entities/job-evaluation-generals.entity';
+import { JobEvaluationSpecifics } from '../jobs/entities/job-evaluation-specifics.entity';
+import { JobExternalUrls } from '../jobs/entities/job-external-urls.entity';
+import { JobKnowledge } from '../jobs/entities/job-knowledge.entity';
+import { JobLanguages } from '../jobs/entities/job-languages.entity';
+import { JobLikes } from '../jobs/entities/job-likes.entity';
+import { JobMatchNotifications } from '../jobs/entities/job-match-notifications.entity';
+import { JobMetas } from '../jobs/entities/job-metas.entity';
+import { JobOtherRequirements } from '../jobs/entities/job-other-requirements.entity';
+import { JobPersonalities } from '../jobs/entities/job-personalities.entity';
+import { JobPlans } from '../jobs/entities/job-plans.entity';
+import { JobPositions } from '../jobs/entities/job-positions.entity';
+import { JobProficiencies } from '../jobs/entities/job-proficiencies.entity';
+import { JobReportTos } from '../jobs/entities/job-report-tos.entity';
+import { JobRequirements } from '../jobs/entities/job-requirements.entity';
+import { JobSalaries } from '../jobs/entities/job-salaries.entity';
+import { JobServiceInfos } from '../jobs/entities/job-service-infos.entity';
+import { JobShortListings } from '../jobs/entities/job-short-listings.entity';
+import { JobTypes } from '../jobs/entities/job-types.entity';
+import { JobStatistics } from '../jobs/entities/job-statistics.entity';
+import { JobSoftware } from '../jobs/entities/job-software.entity';
+import { JobTool } from '../jobs/entities/job-tool.entity';
+import { JobAbility } from '../jobs/entities/job-abilities.entity';
 
+// Create a single array of all entities to avoid duplication
+const allEntities = [
+  // Applicant Entities
+  Applicants,
+  ApplicantReferees,
+  ApplicantCareers,
+  ApplicantTrainings,
+  ApplicantCultures,
+  ApplicantPersonalities,
+  ApplicantTools,
+  ApplicantSoftware,
+  ApplicantKnowledge,
+  ApplicantProficiencies,
+  ApplicantAddresses,
+  ApplicantPhones,
+  ApplicantEducation,
+  ApplicantPositions,
+  ApplicantLanguages,
+  ApplicantEmployers,
+  ApplicantObjective,
+
+  // Core Entities
+  Users,
+  Role,
+  Permission,
+  MaritalStatuses,
+  Genders,
+  Cultures,
+  LanguageReads,
+  LanguageWrites,
+  LanguageSpeaks,
+  LanguageUnderstands,
+
+  // Business Entities
+  Organizations,
+  Courses,
+  EducationLevels,
+  PositionLevels,
+  Positions,
+  SalaryRanges,
+  Tools,
+  Softwares,
+  Knowledge,
+  Personalities,
+  Majors,
+  Regions,
+  Countries,
+  Colleges,
+  Proficiencies,
+  Industries,
+  Languages,
+
+  // Jobs & Related
+  Jobs,
+  JobAddresses,
+  JobAlerts,
+  JobApplicationModals,
+  JobApplicationOptions,
+  JobApplicationSubscriptions,
+  JobApplyConditions,
+  JobCarts,
+  JobCourses,
+  JobCultures,
+  JobEducation,
+  JobEmails,
+  JobEvaluationAptitudes,
+  JobEvaluationGenerals,
+  JobEvaluationSpecifics,
+  JobExternalUrls,
+  JobKnowledge,
+  JobLanguages,
+  JobLikes,
+  JobMajors,
+  JobMatchNotifications,
+  MetaKeywords,
+  JobMetas,
+  JobOtherRequirements,
+  JobPersonalities,
+  JobPlans,
+  JobPositions,
+  JobProficiencies,
+  JobReportTos,
+  JobRequirements,
+  JobSalaries,
+  JobServiceInfos,
+  JobShortListings,
+  JobTypes,
+  JobUniversalTypes,
+  JobStatistics,
+  JobSoftware,
+  JobTool,
+  JobAbility,
+
+  // Other
+  Currencies,
+  Clients,
+  Contacts,
+  Plans,
+  PlanTypes,
+  PaymentMethods,
+  ClientSubscriptionPayments,
+];
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      //password: 'root123', 
-      database: 'ekazi',
-      entities: [
-        // Applicant-related
-        Applicants,
-        ApplicantReferees,
-        ApplicantCareers,
-        ApplicantTrainings,
-        ApplicantCultures,
-        ApplicantPersonalities,
-        ApplicantTools,
-        ApplicantSoftware,
-        ApplicantKnowledge,
-        ApplicantProficiencies,
-        ApplicantAddresses,
-        ApplicantPhones,
-        ApplicantEducation,
-        ApplicantPositions,
-        ApplicantLanguages,
-        ApplicantEmployers,
-        ApplicantObjective,
-
-        // Other main entities
-        Users,
-        Role,
-        Permission,
-        MaritalStatuses,
-        Genders,
-        Cultures,
-        LanguageReads,
-        LanguageWrites,
-        LanguageSpeaks,
-        LanguageUnderstands,
-        Organizations,
-        Courses,
-        EducationLevels,
-        PositionLevels,
-        Positions,
-        SalaryRanges,
-        Tools,
-        Softwares,
-        Knowledge,
-        Personalities,
-        Majors,
-        Regions,
-        Countries,
-        Colleges,
-        Proficiencies,
-        Industries,
-        Languages,
-        Jobs,
-        Contacts,
-        Currencies,
-        Clients,
-        JobAddresses,
-        JobAlerts,
-        JobApplicationModals,
-        JobApplicationOptions,
-        JobApplicationSubscriptions,
-        JobApplyConditions,
-        JobCarts,
-        JobCourses,
-        JobCultures,
-        JobEducation,
-        JobEmails,
-        JobEvaluationAptitudes,
-        JobEvaluationGenerals,
-        JobEvaluationSpecifics,
-        JobExternalUrls,
-        JobKnowledge,
-        JobLanguages,
-        JobLikes,
-        JobMajors,
-        JobMatchNotifications,
-        MetaKeywords,
-        JobMetas,
-        JobOtherRequirements,
-        JobPersonalities,
-        Plans,
-        PlanTypes,
-        PaymentMethods,
-        JobPlans,
-        ClientSubscriptionPayments,
-        JobPositions,
-        JobProficiencies,
-        JobReportTos,
-        JobRequirements,
-        JobSalaries,
-        JobServiceInfos,
-        JobShortListings,
-        JobTypes,
-        JobUniversalTypes,
-        JobStatistics,
-        JobSoftware,
-        JobTool,
-        JobAbility,
-        // Correspondences,
-      ],
-      synchronize: false, // Only for dev! Auto-create tables
+    // Async configuration with environment variables
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'mysql',
+        host: config.get('DB_HOST', 'localhost'),
+        port: config.get('DB_PORT', 3306),
+        username: config.get('DB_USER', 'root'),
+        password: config.get('DB_PASS', ''),
+        database: config.get('DB_NAME', 'ekazi'),
+        entities: allEntities,
+        synchronize: false, // Always false for production
+        logging: config.get('NODE_ENV') === 'development',
+        // Optional: Add these for better performance
+        // poolSize: 10,
+        // connectTimeout: 30000,
+        // acquireTimeout: 30000,
+      }),
     }),
-    TypeOrmModule.forFeature([
-      // All entities available for injection
-      Applicants,
-      ApplicantReferees,
-      ApplicantCareers,
-      ApplicantTrainings,
-      ApplicantCultures,
-      ApplicantPersonalities,
-      ApplicantTools,
-      ApplicantSoftware,
-      ApplicantKnowledge,
-      ApplicantProficiencies,
-      ApplicantAddresses,
-      ApplicantPhones,
-      ApplicantEducation,
-      ApplicantPositions,
-      ApplicantLanguages,
-      ApplicantEmployers,
-      ApplicantObjective,
-
-      Users,
-      Role,
-      Permission,
-      MaritalStatuses,
-      Genders,
-      Cultures,
-      LanguageReads,
-      LanguageWrites,
-      LanguageSpeaks,
-      LanguageUnderstands,
-      Organizations,
-      Courses,
-      EducationLevels,
-      PositionLevels,
-      Positions,
-      SalaryRanges,
-      Tools,
-      Softwares,
-      Knowledge,
-      Personalities,
-      Majors,
-      Regions,
-      Countries,
-      Colleges,
-      Proficiencies,
-      Industries,
-      Languages,
-      // Correspondences,
-      Jobs,
-      Contacts,
-      Currencies,
-      Clients,
-      JobAddresses,
-      JobAlerts,
-      JobApplicationModals,
-      JobApplicationOptions,
-      JobApplicationSubscriptions,
-      JobApplyConditions,
-      JobCarts,
-      JobCourses,
-      JobCultures,
-      JobEducation,
-      JobEmails,
-      JobEvaluationAptitudes,
-      JobEvaluationGenerals,
-      JobEvaluationSpecifics,
-      JobExternalUrls,
-      JobLanguages,
-      JobLikes,
-      JobMajors,
-      JobMatchNotifications,
-      MetaKeywords,
-      JobMetas,
-      JobOtherRequirements,
-      JobPersonalities,
-      Plans,
-      PlanTypes,
-      PaymentMethods,
-      JobPlans,
-      ClientSubscriptionPayments,
-      JobPositions,
-      JobProficiencies,
-      JobReportTos,
-      JobRequirements,
-      JobSalaries,
-      JobServiceInfos,
-      JobShortListings,
-      JobTypes,
-      JobUniversalTypes,
-      JobStatistics,
-      JobSoftware,
-      JobTool,
-      JobAbility,
-
-    ]),
+    
+    // Register all entities for injection
+    TypeOrmModule.forFeature(allEntities),
   ],
   exports: [TypeOrmModule],
 })
-export class DatabaseModule { }
+export class DatabaseModule {}

@@ -5,7 +5,10 @@ import {
   IsBoolean,
   IsNotEmpty,
   MaxLength,
+  IsInt
+
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateJobDto {
   @IsNumber()
@@ -84,4 +87,14 @@ export class CreateJobDto {
   @IsOptional()
   @IsString()
   sub_location?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  from_salary?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  to_salary?: number;
 }

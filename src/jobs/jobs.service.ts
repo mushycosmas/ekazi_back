@@ -4,7 +4,7 @@ import {
     InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets, DataSource } from 'typeorm';
+import { Repository, Brackets, DataSource, QueryRunner } from 'typeorm';
 
 import { Jobs } from './entities/job.entity';
 import { CreateJobDto } from './dtos/create-job.dto';
@@ -22,6 +22,7 @@ import { Positions } from 'src/entities/positions.entity';
 import { BadRequestException } from '@nestjs/common';
 import { CompleteJobProfileDto } from './dtos/complete-job-profile.dto';
 import { generateSlug } from 'src/utils/slug';
+import { JobSalaries } from './entities/job-salaries.entity';
 
 @Injectable()
 export class JobsService {
@@ -49,6 +50,8 @@ export class JobsService {
 
         @InjectRepository(JobProficiencies)
         private readonly jobProficiencyRepository: Repository<JobProficiencies>,
+
+
 
 
         @InjectRepository(JobAddresses)
@@ -400,7 +403,7 @@ export class JobsService {
 
         return {
             success: true,
-            message: 'Job retrieved successfully',
+            message: 'Job retrieved successfully 2000',
             data: job,
         };
     }
@@ -409,13 +412,119 @@ export class JobsService {
     // UPDATE JOB
     // =========================
     async update(id: number, dto: UpdateJobDto) {
-        await this.findOne(id);
-        await this.jobsRepository.update(id, {
-            ...dto,
-            updated_at: new Date(),
+        const existingJob = await this.jobsRepository.findOne({
+            where: { id },
         });
 
-        return this.findOne(id);
+        if (!existingJob) {
+            throw new NotFoundException('Job not found');
+        }
+
+        const queryRunner = this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            // =========================
+            // POSITION (auto create)
+            // =========================
+            const positionId = await this.getOrCreatePosition(
+                dto.position_id,
+                queryRunner,
+                dto.client_id ?? existingJob.client_id,
+                dto.industry_id ?? existingJob.industry_id,
+            );
+
+            // =========================
+            // SPLIT DTO SAFELY
+            // =========================
+            const {
+                from_salary,
+                to_salary,
+                region_id,
+                sub_location,
+                ...jobData
+            } = dto;
+
+            // =========================
+            // UPDATE JOBS TABLE
+            // =========================
+            await queryRunner.manager.update(
+                Jobs,
+                { id },
+                {
+                    ...jobData,
+                    position_id: positionId,
+                    updated_at: new Date(),
+                },
+            );
+
+            // =========================
+            // UPDATE / CREATE ADDRESS
+            // =========================
+            if (region_id !== undefined || sub_location !== undefined) {
+                const address = await queryRunner.manager.findOne(JobAddresses, {
+                    where: { job_id: id },
+                });
+
+                if (address) {
+                    await queryRunner.manager.update(
+                        JobAddresses,
+                        { job_id: id },
+                        {
+                            region_id,
+                            sub_location,
+                        },
+                    );
+                } else {
+                    await queryRunner.manager.save(JobAddresses, {
+                        job_id: id,
+                        region_id,
+                        sub_location,
+                    });
+                }
+            }
+
+            // =========================
+            // UPDATE / CREATE SALARY
+            // =========================
+            if (from_salary !== undefined || to_salary !== undefined) {
+                const salary = await queryRunner.manager.findOne(JobSalaries, {
+                    where: { job_id: id },
+                });
+
+                if (salary) {
+                    await queryRunner.manager.update(
+                        JobSalaries,
+                        { job_id: id },
+                        {
+                            from_salary,
+                            to_salary,
+                            updated_at: new Date(),
+                        },
+                    );
+                } else {
+                    await queryRunner.manager.save(JobSalaries, {
+                        job_id: id,
+                        from_salary,
+                        to_salary,
+                        created_at: new Date(),
+                        updated_at: new Date(),
+                    });
+                }
+            }
+
+            await queryRunner.commitTransaction();
+
+            return await this.findOne(id);
+
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     // =========================
@@ -436,6 +545,46 @@ export class JobsService {
             success: true,
             message: 'Job deleted successfully',
         };
+    }
+    private async getOrCreatePosition(
+        position: number | string,
+        queryRunner: QueryRunner,
+        clientId: number,
+        industryId: number,
+    ): Promise<number> {
+
+        // If it's already an ID, use it
+        if (typeof position === 'number') {
+            return position;
+        }
+
+        // Handle numeric string (e.g. "5")
+        if (!isNaN(Number(position))) {
+            return Number(position);
+        }
+
+        const positionName = position.trim();
+
+        let existingPosition = await queryRunner.manager.findOne(Positions, {
+            where: {
+                position_name: positionName,
+            },
+        });
+
+        if (!existingPosition) {
+            existingPosition = await queryRunner.manager.save(Positions, {
+                position_name: positionName,
+                slug: generateSlug(positionName),
+                creator_id: clientId,
+                updator_id: clientId,
+                industry_id: industryId,
+                hide: 0,
+                created_at: new Date(),
+                updated_at: new Date(),
+            });
+        }
+
+        return existingPosition.id;
     }
 
     // =========================
