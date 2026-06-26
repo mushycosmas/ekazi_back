@@ -208,27 +208,33 @@ const allEntities = [
   ClientSubscriptionPayments,
 ];
 
- @Module({
+@Module({
+  
   imports: [
+    // Async configuration with environment variables
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'mysql',
         host: config.get('DB_HOST'),
-        port: Number(config.get('DB_PORT')),
+        port: config.get('DB_PORT'),
         username: config.get('DB_USER'),
         password: config.get('DB_PASS'),
         database: config.get('DB_NAME'),
-
-        entities: allEntities, // OR autoLoadEntities: true
-        synchronize: false,
+        entities: allEntities,
+        synchronize: false, // Always false for production
+        logging: config.get('NODE_ENV'),
+        // Optional: Add these for better performance
+        // poolSize: 10,
+        // connectTimeout: 30000,
+        // acquireTimeout: 30000,
       }),
     }),
 
+    // Register all entities for injection
     TypeOrmModule.forFeature(allEntities),
   ],
-
   exports: [TypeOrmModule],
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

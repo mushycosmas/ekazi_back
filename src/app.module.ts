@@ -49,7 +49,9 @@ import { JobOtherRequirementsModule } from './jobs/modules/job-other-requirement
  
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
-    CvbuilderModule, EmployerModule, RegionsModule, CountriesModule,
+    CvbuilderModule, 
+    EmployerModule,
+     RegionsModule, CountriesModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
