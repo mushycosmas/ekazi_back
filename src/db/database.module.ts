@@ -104,6 +104,9 @@ import { JobStatistics } from '../jobs/entities/job-statistics.entity';
 import { JobSoftware } from '../jobs/entities/job-software.entity';
 import { JobTool } from '../jobs/entities/job-tool.entity';
 import { JobAbility } from '../jobs/entities/job-abilities.entity';
+import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
+import { PasswordReset } from 'src/entities/password-resets.entity';
+import { EmailVerification } from 'src/entities/email-verification.entity';
 
 // Create a single array of all entities to avoid duplication
 const allEntities = [
@@ -129,6 +132,9 @@ const allEntities = [
   // Core Entities
   Users,
   Role,
+  PersonalAccessToken,
+  PasswordReset,
+  EmailVerification,
   Permission,
   MaritalStatuses,
   Genders,

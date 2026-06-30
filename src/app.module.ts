@@ -38,6 +38,7 @@ import { JobLanguagesModule } from './jobs/modules/job-languages.module';
 import { JobReportTosModule } from './jobs/modules/job-report-tos.module';
 import { JobRequirementsModule } from './jobs/modules/job-requirements.module';
 import { JobOtherRequirementsModule } from './jobs/modules/job-other-requirements.module';
+import { AuthModule } from './auth/auth.module';
  
 // ... other imports
 
@@ -49,7 +50,7 @@ import { JobOtherRequirementsModule } from './jobs/modules/job-other-requirement
  
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
-    CvbuilderModule, 
+    CvbuilderModule, AuthModule,
     EmployerModule,
      RegionsModule, CountriesModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
