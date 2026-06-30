@@ -107,6 +107,9 @@ import { JobAbility } from '../jobs/entities/job-abilities.entity';
 import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
 import { PasswordReset } from 'src/entities/password-resets.entity';
 import { EmailVerification } from 'src/entities/email-verification.entity';
+import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
+import { JobStage } from 'src/jobs/entities/job-stage.entity';
+
 
 // Create a single array of all entities to avoid duplication
 const allEntities = [
@@ -203,6 +206,9 @@ const allEntities = [
   JobSoftware,
   JobTool,
   JobAbility,
+  ApplicantApplication,
+  JobStage,
+  
 
   // Other
   Currencies,

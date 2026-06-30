@@ -3,8 +3,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './db/database.module'; // Import your database module
 import { CvbuilderModule } from './cvbuilder/cvbuilder.module';
-import { EmployerModule } from './employer/employer.module';
-import { EmployerController } from './employer/controllers/employer.controller';
 import { EmployerUserService } from './employer/services/employer-user.service';
 import { RegionsModule } from './regions/regions.module';
 import { RegionsController } from './regions/regions.controller';
@@ -39,6 +37,9 @@ import { JobReportTosModule } from './jobs/modules/job-report-tos.module';
 import { JobRequirementsModule } from './jobs/modules/job-requirements.module';
 import { JobOtherRequirementsModule } from './jobs/modules/job-other-requirements.module';
 import { AuthModule } from './auth/auth.module';
+import { EmployerController } from './employer/employer.controller';
+import { EmployerModule } from './employer/employer.module';
+
  
 // ... other imports
 
@@ -50,8 +51,7 @@ import { AuthModule } from './auth/auth.module';
  
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
-    CvbuilderModule, AuthModule,
-    EmployerModule,
+    CvbuilderModule, AuthModule,EmployerModule,
      RegionsModule, CountriesModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
@@ -61,7 +61,7 @@ import { AuthModule } from './auth/auth.module';
 
     // ... other modules
   ],
-  controllers: [EmployerController, EmployerController,
+  controllers: [EmployerController,
     RegionsController, CountriesController],
   providers: [EmployerUserService, RegionsService, CountriesService],
 

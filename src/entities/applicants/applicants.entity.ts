@@ -163,4 +163,6 @@ export class Applicants {
 
   @OneToMany(() => JobMatchNotifications, (notification) => notification.applicant,)
   matchNotifications: JobMatchNotifications[];
+
+  
 }

@@ -6,6 +6,7 @@ import {
     JoinColumn,
     OneToMany,
 } from 'typeorm';
+import { Transform } from 'class-transformer';
 
 import { Industries } from 'src/entities/industries.entity';
 import { Countries } from 'src/entities/countries.entity';
@@ -51,6 +52,7 @@ import { JobStatistics } from './job-statistics.entity';
 import { JobSoftware } from './job-software.entity';
 import { JobTool } from './job-tool.entity';
 import { JobUniversalTypes } from 'src/entities/job-universal-types.entity';
+import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 
 
 @Entity('jobs')
@@ -121,7 +123,7 @@ export class Jobs {
     @Column({ default: false })
     show_client_name: boolean;
 
-    @Column({ length: 300, nullable: true  })
+    @Column({ length: 300, nullable: true })
     title: string;
 
     @Column({ nullable: true })
@@ -166,8 +168,14 @@ export class Jobs {
     @Column({ nullable: true, length: 100 })
     publish_date: string;
 
-    @Column('text')
-    dead_line: string;
+
+
+
+    @Column({ type: 'date' })
+    @Transform(({ value }) =>
+        value ? new Date(value).toISOString().split('T')[0] : null,
+    )
+    dead_line: Date;
 
     @Column({
         type: 'blob',
@@ -373,4 +381,10 @@ export class Jobs {
     @ManyToOne(() => JobUniversalTypes)
     @JoinColumn({ name: 'type_id' })
     jobUniversalType: JobUniversalTypes;
+
+    @OneToMany(
+        () => ApplicantApplication,
+        (application) => application.job,
+    )
+    applications: ApplicantApplication[];
 }
