@@ -80,7 +80,7 @@ export class AuthService {
         return {
             success: true,
             token: plainToken, // return only the plain token
-            user,
+            data:user,
         };
     }
 
