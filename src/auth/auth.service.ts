@@ -9,6 +9,7 @@ import { MailService } from 'src/mail/mail.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailVerification } from 'src/entities/email-verification.entity';
 import { ConfigService } from '@nestjs/config';
+import { InternalServerErrorException } from '@nestjs/common';
 
 
 
@@ -260,7 +261,7 @@ export class AuthService {
             throw new UnauthorizedException('User not found');
         }
 
-        user.verified= true;
+        user.verified = true;
         await this.usersRepository.save(user);
 
         await this.emailVerificationRepository.delete({ email });
@@ -269,6 +270,49 @@ export class AuthService {
             success: true,
             message: 'Email verified successfully',
         };
+    }
+    async myaccount(user: Users) {
+        try {
+            const account = await this.usersRepository.findOne({
+                where: { id: user.id },
+                relations: [
+                    'role',
+                    'role.permissions',
+                ],
+            });
+
+            if (!account) {
+                throw new InternalServerErrorException({
+                    success: false,
+                    message: 'User account not found',
+                });
+            }
+
+            return {
+                success: true,
+                message: 'Successfully retrieved user account',
+                data: {
+                    id: account.id,
+                    username: account.username,
+                    email: account.email,
+                    verified: account.verified,
+                    role_id: account.role_id,
+
+                    role: account.role?.name,
+
+                    permissions: account.role?.permissions?.map((p) => ({
+                        id: p.id,
+                        name: p.name,
+                    })) || [],
+                },
+            };
+        } catch (error) {
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch employer account',
+                error: error.message,
+            });
+        }
     }
 
 }

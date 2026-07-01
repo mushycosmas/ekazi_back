@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards ,Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SanctumGuard } from './guards/sanctum.guard';
@@ -6,6 +6,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { ChangePasswordDto } from './dto/chage-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Users } from 'src/entities/users.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -38,4 +39,9 @@ export class AuthController {
     resetPassword(@Body() dto: ResetPasswordDto) {
         return this.authService.resetPassword(dto);
     }
+      @UseGuards(SanctumGuard)
+      @Get('user')
+      employerAccount(@CurrentUser() user: Users) {
+        return this.authService.myaccount(user);
+      }
 }
