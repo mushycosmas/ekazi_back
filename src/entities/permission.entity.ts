@@ -1,5 +1,6 @@
- import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
- import { Users } from './users.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,ManyToMany } from 'typeorm';
+import { Users } from './users.entity';
+import { Role } from './role.entity';
 
 @Entity('permissions')
 export class Permission {
@@ -17,4 +18,8 @@ export class Permission {
 
   @UpdateDateColumn({ name: 'updated_at', nullable: true })
   updatedAt: Date | null;
+
+  // 🔥 inverse side (NO JoinTable here)
+  @ManyToMany(() => Role, (role) => role.permissions)
+  roles: Role[];
 }

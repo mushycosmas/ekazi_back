@@ -38,5 +38,6 @@ import { JobStage } from 'src/jobs/entities/job-stage.entity';
     EmployerJobsService,
     EmployerDashboardService,
   ],
+  exports: [EmployerService],
 })
 export class EmployerModule { }
