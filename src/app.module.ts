@@ -39,6 +39,9 @@ import { JobOtherRequirementsModule } from './jobs/modules/job-other-requirement
 import { AuthModule } from './auth/auth.module';
 import { EmployerController } from './employer/employer.controller';
 import { EmployerModule } from './employer/employer.module';
+import { CompanySizesModule } from './companysize/company-sizes.module';
+import { MetaKeywordsModule } from './metas/meta-keywords.module';
+import { CompanyTypeModule } from './companytype/company-type.module';
 
  
 // ... other imports
@@ -51,8 +54,8 @@ import { EmployerModule } from './employer/employer.module';
  
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
-    CvbuilderModule, AuthModule,EmployerModule,
-     RegionsModule, CountriesModule,
+    CvbuilderModule, AuthModule,EmployerModule, CompanySizesModule,MetaKeywordsModule,
+     RegionsModule, CountriesModule,CompanyTypeModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,

@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Users } from 'src/entities/users.entity';
 import { InternalServerErrorException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 export type MyJobsQuery = {
     page?: number;
@@ -181,7 +182,7 @@ export class EmployerJobsService {
             const formatted = jobs.entities.map((job, index) => {
                 return {
                     ...job,
-                        status: jobs.raw[index].status,
+                    status: jobs.raw[index].status,
                     total_applicants: Number(jobs.raw[index]?.total_applicants || 0),
                 };
             });
@@ -206,6 +207,98 @@ export class EmployerJobsService {
             throw new InternalServerErrorException({
                 success: false,
                 message: 'Failed to fetch jobs',
+                error: error.message,
+            });
+        }
+    }
+
+    async myJobDetail(user: Users, jobId: number) {
+        try {
+            const clientId = user.client_id;
+
+            if (!clientId) {
+                throw new NotFoundException('No client assigned to this user');
+            }
+
+            const result = await this.jobsRepository
+                .createQueryBuilder('job')
+
+                .leftJoinAndSelect('job.client', 'client')
+                .leftJoinAndSelect('job.country', 'country')
+                .leftJoinAndSelect('job.region', 'region')
+                .leftJoinAndSelect('job.industry', 'industry')
+                .leftJoinAndSelect('job.position', 'position')
+                .leftJoinAndSelect('job.addresses', 'addresses')
+                .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
+                .leftJoinAndSelect('job.jobUniversalType', 'jobUniversalType')
+                .leftJoinAndSelect('job.currency', 'currency')
+
+                // Applications
+                .leftJoin('job.applications', 'applications')
+
+                .select([
+                    'job',
+
+                    'client.id',
+                    'client.client_name',
+                    'client.logo',
+
+                    'country',
+                    'region',
+                    'industry',
+                    'position',
+                    'addresses',
+                    'jobStatistics',
+                    'jobUniversalType',
+                    'currency',
+                ])
+
+                .addSelect(`
+                CASE
+                    WHEN DATE(job.dead_line) >= CURDATE() THEN 'Active'
+                    ELSE 'Expired'
+                END
+            `, 'status')
+
+                .addSelect('COUNT(applications.id)', 'total_applicants')
+
+                .where('job.id = :jobId', { jobId })
+                .andWhere('client.id = :clientId', { clientId })
+
+                .groupBy('job.id')
+                .addGroupBy('client.id')
+                .addGroupBy('country.id')
+                .addGroupBy('region.id')
+                .addGroupBy('industry.id')
+                .addGroupBy('position.id')
+                .addGroupBy('jobStatistics.id')
+                .addGroupBy('jobUniversalType.id')
+                .addGroupBy('currency.id')
+                .addGroupBy('addresses.id')
+
+                .getRawAndEntities();
+
+            if (!result.entities.length) {
+                throw new NotFoundException('Job not found');
+            }
+
+            const job = result.entities[0];
+
+            return {
+                success: true,
+                message: 'Job details fetched successfully',
+                data: {
+                    ...job,
+                    status: result.raw[0].status,
+                    total_applicants: Number(
+                        result.raw[0].total_applicants ?? 0,
+                    ),
+                },
+            };
+        } catch (error) {
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch job details',
                 error: error.message,
             });
         }

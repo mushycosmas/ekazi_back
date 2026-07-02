@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, Req, Param, ParseIntPipe } from '@nestjs/common';
 import { EmployerJobsService } from '../services/employer-jobs.service';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -26,5 +26,13 @@ export class EmployerJobsController {
             industryId: industryId ? Number(industryId) : undefined,
             status: status as 'active' | 'expired' | 'today' | 'all',
         });
+    }
+    @Get('jobs/:id')
+    @UseGuards(SanctumGuard)
+    async myJobDetail(
+        @Req() req,
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        return this.employerJobsService.myJobDetail(req.user, id);
     }
 }
