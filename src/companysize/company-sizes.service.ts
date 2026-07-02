@@ -48,7 +48,7 @@ export class CompanySizesService {
     // ======================
     async findAll() {
         const data = await this.repo.find({
-            order: { id: 'DESC' },
+            order: { id: 'ASC' },
         });
 
         // remove timestamps from response
