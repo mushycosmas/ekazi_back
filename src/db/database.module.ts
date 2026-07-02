@@ -109,6 +109,13 @@ import { PasswordReset } from 'src/entities/password-resets.entity';
 import { EmailVerification } from 'src/entities/email-verification.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
+import { ClientAddress } from 'src/client/entities/client-address.entity';
+import { ClientEmail } from 'src/client/entities/client-email.entity';
+import { ClientPhone } from 'src/client/entities/client-phones.entity';
+import { Notification } from 'src/client/entities/notifications.entity';
+import { ClientDescription } from 'src/client/entities/client-descriptions.entity';
+import { ClientType } from 'src/client/entities/client-types.entity';
+import { CompanySize } from 'src/entities/company-size.entity';
 
 
 // Create a single array of all entities to avoid duplication
@@ -218,6 +225,13 @@ const allEntities = [
   PlanTypes,
   PaymentMethods,
   ClientSubscriptionPayments,
+  ClientAddress,
+  ClientEmail,
+  ClientPhone,
+  Notification,
+  ClientDescription,
+  ClientType,
+  CompanySize,
 ];
 
 @Module({

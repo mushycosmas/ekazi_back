@@ -14,6 +14,12 @@ import { Users } from 'src/entities/users.entity';
 import { JobAlerts } from 'src/jobs/entities/job-alerts.entity';
 import { JobPlans } from 'src/jobs/entities/job-plans.entity';
 import { ClientSubscriptionPayments } from './client-subscription-payments.entity';
+import { ClientAddress } from './entities/client-address.entity';
+import { ClientPhone } from './entities/client-phones.entity';
+import { ClientEmail } from './entities/client-email.entity';
+import { ClientDescription } from './entities/client-descriptions.entity';
+import { ClientType } from './entities/client-types.entity';
+import { CompanySize } from 'src/entities/company-size.entity';
 
 @Entity('clients')
 export class Clients {
@@ -127,5 +133,30 @@ export class Clients {
         (payment) => payment.client,
     )
     clientSubscriptionPayments: ClientSubscriptionPayments[];
+
+    @OneToMany(() => ClientAddress, (address) => address.client)
+    addresses: ClientAddress[];
+
+    @OneToMany(() => ClientPhone, (phone) => phone.client)
+    phones: ClientPhone[];
+
+    @OneToMany(() => ClientEmail, (email) => email.client)
+    emails: ClientEmail[];
+
+
+
+    @OneToMany(
+        () => ClientDescription,
+        (description) => description.client,
+    )
+    descriptions: ClientDescription[];
+
+    @ManyToOne(() => ClientType, (type) => type.clients)
+    @JoinColumn({ name: 'type_id' })
+    type: ClientType;
+
+    @ManyToOne(() => CompanySize, (size) => size.clients)
+    @JoinColumn({ name: 'company_size_id' })
+    companySize: CompanySize;
 
 }

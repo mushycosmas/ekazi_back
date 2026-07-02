@@ -9,7 +9,7 @@ export class EmployerJobsController {
     constructor(
         private readonly employerJobsService: EmployerJobsService,
     ) { }
-    @Get('my-jobs')
+    @Get('jobs')
     @UseGuards(SanctumGuard)
     myJobs(
         @CurrentUser() user: Users,

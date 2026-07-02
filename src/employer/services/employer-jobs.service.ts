@@ -63,6 +63,8 @@ export class EmployerJobsService {
                     'job.quantity',
                     'job.featured',
                     'job.publish_date',
+                    'job.created_at',
+                    'job.updated_at',
 
                     'client.id',
                     'client.client_name',

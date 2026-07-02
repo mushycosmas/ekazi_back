@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes, createHash, createHmac } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { ChangePasswordDto } from './dto/chage-password.dto';
 import { PasswordReset } from 'src/entities/password-resets.entity';
@@ -10,19 +10,39 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailVerification } from 'src/entities/email-verification.entity';
 import { ConfigService } from '@nestjs/config';
 import { InternalServerErrorException } from '@nestjs/common';
-
-
-
-
-
 import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
 import { Users } from 'src/entities/users.entity';
+import { CreateEmployerDto } from 'src/employer/dto/create-employer.dto';
+import { BadRequestException } from '@nestjs/common';
+import { Role } from 'src/entities/role.entity';
+import { Clients } from 'src/client/clients.entity';
+import { ClientEmail } from 'src/client/entities/client-email.entity';
+import { ClientPhone } from 'src/client/entities/client-phones.entity';
+import { Notification } from 'src/client/entities/notifications.entity';
+
+
 
 @Injectable()
 export class AuthService {
     constructor(
         @InjectRepository(Users)
         private readonly usersRepository: Repository<Users>,
+
+        @InjectRepository(Role)
+        private readonly roleRepository: Repository<Role>,
+
+        @InjectRepository(Clients)
+        private clientRepo: Repository<Clients>,
+
+
+        @InjectRepository(ClientEmail)
+        private clientEmailRepo: Repository<ClientEmail>,
+
+        @InjectRepository(ClientPhone)
+        private clientPhoneRepo: Repository<ClientPhone>,
+
+        @InjectRepository(Notification)
+        private notificationRepo: Repository<Notification>,
 
         @InjectRepository(PersonalAccessToken)
         private readonly tokenRepository: Repository<PersonalAccessToken>,
@@ -36,6 +56,114 @@ export class AuthService {
         private readonly mailService: MailService,
         private configService: ConfigService, // ✅ ADD THIS
     ) { }
+
+
+    async registerEmployer(dto: CreateEmployerDto) {
+        const existing = await this.usersRepository.findOne({
+            where: { email: dto.email },
+        });
+
+        if (existing) {
+            throw new BadRequestException('Email already exists');
+        }
+
+        const role = await this.roleRepository.findOne({
+            where: { name: 'Post Jobs Only' },
+        });
+
+        if (!role) {
+            throw new BadRequestException('Role not found');
+        }
+
+        const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+        // =========================
+        // USER
+        // =========================
+        const now = new Date();
+
+        const user = this.usersRepository.create({
+            username: dto.name,
+            email: dto.email,
+            temp_email: dto.email,
+            password: hashedPassword,
+            role_id: role.id,
+            hide: false,
+            verify_key: dto.email + new Date().toISOString().slice(0, 10),
+            created_at: now,
+            updated_at: now,
+        });
+
+        await this.usersRepository.save(user);
+
+        // =========================
+        // CLIENT
+        // =========================
+        const client = this.clientRepo.create({
+            creator_id: user.id,
+            updator_id: user.id,
+            type_id: dto.type,
+            client_name: dto.name,
+        });
+
+        await this.clientRepo.save(client);
+
+        // link user
+        user.client_id = client.id;
+        await this.usersRepository.save(user);
+
+        // =========================
+        // ROLE ASSIGN (Spatie equivalent)
+        // =========================
+        // If using nestjs CASL or custom roles:
+        // user.role = role;
+
+        // =========================
+        // CLIENT EMAIL
+        // =========================
+        await this.clientEmailRepo.save({
+            client_email: dto.email,
+            client_id: client.id,
+        });
+
+        // =========================
+        // CLIENT PHONE
+        // =========================
+        await this.clientPhoneRepo.save({
+            phone_number: dto.phone,
+            client_id: client.id,
+        });
+
+        // =========================
+        // NOTIFICATION
+        // =========================
+        await this.notificationRepo.save({
+            client_id: client.id,
+            data: 'New Client Joined',
+            type: 'new-client',
+        });
+        if (!user.email) {
+            throw new BadRequestException('User email is missing');
+        }
+        if (!user.username) {
+            throw new BadRequestException('User email is missing');
+        }
+        // ✅ SEND EMAIL VERIFICATION AFTER SUCCESS
+        await this.sendVerificationEmail(
+            user.email,
+            user.username,
+        );
+
+        return {
+            success: true,
+            message: 'Employer account created successfully',
+            data: {
+                id: user.id,
+                email: user.email,
+                client_id: client.id,
+            },
+        };
+    }
 
     async login(username: string, password: string) {
         const user = await this.usersRepository.findOne({
@@ -80,7 +208,7 @@ export class AuthService {
         return {
             success: true,
             token: plainToken, // return only the plain token
-            data:user,
+            data: user,
         };
     }
 
@@ -211,45 +339,86 @@ export class AuthService {
     }
 
 
-    async sendVerificationEmail(email: string) {
+    // ===============================
+    // SEND VERIFICATION EMAIL (NO DB)
+    // ===============================
+    async sendVerificationEmail(email: string, username: string) {
+        const secret = this.configService.get('APP_KEY');
+
         const token = randomBytes(32).toString('hex');
 
-        await this.emailVerificationRepository.delete({ email });
+        const signature = createHmac('sha256', secret)
+            .update(token + email)
+            .digest('hex');
 
-        await this.emailVerificationRepository.save({
-            email,
-            token: createHash('sha256').update(token).digest('hex'),
-        });
+        const fullToken = `${token}.${signature}`;
 
         const verifyLink = `${this.configService.get(
             'FRONTEND_URL',
-        )}/verify-email?token=${token}&email=${email}`;
+        )}/verify-email?token=${fullToken}&email=${email}`;
 
         await this.mailService.sendMail({
             from: `"${this.configService.get('APP_NAME')}" <${this.configService.get(
                 'MAIL_FROM_ADDRESS',
             )}>`,
-            to: email,
-            subject: 'Verify Your Account',
+            to: 'ibrahim@exactmanpower.co.tz',
+            cc: ['halidiselemani94@gmail.com'],
+            subject: 'New Employer Registered',
             html: `
-      <h2>Account Verification</h2>
-      <p>Click below to verify your account:</p>
-      <a href="${verifyLink}">Verify Email</a>
+        <h2>📣 New Employer Registered</h2>
+
+        <p>A new employer has successfully registered on the <strong>eKazi Portal</strong>.</p>
+
+        <table cellpadding="6" cellspacing="0" border="0">
+            <tr>
+                <td><strong>Name:</strong></td>
+                <td>${username}</td>
+            </tr>
+            <tr>
+                <td><strong>Email:</strong></td>
+                <td>${email}</td>
+            </tr>
+            <tr>
+                <td><strong>Registered At:</strong></td>
+                <td>${new Date().toLocaleString()}</td>
+            </tr>
+        </table>
+
+        <br>
+
+        <p>The employer can verify their email using the link below:</p>
+
+        <a href="${verifyLink}"
+           style="display:inline-block;padding:12px 20px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:6px;">
+            Verify Email
+        </a>
+
+        <br><br>
+
+        <p>Regards,<br><strong>eKazi Portal System</strong></p>
     `,
         });
     }
     async verifyEmail(email: string, token: string) {
-        const record = await this.emailVerificationRepository.findOne({
-            where: { email },
-        });
+        const secret = this.configService.get<string>('APP_KEY');
 
-        if (!record) {
-            throw new UnauthorizedException('Invalid verification request');
+        if (!secret) {
+            throw new InternalServerErrorException('APP_KEY is not set');
         }
 
-        const hashedToken = createHash('sha256').update(token).digest('hex');
+        const parts = token.split('.');
 
-        if (hashedToken !== record.token) {
+        if (parts.length !== 2) {
+            throw new UnauthorizedException('Invalid verification token');
+        }
+
+        const [rawToken, signature] = parts;
+
+        const expectedSignature = createHmac('sha256', secret)
+            .update(rawToken + email)
+            .digest('hex');
+
+        if (expectedSignature !== signature) {
             throw new UnauthorizedException('Invalid verification token');
         }
 
@@ -263,8 +432,6 @@ export class AuthService {
 
         user.verified = true;
         await this.usersRepository.save(user);
-
-        await this.emailVerificationRepository.delete({ email });
 
         return {
             success: true,

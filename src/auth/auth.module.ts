@@ -12,6 +12,11 @@ import { PasswordReset } from 'src/entities/password-resets.entity';
 
 import { MailModule } from 'src/mail/mail.module';
 import { EmailVerification } from 'src/entities/email-verification.entity';
+import { Clients } from 'src/client/clients.entity';
+import { ClientEmail } from 'src/client/entities/client-email.entity';
+import { ClientPhone } from 'src/client/entities/client-phones.entity';
+import { Notification } from 'src/client/entities/notifications.entity';
+import { Role } from 'src/entities/role.entity';
 
 @Module({
   imports: [
@@ -19,7 +24,12 @@ import { EmailVerification } from 'src/entities/email-verification.entity';
       Users,
       PersonalAccessToken,
       PasswordReset,
-      EmailVerification
+      EmailVerification,
+      Clients,
+      ClientEmail,
+      Notification,
+      ClientPhone,
+      Role,
     ]),
     MailModule,
   ],

@@ -15,6 +15,10 @@ import { EmployerDashboardController } from './controllers/employer-dashboard.co
 import { EmployerDashboardService } from './services/employer-dashboard.service';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
+import { Clients } from 'src/client/clients.entity';
+import { ClientEmail } from 'src/client/entities/client-email.entity';
+import { ClientAddress } from 'src/client/entities/client-address.entity';
+import { ClientPhone } from 'src/client/entities/client-phones.entity';
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { JobStage } from 'src/jobs/entities/job-stage.entity';
       PersonalAccessToken, // 👈 THIS FIXES YOUR ERROR
       ApplicantApplication,
       JobStage,
+      Clients,
+      ClientEmail,
+      ClientAddress,
+      ClientPhone,
     ]),
   ],
   controllers: [

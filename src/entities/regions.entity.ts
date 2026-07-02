@@ -11,6 +11,7 @@ import { ApplicantAddresses } from './applicants/applicant-addresses.entity';
 import { ApplicantPositions } from './applicants/applicant-positions.entity';
 import { Jobs } from 'src/jobs/entities/job.entity';
 import { JobAddresses } from 'src/jobs/entities/job-addresses.entity';
+import { ClientAddress } from 'src/client/entities/client-address.entity';
 
 @Entity('regions')
 export class Regions {
@@ -61,4 +62,7 @@ export class Regions {
   jobs: Jobs[];
   @OneToMany(() => JobAddresses, (address) => address.region,)
   jobAddresses: JobAddresses[];
+
+  @OneToMany(() => ClientAddress, (address) => address.region)
+  clientAddresses: ClientAddress[];
 }

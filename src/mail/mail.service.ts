@@ -58,6 +58,34 @@ export class MailService {
         });
     }
 
+    async sendEmailVerification(email: string, token: string, username: string) {
+        const verifyLink = `${this.configService.get(
+            'FRONTEND_URL',
+        )}/verify-email?token=${token}&email=${email}`;
+
+        const templatePath = path.join(
+            process.cwd(),
+            'src',
+            'mail',
+            'templates',
+            'email-verification.template.html',
+        );
+
+        let html = fs.readFileSync(templatePath, 'utf-8');
+
+        html = html.replace('{{USERNAME}}', username);
+        html = html.replace('{{VERIFY_LINK}}', verifyLink);
+
+        await this.transporter.sendMail({
+            from: `"${this.configService.get('MAIL_FROM_NAME')}" <${this.configService.get(
+                'MAIL_FROM_ADDRESS',
+            )}>`,
+            to: email,
+            subject: 'Verify Your Email',
+            html,
+        });
+    }
+
 
 
 }

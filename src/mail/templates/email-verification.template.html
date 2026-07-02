@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Verify Your Email - eKazi</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    .header {
+      background: #0d6efd;
+      color: #ffffff;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .content {
+      padding: 30px;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #0d6efd;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .footer {
+      font-size: 12px;
+      text-align: center;
+      color: #888;
+      padding: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <div class="header">
+      <h1>Welcome to eKazi 🚀</h1>
+    </div>
+
+    <div class="content">
+      <h2>Hello {{USERNAME}},</h2>
+
+      <p>
+        Thank you for joining <strong>eKazi Job Portal</strong>.
+        To continue using your account, please verify your email address.
+      </p>
+
+      <p class="small">
+        Click the button below to verify your email:
+      </p>
+
+      <a class="btn" href="{{VERIFY_LINK}}">
+        Verify My Email
+      </a>
+
+      <p style="margin-top: 30px;" class="small">
+        If the button doesn’t work, copy and paste this link into your browser:
+      </p>
+
+      <p class="small">
+        {{VERIFY_LINK}}
+      </p>
+
+      <p class="small">
+        This verification link will expire soon for security reasons.
+      </p>
+
+      <p>
+        Regards,<br/>
+        <strong>eKazi Team</strong>
+      </p>
+    </div>
+
+    <div class="footer">
+      © {{YEAR}} eKazi Job Portal. All rights reserved.
+    </div>
+
+  </div>
+
+</body>
+</html>

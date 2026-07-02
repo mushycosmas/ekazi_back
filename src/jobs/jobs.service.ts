@@ -209,7 +209,7 @@ export class JobsService {
                     'jobUniversalType.type_name',
 
                     'addresses.id',
-                    'addresses.sub_location',
+                    'addresses.sub_location', 
                 ])
 
                 .orderBy('job.id', 'DESC');
