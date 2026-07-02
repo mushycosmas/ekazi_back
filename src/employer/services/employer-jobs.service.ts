@@ -6,12 +6,12 @@ import { Users } from 'src/entities/users.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 
 export type MyJobsQuery = {
-  page?: number;
-  limit?: number;
-  search?: string;
-  industryId?: number;
-  status?: 'active' | 'expired' | 'today' | 'all';
-  published?: 'published' | 'unpublished' | 'all';
+    page?: number;
+    limit?: number;
+    search?: string;
+    industryId?: number;
+    status?: 'active' | 'expired' | 'today' | 'all';
+    published?: 'published' | 'unpublished' | 'all';
 };
 @Injectable()
 export class EmployerJobsService {
@@ -20,15 +20,15 @@ export class EmployerJobsService {
         private readonly jobsRepository: Repository<Jobs>,
     ) { }
 
-  async myjobs(user: Users, query: MyJobsQuery) {
-  const {
-    page = 1,
-    limit = 20,
-    search,
-    industryId,
-    status = 'all',
-    published = 'all',
-  } = query;
+    async myjobs(user: Users, query: MyJobsQuery) {
+        const {
+            page = 1,
+            limit = 20,
+            search,
+            industryId,
+            status = 'all',
+            published = 'all',
+        } = query;
         try {
             const clientId = user?.client_id;
 
@@ -57,7 +57,6 @@ export class EmployerJobsService {
 
                 .select([
                     'job.id',
-                    'job.status',
                     'job.published',
                     'job.dead_line',
                     'job.quantity',
@@ -76,6 +75,12 @@ export class EmployerJobsService {
                     'jobStatistics.id',
                     'jobStatistics.job_views',
                 ])
+                .addSelect(`
+                    CASE
+                        WHEN DATE(job.dead_line) >= CURDATE() THEN 'Active'
+                        ELSE 'Expired'
+                    END
+                `, 'status')
 
                 // 🔥 TOTAL APPLICANTS
                 .addSelect('COUNT(applications.id)', 'total_applicants')
@@ -176,6 +181,7 @@ export class EmployerJobsService {
             const formatted = jobs.entities.map((job, index) => {
                 return {
                     ...job,
+                        status: jobs.raw[index].status,
                     total_applicants: Number(jobs.raw[index]?.total_applicants || 0),
                 };
             });

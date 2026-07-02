@@ -189,17 +189,20 @@ export class Jobs {
     })
     job_paid_status: string;
 
-    @Column({
-        type: 'timestamp',
-        nullable: true,
-    })
+    
+    @Column({ type: 'date' })
+    @Transform(({ value }) =>
+        value ? new Date(value).toISOString().split('T')[0] : null,
+    )
     created_at: Date;
 
-    @Column({
-        type: 'timestamp',
-        nullable: true,
-    })
-    updated_at: Date;
+        @Column({ type: 'date' })
+    @Transform(({ value }) =>
+        value ? new Date(value).toISOString().split('T')[0] : null,
+    )
+     updated_at: Date;
+
+ 
 
     /*
     |--------------------------------------------------------------------------
