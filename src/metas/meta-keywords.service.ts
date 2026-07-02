@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { CreateMetaKeywordDto } from './dto/create-meta-keyword.dto';
 import { UpdateMetaKeywordDto } from './dto/update-meta-keyword.dto';
 import { NotFoundException } from '@nestjs/common';
+import { InternalServerErrorException } from '@nestjs/common';
 
 @Injectable()
 export class MetaKeywordsService {
@@ -29,20 +30,76 @@ export class MetaKeywordsService {
         };
     }
 
-    async findAll() {
-        const data = await this.repository.find({
-            order: {
-                id: 'DESC',
-            },
-        });
+    async findAll(page = 1, limit = 20, search?: string) {
+        try {
+            const query = this.repository
+                .createQueryBuilder('meta')
+                .select([
+                    'meta.id',
+                    'meta.entity_type',
+                    'meta.name',
+                    'meta.creator_id',
+                    'meta.updator_id',
+                    'meta.created_at',
+                    'meta.updated_at',
+                ])
+                .orderBy('meta.id', 'DESC');
 
-        const formatted = data.map(({ created_at, updated_at, ...rest }) => rest);
+            // ======================
+            // SEARCH FILTER
+            // ======================
+            if (search && search.trim()) {
+                query.where('meta.name LIKE :search', {
+                    search: `%${search}%`,
+                });
+            }
 
-        return {
-            success: true,
-            message: 'Meta keywords retrieved successfully',
-            data: formatted,
-        };
+            // ======================
+            // TOTAL COUNT
+            // ======================
+            const totalQuery = this.repository.createQueryBuilder('meta');
+
+            if (search && search.trim()) {
+                totalQuery.where('meta.name LIKE :search', {
+                    search: `%${search}%`,
+                });
+            }
+
+            const totalResult = await totalQuery
+                .select('COUNT(*)', 'count')
+                .getRawOne();
+
+            const total = Number(totalResult.count);
+
+            // ======================
+            // PAGINATION
+            // ======================
+            const data = await query
+                .skip((page - 1) * limit)
+                .take(limit)
+                .getMany();
+
+            // ======================
+            // REMOVE created_at/updated_at
+            // ======================
+            const formatted = data.map(({ created_at, updated_at, ...rest }) => rest);
+
+            return {
+                success: true,
+                message: 'Meta keywords retrieved successfully',
+                data: formatted,
+                current_page: page,
+                per_page: limit,
+                total,
+                total_pages: Math.ceil(total / limit),
+            };
+        } catch (error) {
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch meta keywords',
+                error: error.message,
+            });
+        }
     }
 
     async findOne(id: number) {

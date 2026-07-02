@@ -7,6 +7,7 @@ import {
     Body,
     Param,
     ParseIntPipe,
+    Query,
 } from '@nestjs/common';
 
 import { MetaKeywordsService } from './meta-keywords.service';
@@ -17,7 +18,7 @@ import { UpdateMetaKeywordDto } from './dto/update-meta-keyword.dto';
 export class MetaKeywordsController {
     constructor(
         private readonly service: MetaKeywordsService,
-    ) {}
+    ) { }
 
     @Post()
     create(@Body() dto: CreateMetaKeywordDto) {
@@ -25,8 +26,12 @@ export class MetaKeywordsController {
     }
 
     @Get()
-    findAll() {
-        return this.service.findAll();
+    findAll(
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 20,
+        @Query('search') search?: string,
+    ) {
+        return this.service.findAll(Number(page), Number(limit), search);
     }
 
     @Get(':id')
