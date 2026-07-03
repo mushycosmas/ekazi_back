@@ -42,6 +42,8 @@ import { EmployerModule } from './employer/employer.module';
 import { CompanySizesModule } from './companysize/company-sizes.module';
 import { MetaKeywordsModule } from './metas/meta-keywords.module';
 import { CompanyTypeModule } from './companytype/company-type.module';
+import { StagesModule } from './stage/stages.module';
+import { PositionLevelsModule } from './positionlevel/position-levels.module';
 
  
 // ... other imports
@@ -55,7 +57,7 @@ import { CompanyTypeModule } from './companytype/company-type.module';
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
     CvbuilderModule, AuthModule,EmployerModule, CompanySizesModule,MetaKeywordsModule,
-     RegionsModule, CountriesModule,CompanyTypeModule,
+    RegionsModule, CountriesModule,CompanyTypeModule,StagesModule,PositionLevelsModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,

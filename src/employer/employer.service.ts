@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Users } from 'src/entities/users.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,6 +10,9 @@ import { ClientAddress } from 'src/client/entities/client-address.entity';
 import { ClientEmail } from 'src/client/entities/client-email.entity';
 import { ClientPhone } from 'src/client/entities/client-phones.entity';
 import { UpdateCompanyProfileDto } from 'src/client/dto/update-company-profile.dto';
+import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
+import { JobStage } from 'src/jobs/entities/job-stage.entity';
 
 @Injectable()
 export class EmployerService {
@@ -25,8 +28,17 @@ export class EmployerService {
         @InjectRepository(ClientEmail)
         private readonly emailRepository: Repository<ClientEmail>,
 
+        @InjectRepository(ApplicantApplication)
+        private readonly applicationRepository: Repository<ApplicantApplication>,
+
+        @InjectRepository(Jobs)
+        private readonly jobsRepository: Repository<Jobs>,
+
         @InjectRepository(ClientPhone)
         private readonly phoneRepository: Repository<ClientPhone>,
+
+        @InjectRepository(JobStage)
+        private readonly jobStageRepository: Repository<JobStage>,
 
 
         private readonly configService: ConfigService,
@@ -266,6 +278,257 @@ export class EmployerService {
             throw new InternalServerErrorException({
                 success: false,
                 message: 'Failed to update company profile',
+                error: error.message,
+            });
+        }
+    }
+
+    async getApplicantsByJob(
+        user: Users,
+        jobId: number,
+        page = 1,
+        limit = 20,
+        search?: string,
+        stageId?: number,
+    ) {
+        try {
+            // Ensure the job belongs to the employer
+            if (!user.client_id) {
+                throw new NotFoundException('No company is associated with this user.');
+            }
+
+            const job = await this.jobsRepository.findOne({
+                where: {
+                    id: jobId,
+                    client_id: user.client_id,
+                },
+            });
+
+            if (!job) {
+                throw new NotFoundException(
+                    'Job not found or you do not have permission to view applicants.',
+                );
+            }
+
+            const query = this.applicationRepository
+                .createQueryBuilder('application')
+                .leftJoinAndSelect('application.stage', 'stage')
+                .leftJoinAndSelect('application.applicant', 'user')
+                .leftJoinAndSelect('user.applicants', 'applicant')
+                .leftJoinAndSelect(
+                    'applicant.applicant_addresses',
+                    'address',
+                )
+                .leftJoinAndSelect(
+                    'applicant.applicant_phones',
+                    'phone',
+                )
+                .leftJoinAndSelect(
+                    'applicant.positions',
+                    'position',
+                )
+                .where('application.job_id = :jobId', {
+                    jobId,
+                });
+
+            // Stage Filter
+            if (stageId) {
+                query.andWhere(
+                    'application.stage_id = :stageId',
+                    {
+                        stageId: Number(stageId),
+                    },
+                );
+            }
+            // Search
+            if (search) {
+                query.andWhere(
+                    `
+                (
+                    applicant.first_name LIKE :search
+                    OR applicant.middle_name LIKE :search
+                    OR applicant.last_name LIKE :search
+                    OR user.email LIKE :search
+                    OR phone.phone_number LIKE :search
+                    OR position.position_name LIKE :search
+                )
+                `,
+                    {
+                        search: `%${search}%`,
+                    },
+                );
+            }
+
+            const total = await query.getCount();
+            const applications = await query
+                .orderBy('application.created_at', 'DESC')
+                .skip((page - 1) * limit)
+                .take(limit)
+                .getMany();
+
+            const data = applications.map((item) => ({
+                id: item.id,
+
+                status: item.status,
+                letter: item.letter,
+
+                stage: item.stage
+                    ? {
+                        id: item.stage.id,
+                        name: item.stage.stage_name,
+                        code: item.stage.stage_code,
+                    }
+                    : null,
+
+                applicant: {
+                    id: item.applicant.id,
+
+                    first_name:
+                        item.applicant.applicants?.[0]
+                            ?.first_name ?? null,
+
+                    middle_name:
+                        item.applicant.applicants?.[0]
+                            ?.middle_name ?? null,
+
+                    last_name:
+                        item.applicant.applicants?.[0]
+                            ?.last_name ?? null,
+
+                    email: item.applicant.email,
+
+                },
+
+                applied_at: item.created_at,
+            }));
+
+            return {
+                success: true,
+                message: 'Applicants retrieved successfully',
+                data,
+                current_page: page,
+                per_page: limit,
+                total_pages: Math.ceil(total / limit),
+                total,
+            };
+        } catch (error) {
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch applicants',
+                error: error.message,
+            });
+        }
+    }
+    async getJobStageHistory(
+        user: Users,
+        jobId: number,
+        page = 1,
+        limit = 20,
+        search?: string,
+        stageId?: number,
+    ) {
+        try {
+            // Ensure employer owns this job
+            if (!user.client_id) {
+                throw new BadRequestException('Employer has no company.');
+            }
+
+            const job = await this.jobsRepository.findOne({
+                where: {
+                    id: jobId,
+                    client_id: user.client_id,
+                },
+            });
+
+            if (!job) {
+                throw new NotFoundException('Job not found.');
+            }
+
+            const query = this.jobStageRepository
+                .createQueryBuilder('history')
+
+                .leftJoinAndSelect('history.stage', 'stage')
+
+                .leftJoinAndSelect('history.applicant', 'applicant')
+
+                .leftJoinAndSelect('applicant.user', 'user')
+
+                .where('history.job_id = :jobId', {
+                    jobId,
+                });
+
+            // ==========================
+            // FILTER BY STAGE
+            // ==========================
+
+            if (stageId) {
+                query.andWhere('history.stage_id = :stageId', {
+                    stageId,
+                });
+            }
+
+            // ==========================
+            // SEARCH
+            // ==========================
+
+            if (search) {
+                query.andWhere(
+                    `(
+                    applicant.first_name LIKE :search
+                    OR applicant.middle_name LIKE :search
+                    OR applicant.last_name LIKE :search
+                    OR user.email LIKE :search
+                )`,
+                    {
+                        search: `%${search}%`,
+                    },
+                );
+            }
+
+            query.orderBy('history.created_at', 'DESC');
+
+            const total = await query.getCount();
+
+            const histories = await query
+                .skip((page - 1) * limit)
+                .take(limit)
+                .getMany();
+
+            const data = histories.map((item) => ({
+                id: item.id,
+
+                applicant: {
+                    id: item.applicant.id,
+                    first_name: item.applicant.first_name,
+                    middle_name: item.applicant.middle_name,
+                    last_name: item.applicant.last_name,
+                    email: item.applicant.user?.email,
+                    picture: item.applicant.picture,
+                },
+
+                stage: {
+                    id: item.stage.id,
+                    name: item.stage.stage_name,
+                    code: item.stage.stage_code,
+                },
+
+                moved_at: item.created_at,
+            }));
+
+            return {
+                success: true,
+                message: 'Applicants stage history fetched successfully.',
+                data,
+
+                current_page: page,
+                per_page: limit,
+                total,
+                total_pages: Math.ceil(total / limit),
+            };
+        } catch (error) {
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch applicants.',
                 error: error.message,
             });
         }

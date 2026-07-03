@@ -29,6 +29,7 @@ import { ApplicantLanguages } from './applicant-languages.entity';
 import { JobAlerts } from 'src/jobs/entities/job-alerts.entity';
 import { JobCarts } from 'src/jobs/entities/job-carts.entity';
 import { JobMatchNotifications } from 'src/jobs/entities/job-match-notifications.entity';
+import { JobStage } from 'src/jobs/entities/job-stage.entity';
 
 @Entity('applicants')
 export class Applicants {
@@ -164,5 +165,8 @@ export class Applicants {
   @OneToMany(() => JobMatchNotifications, (notification) => notification.applicant,)
   matchNotifications: JobMatchNotifications[];
 
-  
+  @OneToMany(() => JobStage, (jobStage) => jobStage.applicant)
+  jobStages: JobStage[];
+
+
 }

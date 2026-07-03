@@ -255,33 +255,67 @@ export class AuthService {
         };
     }
     async forgotPassword(email: string) {
-        const user = await this.usersRepository.findOne({
-            where: { email },
-        });
+        try {
+            console.log('[FORGOT PASSWORD] Request received:', {
+                email,
+                time: new Date().toISOString(),
+            });
 
-        if (!user) {
+            const user = await this.usersRepository.findOne({
+                where: { email },
+            });
+
+            if (!user) {
+                console.log('[FORGOT PASSWORD] User not found:', email);
+
+                return {
+                    success: true,
+                    message: 'If the email exists, a reset link has been sent.',
+                };
+            }
+
+            console.log('[FORGOT PASSWORD] User found:', {
+                id: user.id,
+                email: user.email,
+            });
+
+            const token = randomBytes(32).toString('hex');
+
+            console.log('[FORGOT PASSWORD] Generated token:', token);
+
+            await this.passwordResetRepository.delete({ email });
+
+            console.log('[FORGOT PASSWORD] Old reset tokens cleared');
+
+            await this.passwordResetRepository.save({
+                email,
+                token,
+                expires_at: new Date(Date.now() + 15 * 60 * 1000),
+            });
+
+            console.log('[FORGOT PASSWORD] Token saved in DB');
+
+            await this.mailService.sendPasswordReset(email, token);
+
+            console.log('[FORGOT PASSWORD] Email sent successfully');
+
             return {
                 success: true,
-                message: 'If the email exists, a reset link has been sent.',
+                message: 'Password reset link sent.',
+            };
+        } catch (error) {
+            console.error('[FORGOT PASSWORD ERROR]', {
+                message: error.message,
+                stack: error.stack,
+                email,
+            });
+
+            return {
+                success: false,
+                message: 'Failed to process forgot password request',
+                error: error.message,
             };
         }
-
-        const token = randomBytes(32).toString('hex');
-
-        await this.passwordResetRepository.delete({ email });
-
-        await this.passwordResetRepository.save({
-            email,
-            token,
-            expires_at: new Date(Date.now() + 15 * 60 * 1000),
-        });
-
-        await this.mailService.sendPasswordReset(email, token);
-
-        return {
-            success: true,
-            message: 'Password reset link sent.',
-        };
     }
 
     async resetPassword(dto: ResetPasswordDto) {

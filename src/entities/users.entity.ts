@@ -17,6 +17,7 @@ import { JobEvaluationSpecifics } from 'src/jobs/entities/job-evaluation-specifi
 import { JobLikes } from 'src/jobs/entities/job-likes.entity';
 import { JobServiceInfos } from 'src/jobs/entities/job-service-infos.entity';
 import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
+import { JobStage } from 'src/jobs/entities/job-stage.entity';
 
 @Entity('users')
 export class Users {
@@ -116,11 +117,9 @@ export class Users {
   @OneToMany(() => JobShortListings, (shortListing) => shortListing.user,)
   jobShortListings: JobShortListings[];
 
-  // @ManyToMany(() => Permission)
-  // @JoinTable({
-  //   name: 'user_has_permissions',
-  //   joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-  //   inverseJoinColumn: { name: 'permission_id', referencedColumnName: 'id' }
-  // })
-  // permissions: Permission[];
+  @OneToMany(() => JobStage, (jobStage) => jobStage.creator)
+  createdJobStages: JobStage[];
+
+  @OneToMany(() => JobStage, (jobStage) => jobStage.updator)
+  updatedJobStages: JobStage[];
 }

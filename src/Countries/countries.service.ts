@@ -21,7 +21,7 @@ export class CountriesService {
         .createQueryBuilder('country')
         .select([
           'MIN(country.id) as id',
-          'country.name as ame',
+          'country.name as name',
         ])
         .groupBy('country.name')
         .orderBy('id', 'DESC');

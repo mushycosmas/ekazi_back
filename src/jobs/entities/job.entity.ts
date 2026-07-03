@@ -53,6 +53,7 @@ import { JobSoftware } from './job-software.entity';
 import { JobTool } from './job-tool.entity';
 import { JobUniversalTypes } from 'src/entities/job-universal-types.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
+import { JobStage } from './job-stage.entity';
 
 
 @Entity('jobs')
@@ -189,20 +190,20 @@ export class Jobs {
     })
     job_paid_status: string;
 
-    
+
     @Column({ type: 'date' })
     @Transform(({ value }) =>
         value ? new Date(value).toISOString().split('T')[0] : null,
     )
     created_at: Date;
 
-        @Column({ type: 'date' })
+    @Column({ type: 'date' })
     @Transform(({ value }) =>
         value ? new Date(value).toISOString().split('T')[0] : null,
     )
-     updated_at: Date;
+    updated_at: Date;
 
- 
+
 
     /*
     |--------------------------------------------------------------------------
@@ -390,4 +391,7 @@ export class Jobs {
         (application) => application.job,
     )
     applications: ApplicantApplication[];
+
+    @OneToMany(() => JobStage, (jobStage) => jobStage.job)
+    jobStages: JobStage[];
 }

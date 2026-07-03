@@ -10,7 +10,8 @@ import {
 
 import { Users } from 'src/entities/users.entity';
 import { Jobs } from 'src/jobs/entities/job.entity';
-import { JobStage } from 'src/jobs/entities/job-stage.entity';
+import { Stage } from '../stage.entity';
+ 
 
 @Entity('applicant_applications')
 export class ApplicantApplication {
@@ -50,15 +51,15 @@ export class ApplicantApplication {
     @JoinColumn({ name: 'applicant_id' })
     applicant: Users;
 
-    // 🔥 RELATION TO STAGE (IMPORTANT)
-    @ManyToOne(() => JobStage, (stage) => stage.applications)
-    @JoinColumn({ name: 'stage_id' })
-    stage: JobStage;
-
+ 
     // Timestamps - ONLY DECLARE ONCE!
     @CreateDateColumn()
     created_at: Date;
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @ManyToOne(() => Stage, (stage) => stage.applications)
+    @JoinColumn({ name: 'stage_id' })
+    stage: Stage;
 }
