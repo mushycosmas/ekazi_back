@@ -10,47 +10,68 @@ export class RegionsService {
         private readonly regionRepository: Repository<Regions>,
     ) { }
 
-    async findAll(
-        page = 1,
-        limit = 20,
-        search?: string,
-    ) {
+    async findAll(page = 1, limit = 20, search?: string) {
         const query = this.regionRepository
             .createQueryBuilder('region')
+            .leftJoinAndSelect('region.country', 'country')
             .select([
-                'MIN(region.id) as id',
-                'region.region_name as region_name',
+                'region.id',
+                'region.region_name',
+                'region.slug',
+                'country.id',
+                'country.name',
             ])
-            .groupBy('region.region_name')
-            .orderBy('id', 'DESC');
+            .orderBy('region.id', 'DESC');
 
+        // ======================
+        // SEARCH
+        // ======================
         if (search) {
-            query.andWhere(
-                'region.region_name LIKE :search',
-                { search: `%${search}%` },
-            );
+            query.where('region.region_name LIKE :search', {
+                search: `%${search}%`,
+            });
         }
 
+        // ======================
+        // TOTAL COUNT
+        // ======================
         const totalQuery = this.regionRepository
             .createQueryBuilder('region');
 
         if (search) {
-            totalQuery.where(
-                'region.region_name LIKE :search',
-                { search: `%${search}%` },
-            );
+            totalQuery.where('region.region_name LIKE :search', {
+                search: `%${search}%`,
+            });
         }
 
         const totalResult = await totalQuery
-            .select('COUNT(DISTINCT region.region_name)', 'count')
+            .select('COUNT(*)', 'count')
             .getRawOne();
 
         const total = Number(totalResult.count);
 
-        const data = await query
-            .offset((page - 1) * limit)
-            .limit(limit)
-            .getRawMany();
+        // ======================
+        // PAGINATION
+        // ======================
+        const regions = await query
+            .skip((page - 1) * limit)
+            .take(limit)
+            .getMany();
+
+        // ======================
+        // FORMAT RESPONSE
+        // ======================
+        const data = regions.map((region) => ({
+            id: region.id,
+            name: region.region_name,
+            slug: region.slug ?? null,
+            country: region.country
+                ? {
+                    id: region.country.id,
+                    name: region.country.name,
+                }
+                : null,
+        }));
 
         return {
             success: true,
