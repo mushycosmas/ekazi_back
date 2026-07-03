@@ -74,4 +74,10 @@ export class UpdateCompanyProfileDto {
     @IsOptional()
     @IsString()
     fax?: string;
+
+    @IsOptional()
+    @IsString()
+    attachment?: string
+
+
 }

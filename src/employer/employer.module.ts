@@ -19,6 +19,7 @@ import { Clients } from 'src/client/clients.entity';
 import { ClientEmail } from 'src/client/entities/client-email.entity';
 import { ClientAddress } from 'src/client/entities/client-address.entity';
 import { ClientPhone } from 'src/client/entities/client-phones.entity';
+import { ClientDescription } from 'src/client/entities/client-descriptions.entity';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ClientPhone } from 'src/client/entities/client-phones.entity';
       ClientEmail,
       ClientAddress,
       ClientPhone,
+      ClientDescription,
     ]),
   ],
   controllers: [

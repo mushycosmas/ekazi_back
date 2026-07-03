@@ -13,6 +13,7 @@ import { UpdateCompanyProfileDto } from 'src/client/dto/update-company-profile.d
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 import { Jobs } from 'src/jobs/entities/job.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
+import { ClientDescription } from 'src/client/entities/client-descriptions.entity';
 
 @Injectable()
 export class EmployerService {
@@ -36,6 +37,11 @@ export class EmployerService {
 
         @InjectRepository(ClientPhone)
         private readonly phoneRepository: Repository<ClientPhone>,
+
+        @InjectRepository(ClientDescription)
+        private readonly   clientDescriptionRepository: Repository<ClientDescription>,
+
+      
 
         @InjectRepository(JobStage)
         private readonly jobStageRepository: Repository<JobStage>,
@@ -204,6 +210,7 @@ export class EmployerService {
                     'addresses',
                     'emails',
                     'phones',
+                    'descriptions',
                 ],
             });
 
@@ -268,6 +275,24 @@ export class EmployerService {
                 client.phones[0].fax = dto.fax ?? client.phones[0].fax;
 
                 await this.phoneRepository.save(client.phones[0]);
+            }
+            // ======================
+            // DESCRIPTION (FIRST RECORD)
+            // ======================
+            if (client.descriptions?.length) {
+                const description = client.descriptions[0];
+
+                description.description =
+                    dto.description ?? description.description;
+
+                description.website =
+                    dto.website ?? description.website;
+
+                description.attachment =
+                    dto.attachment ?? description.attachment;
+
+
+                await this.clientDescriptionRepository.save(description);
             }
 
             return {
