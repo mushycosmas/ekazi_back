@@ -60,8 +60,22 @@ export class Users {
   // verified: boolean | null;
   // @Column({ default: 0 })
   // verified: number;
-  @Column({ default: false })
-  verified: boolean;
+  // @Column({ type: 'int' })
+  // verified: number;
+  @Column({ type: 'int' })
+  private _verified: number;
+
+  set verified(value: number | boolean) {
+    if (typeof value === 'boolean') {
+      this._verified = value ? 1 : 0;
+    } else {
+      this._verified = value;
+    }
+  }
+
+  get verified(): number {
+    return this._verified;
+  }
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   verify_key: string | null;

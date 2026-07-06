@@ -213,6 +213,7 @@ export class AuthService {
                 password: hashedPassword,
                 role_id: role.id,
                 hide: false,
+                verified: 0, // ✅ ALWAYS UNVERIFIED ON REGISTER
                 verify_key: dto.email + new Date().toISOString().slice(0, 10),
                 created_at: now,
                 updated_at: now,
