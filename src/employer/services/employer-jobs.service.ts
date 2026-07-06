@@ -394,8 +394,12 @@ export class EmployerJobsService {
                          'jobSoftwares.software',
 
                          //TOOLS
-                         'jobTool',
-                         'jobTool.tool',
+                         'jobTools',
+                         'jobTools.tool',
+
+                         //KNOWLEGD
+                         'jobKnowledge',
+                         'jobKnowledge.knowledge',
 
                         // PERSONALITIES (FIXED → now returns ALL)
                         'jobPersonalities',

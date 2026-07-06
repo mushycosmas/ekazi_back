@@ -58,111 +58,257 @@ export class AuthService {
     ) { }
 
 
+    // async registerEmployer(dto: CreateEmployerDto) {
+    //     const existing = await this.usersRepository.findOne({
+    //         where: { email: dto.email },
+    //     });
+
+    //     if (existing) {
+    //         throw new BadRequestException('Email already exists');
+    //     }
+
+    //     const role = await this.roleRepository.findOne({
+    //         where: { name: 'Post Jobs Only' },
+    //     });
+
+    //     if (!role) {
+    //         throw new BadRequestException('Role not found');
+    //     }
+
+    //     const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    //     // =========================
+    //     // USER
+    //     // =========================
+    //     const now = new Date();
+
+    //     const user = this.usersRepository.create({
+    //         username: dto.name,
+    //         email: dto.email,
+    //         temp_email: dto.email,
+    //         password: hashedPassword,
+    //         role_id: role.id,
+    //         hide: false,
+    //         verify_key: dto.email + new Date().toISOString().slice(0, 10),
+    //         created_at: now,
+    //         updated_at: now,
+    //     });
+
+    //     await this.usersRepository.save(user);
+
+    //     // =========================
+    //     // CLIENT
+    //     // =========================
+    //     const client = this.clientRepo.create({
+    //         creator_id: user.id,
+    //         updator_id: user.id,
+    //         type_id: dto.type,
+    //         client_name: dto.name,
+    //     });
+
+    //     await this.clientRepo.save(client);
+
+    //     // link user
+    //     user.client_id = client.id;
+    //     await this.usersRepository.save(user);
+
+    //     // =========================
+    //     // ROLE ASSIGN (Spatie equivalent)
+    //     // =========================
+    //     // If using nestjs CASL or custom roles:
+    //     // user.role = role;
+
+    //     // =========================
+    //     // CLIENT EMAIL
+    //     // =========================
+    //     await this.clientEmailRepo.save({
+    //         client_email: dto.email,
+    //         client_id: client.id,
+    //     });
+
+    //     // =========================
+    //     // CLIENT PHONE
+    //     // =========================
+    //     await this.clientPhoneRepo.save({
+    //         phone_number: dto.phone,
+    //         client_id: client.id,
+    //     });
+
+    //     // =========================
+    //     // NOTIFICATION
+    //     // =========================
+    //     await this.notificationRepo.save({
+    //         client_id: client.id,
+    //         data: 'New Client Joined',
+    //         type: 'new-client',
+    //     });
+    //     if (!user.email) {
+    //         throw new BadRequestException('User email is missing');
+    //     }
+    //     if (!user.username) {
+    //         throw new BadRequestException('User email is missing');
+    //     }
+    //     // ✅ SEND EMAIL VERIFICATION AFTER SUCCESS
+    //     await this.sendVerificationEmail(
+    //         user.email,
+    //         user.username,
+    //     );
+
+    //     return {
+    //         success: true,
+    //         message: 'Employer account created successfully',
+    //         data: {
+    //             id: user.id,
+    //             email: user.email,
+    //             client_id: client.id,
+    //         },
+    //     };
+    // }
     async registerEmployer(dto: CreateEmployerDto) {
-        const existing = await this.usersRepository.findOne({
-            where: { email: dto.email },
-        });
+        try {
+            console.log('🚀 START registerEmployer:', dto.email);
 
-        if (existing) {
-            throw new BadRequestException('Email already exists');
-        }
+            // =========================
+            // CHECK EXISTING USER
+            // =========================
+            const existing = await this.usersRepository.findOne({
+                where: { email: dto.email },
+            });
 
-        const role = await this.roleRepository.findOne({
-            where: { name: 'Post Jobs Only' },
-        });
+            if (existing) {
+                throw new BadRequestException('Email already exists');
+            }
 
-        if (!role) {
-            throw new BadRequestException('Role not found');
-        }
+            console.log('✅ Email is unique');
 
-        const hashedPassword = await bcrypt.hash(dto.password, 10);
+            // =========================
+            // ROLE CHECK
+            // =========================
+            const role = await this.roleRepository.findOne({
+                where: { name: 'Post Jobs Only' },
+            });
 
-        // =========================
-        // USER
-        // =========================
-        const now = new Date();
+            if (!role) {
+                throw new BadRequestException('Role not found');
+            }
 
-        const user = this.usersRepository.create({
-            username: dto.name,
-            email: dto.email,
-            temp_email: dto.email,
-            password: hashedPassword,
-            role_id: role.id,
-            hide: false,
-            verify_key: dto.email + new Date().toISOString().slice(0, 10),
-            created_at: now,
-            updated_at: now,
-        });
+            console.log('✅ Role found:', role.id);
 
-        await this.usersRepository.save(user);
+            // =========================
+            // HASH PASSWORD
+            // =========================
+            const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-        // =========================
-        // CLIENT
-        // =========================
-        const client = this.clientRepo.create({
-            creator_id: user.id,
-            updator_id: user.id,
-            type_id: dto.type,
-            client_name: dto.name,
-        });
+            console.log('🔐 Password hashed');
 
-        await this.clientRepo.save(client);
+            const now = new Date();
 
-        // link user
-        user.client_id = client.id;
-        await this.usersRepository.save(user);
+            // =========================
+            // CREATE USER
+            // =========================
+            const user = this.usersRepository.create({
+                username: dto.name,
+                email: dto.email,
+                temp_email: dto.email,
+                password: hashedPassword,
+                role_id: role.id,
+                hide: false,
+                verify_key: dto.email + new Date().toISOString().slice(0, 10),
+                created_at: now,
+                updated_at: now,
+            });
 
-        // =========================
-        // ROLE ASSIGN (Spatie equivalent)
-        // =========================
-        // If using nestjs CASL or custom roles:
-        // user.role = role;
+            await this.usersRepository.save(user);
 
-        // =========================
-        // CLIENT EMAIL
-        // =========================
-        await this.clientEmailRepo.save({
-            client_email: dto.email,
-            client_id: client.id,
-        });
+            console.log('👤 User created:', user.id);
 
-        // =========================
-        // CLIENT PHONE
-        // =========================
-        await this.clientPhoneRepo.save({
-            phone_number: dto.phone,
-            client_id: client.id,
-        });
+            // =========================
+            // CREATE CLIENT
+            // =========================
+            const client = this.clientRepo.create({
+                creator_id: user.id,
+                updator_id: user.id,
+                type_id: dto.type,
+                client_name: dto.name,
+            });
 
-        // =========================
-        // NOTIFICATION
-        // =========================
-        await this.notificationRepo.save({
-            client_id: client.id,
-            data: 'New Client Joined',
-            type: 'new-client',
-        });
-        if (!user.email) {
-            throw new BadRequestException('User email is missing');
-        }
-        if (!user.username) {
-            throw new BadRequestException('User email is missing');
-        }
-        // ✅ SEND EMAIL VERIFICATION AFTER SUCCESS
-        await this.sendVerificationEmail(
-            user.email,
-            user.username,
-        );
+            await this.clientRepo.save(client);
 
-        return {
-            success: true,
-            message: 'Employer account created successfully',
-            data: {
-                id: user.id,
-                email: user.email,
+            console.log('🏢 Client created:', client.id);
+
+            // link user
+            user.client_id = client.id;
+            await this.usersRepository.save(user);
+
+            // =========================
+            // EMAIL
+            // =========================
+            await this.clientEmailRepo.save({
+                client_email: dto.email,
                 client_id: client.id,
-            },
-        };
+            });
+
+            console.log('📧 Email saved');
+
+            // =========================
+            // PHONE
+            // =========================
+            if (dto.phone) {
+                await this.clientPhoneRepo.save({
+                    phone_number: dto.phone,
+                    client_id: client.id,
+                });
+
+                console.log('📞 Phone saved');
+            }
+
+            // =========================
+            // NOTIFICATION
+            // =========================
+            await this.notificationRepo.save({
+                client_id: client.id,
+                data: 'New Client Joined',
+                type: 'new-client',
+            });
+
+            console.log('🔔 Notification sent');
+
+            // =========================
+            // VALIDATION CHECKS
+            // =========================
+            if (!user.email || !user.username) {
+                throw new BadRequestException('User data incomplete');
+            }
+
+            // =========================
+            // EMAIL VERIFICATION
+            // =========================
+            await this.sendVerificationEmail(user.email, user.username);
+
+            console.log('📨 Verification email sent');
+
+            return {
+                success: true,
+                message: 'Employer account created successfully',
+                data: {
+                    id: user.id,
+                    email: user.email,
+                    client_id: client.id,
+                },
+            };
+        } catch (error) {
+            console.error('❌ registerEmployer ERROR:', {
+                message: error.message,
+                stack: error.stack,
+                dto,
+            });
+
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to register employer',
+                error: error.message,
+            });
+        }
     }
 
     async login(username: string, password: string) {
