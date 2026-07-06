@@ -294,7 +294,7 @@ export class AuthService {
                         message: 'User data incomplete',
 
                     }
-            
+                );
             }
 
             // =========================
