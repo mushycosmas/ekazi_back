@@ -176,7 +176,10 @@ export class AuthService {
             });
 
             if (existing) {
-                throw new BadRequestException('Email already exists');
+                throw new BadRequestException({
+                    success: false,
+                    message: 'Email already exists',
+                });
             }
 
             console.log('✅ Email is unique');
@@ -189,7 +192,13 @@ export class AuthService {
             });
 
             if (!role) {
-                throw new BadRequestException('Role not found');
+                throw new BadRequestException(
+
+                    {
+                        success: false,
+                        message: 'Role not found',
+                    }
+                );
             }
 
             console.log('✅ Role found:', role.id);
@@ -214,7 +223,7 @@ export class AuthService {
                 role_id: role.id,
                 hide: false,
                 verified: false, // ✅ ALWAYS UNVERIFIED ON REGISTER
-              
+
                 verify_key: dto.email + new Date().toISOString().slice(0, 10),
                 created_at: now,
                 updated_at: now,
@@ -279,7 +288,13 @@ export class AuthService {
             // VALIDATION CHECKS
             // =========================
             if (!user.email || !user.username) {
-                throw new BadRequestException('User data incomplete');
+                throw new BadRequestException(
+                    {
+                        success: false,
+                        message: 'User data incomplete',
+
+                    }
+            
             }
 
             // =========================
