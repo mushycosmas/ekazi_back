@@ -18,6 +18,8 @@ import { JobLikes } from 'src/jobs/entities/job-likes.entity';
 import { JobServiceInfos } from 'src/jobs/entities/job-service-infos.entity';
 import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
+import { Task } from 'src/tasks/entities/tasks.entity';
+import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
 
 @Entity('users')
 export class Users {
@@ -122,4 +124,10 @@ export class Users {
 
   @OneToMany(() => JobStage, (jobStage) => jobStage.updator)
   updatedJobStages: JobStage[];
+
+  @OneToMany(() => Task, (task) => task.creator)
+  tasks: Task[];
+
+  @OneToMany(() => TaskAssignment, (a) => a.user)
+  taskAssignments: TaskAssignment[];
 }

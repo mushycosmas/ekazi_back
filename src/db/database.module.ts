@@ -117,6 +117,8 @@ import { ClientType } from 'src/client/entities/client-types.entity';
 import { CompanySize } from 'src/entities/company-size.entity';
 import { Stage } from 'src/entities/stage.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
+import { Task } from 'src/tasks/entities/tasks.entity';
+import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
  
 
 
@@ -236,6 +238,8 @@ const allEntities = [
   ClientType,
   CompanySize,
   Stage,
+  Task,
+  TaskAssignment,
   
 ];
 

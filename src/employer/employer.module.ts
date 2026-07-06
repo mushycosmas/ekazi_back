@@ -20,6 +20,9 @@ import { ClientEmail } from 'src/client/entities/client-email.entity';
 import { ClientAddress } from 'src/client/entities/client-address.entity';
 import { ClientPhone } from 'src/client/entities/client-phones.entity';
 import { ClientDescription } from 'src/client/entities/client-descriptions.entity';
+import { Task } from 'src/tasks/entities/tasks.entity';
+import { TasksModule } from 'src/tasks/tasks.module';
+import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
 
 @Module({
   imports: [
@@ -34,8 +37,12 @@ import { ClientDescription } from 'src/client/entities/client-descriptions.entit
       ClientAddress,
       ClientPhone,
       ClientDescription,
+      Task,
+      TaskAssignment,
     ]),
+     TasksModule, // ✅ ADD THIS
   ],
+ 
   controllers: [
     EmployerController,
     EmployerUserController,

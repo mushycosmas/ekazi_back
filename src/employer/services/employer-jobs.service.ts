@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Users } from 'src/entities/users.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 import { NotFoundException } from '@nestjs/common';
+import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 
 export type MyJobsQuery = {
     page?: number;
@@ -19,6 +20,8 @@ export class EmployerJobsService {
     constructor(
         @InjectRepository(Jobs)
         private readonly jobsRepository: Repository<Jobs>,
+        @InjectRepository(ApplicantApplication)
+        private readonly applicationRepository: Repository<ApplicantApplication>,
     ) { }
 
     async myjobs(user: Users, query: MyJobsQuery) {
@@ -49,6 +52,8 @@ export class EmployerJobsService {
                 .leftJoinAndSelect('job.region', 'region')
                 .leftJoinAndSelect('job.industry', 'industry')
                 .leftJoinAndSelect('job.position', 'position')
+                .leftJoinAndSelect('job.positionLevel', 'positionLevel')
+
                 .leftJoinAndSelect('job.addresses', 'addresses')
                 .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
                 .leftJoinAndSelect('job.jobUniversalType', 'jobUniversalType')
@@ -72,6 +77,9 @@ export class EmployerJobsService {
 
                     'position.id',
                     'position.position_name',
+
+                    'positionLevel.id',
+                    'positionLevel.position_name',
 
                     'jobStatistics.id',
                     'jobStatistics.job_views',
@@ -212,7 +220,7 @@ export class EmployerJobsService {
         }
     }
 
-    async myJobDetail(user: Users, jobId: number) {
+    async myJobDetails(user: Users, jobId: number) {
         try {
             const clientId = user.client_id;
 
@@ -228,10 +236,25 @@ export class EmployerJobsService {
                 .leftJoinAndSelect('job.region', 'region')
                 .leftJoinAndSelect('job.industry', 'industry')
                 .leftJoinAndSelect('job.position', 'position')
+                .leftJoinAndSelect('job.positionLevel', 'positionLevel')
                 .leftJoinAndSelect('job.addresses', 'addresses')
                 .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
                 .leftJoinAndSelect('job.jobUniversalType', 'jobUniversalType')
                 .leftJoinAndSelect('job.currency', 'currency')
+                .leftJoinAndSelect('job.jobMetas', 'jobMetas')
+                .leftJoinAndSelect('job.jobCultures', 'jobCultures')
+                .leftJoinAndSelect('jobCultures.culture', 'culture')
+                .leftJoinAndSelect('job.gender', 'gender')
+                .leftJoinAndSelect('job.jobEducation', 'jobEducation')
+                .leftJoinAndSelect('jobEducation.major', 'major')
+                .leftJoinAndSelect('jobEducation.course', 'course')
+                .leftJoinAndSelect('jobEducation.educationLevel', 'educationLevel')
+                .leftJoinAndSelect('jobMetas.metaKeyword', 'metaKeyword')
+                .leftJoinAndSelect('job.jobReportTos', 'jobReportTos')
+                .leftJoinAndSelect('job.jobRequirements', 'jobRequirements')
+                .leftJoinAndSelect('job.otherRequirements', 'otherRequirements')
+                .leftJoinAndSelect('job.jobPersonalities', 'jobPersonalities')
+                .leftJoinAndSelect('jobPersonalities.personality', 'personality')
 
                 // Applications
                 .leftJoin('job.applications', 'applications')
@@ -247,10 +270,34 @@ export class EmployerJobsService {
                     'region',
                     'industry',
                     'position',
+
+                    'positionLevel.id',
+                    'positionLevel.position_name',
+
                     'addresses',
                     'jobStatistics',
                     'jobUniversalType',
                     'currency',
+
+                    'jobMetas',
+                    'metaKeyword',
+
+                    'jobCultures',
+                    'culture',
+                    'gender',
+                    'jobPersonalities',
+                    'personality',
+
+                    'jobEducation',
+                    'major',
+                    'course',
+                    'educationLevel',
+
+                    'jobReportTos',
+                    'jobRequirements',
+                    'otherRequirements'
+
+
                 ])
 
                 .addSelect(`
@@ -293,6 +340,111 @@ export class EmployerJobsService {
                     total_applicants: Number(
                         result.raw[0].total_applicants ?? 0,
                     ),
+                },
+            };
+        } catch (error) {
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch job details',
+                error: error.message,
+            });
+        }
+    }
+    async myJobDetail(user: Users, jobId: number) {
+        try {
+            const clientId = user.client_id;
+
+            if (!clientId) {
+                throw new NotFoundException(
+                    'No client assigned to this user',
+                );
+            }
+
+            // =========================
+            // RUN IN PARALLEL (FAST)
+            // =========================
+            const [job, totalApplicants] = await Promise.all([
+                this.jobsRepository.findOne({
+                    where: {
+                        id: jobId,
+                        client_id: clientId,
+                    },
+                    relations: [
+                        'client',
+                        'country',
+                        'region',
+                        'industry',
+                        'position',
+                        'positionLevel',
+                        'addresses',
+                        'jobStatistics',
+                        'jobUniversalType',
+                        'currency',
+
+                        // META
+                        'jobMetas',
+                        'jobMetas.metaKeyword',
+
+                        // CULTURE
+                        'jobCultures',
+                        'jobCultures.culture',
+
+                        //SODTWARE
+                         'jobSoftwares',
+                         'jobSoftwares.software',
+
+                         //TOOLS
+                         'jobTool',
+                         'jobTool.tool',
+
+                        // PERSONALITIES (FIXED → now returns ALL)
+                        'jobPersonalities',
+                        'jobPersonalities.personality',
+
+                        // EDUCATION
+                        'jobEducation',
+                        'jobEducation.major',
+                        'jobEducation.course',
+                        'jobEducation.educationLevel',
+
+                        // OTHER
+                        'gender',
+                        'jobReportTos',
+                        'jobRequirements',
+                        'otherRequirements',
+                    ],
+                }),
+
+                this.applicationRepository.count({
+                    where: { job_id: jobId },
+                }),
+            ]);
+
+            // =========================
+            // VALIDATION
+            // =========================
+            if (!job) {
+                throw new NotFoundException('Job not found');
+            }
+
+            // =========================
+            // STATUS LOGIC
+            // =========================
+            const status =
+                new Date(job.dead_line) >= new Date()
+                    ? 'Active'
+                    : 'Expired';
+
+            // =========================
+            // RESPONSE
+            // =========================
+            return {
+                success: true,
+                message: 'Job details fetched successfully',
+                data: {
+                    ...job,
+                    status,
+                    total_applicants: totalApplicants,
                 },
             };
         } catch (error) {

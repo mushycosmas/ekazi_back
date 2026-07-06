@@ -51,6 +51,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/moment": "^2.11.29",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^8.0.1",
     "@types/supertest": "^6.0.2",

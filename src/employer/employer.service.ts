@@ -39,9 +39,9 @@ export class EmployerService {
         private readonly phoneRepository: Repository<ClientPhone>,
 
         @InjectRepository(ClientDescription)
-        private readonly   clientDescriptionRepository: Repository<ClientDescription>,
+        private readonly clientDescriptionRepository: Repository<ClientDescription>,
 
-      
+
 
         @InjectRepository(JobStage)
         private readonly jobStageRepository: Repository<JobStage>,
@@ -161,9 +161,7 @@ export class EmployerService {
 
                     founded_year: client.founded_year,
 
-                    logo: client.logo
-                        ? `${this.configService.get('APP_URL')}/${client.logo}`
-                        : null,
+                    logo: client.logo ? client.logo : null,
 
                     email: client.emails?.[0]?.client_email ?? null,
 
@@ -198,7 +196,7 @@ export class EmployerService {
             });
         }
     }
-    async updateCompanyProfile(user: Users, dto: UpdateCompanyProfileDto) {
+    async updateCompanyProfile(user: Users, dto: UpdateCompanyProfileDto, file?: Express.Multer.File,) {
         try {
             if (!user.client_id) {
                 throw new NotFoundException('Company not found');
@@ -237,7 +235,11 @@ export class EmployerService {
             client.company_size_id =
                 dto.company_size_id ?? client.company_size_id;
             client.country_id = dto.country_id ?? client.country_id;
-
+            if (file) {
+                client.logo = file.path.replace(process.cwd(), '')
+                    .replace(/\\/g, '/')
+                    .replace(/^\/+/, '');
+            }
             client.updator_id = user.id;
             client.updated_at = new Date();
 
@@ -288,8 +290,14 @@ export class EmployerService {
                 description.website =
                     dto.website ?? description.website;
 
-                description.attachment =
-                    dto.attachment ?? description.attachment;
+                // description.attachment =
+                //     dto.attachment ?? description.attachment;
+                // ✅ SAVE FILE PATH HERE
+                if (file) {
+                    description.attachment = file.path.replace(process.cwd(), '')
+                    .replace(/\\/g, '/')
+                    .replace(/^\/+/, '');
+                }
 
 
                 await this.clientDescriptionRepository.save(description);
@@ -339,7 +347,8 @@ export class EmployerService {
                 .createQueryBuilder('application')
                 .leftJoinAndSelect('application.stage', 'stage')
                 .leftJoinAndSelect('application.applicant', 'user')
-                .leftJoinAndSelect('user.applicants', 'applicant')
+                // .leftJoinAndSelect('user.applicants', 'applicant')
+                .leftJoinAndSelect('user.applicants', 'applicantProfile')
                 .leftJoinAndSelect(
                     'applicant.applicant_addresses',
                     'address',
@@ -393,7 +402,6 @@ export class EmployerService {
 
             const data = applications.map((item) => ({
                 id: item.id,
-
                 status: item.status,
                 letter: item.letter,
 
@@ -405,24 +413,19 @@ export class EmployerService {
                     }
                     : null,
 
-                applicant: {
-                    id: item.applicant.id,
+                applicant: item.applicant
+                    ? {
+                        id: item.applicant.id,
+                        email: item.applicant.email,
 
-                    first_name:
-                        item.applicant.applicants?.[0]
-                            ?.first_name ?? null,
-
-                    middle_name:
-                        item.applicant.applicants?.[0]
-                            ?.middle_name ?? null,
-
-                    last_name:
-                        item.applicant.applicants?.[0]
-                            ?.last_name ?? null,
-
-                    email: item.applicant.email,
-
-                },
+                        first_name:
+                            item.applicant.applicants?.[0]?.first_name ?? '',
+                        middle_name:
+                            item.applicant.applicants?.[0]?.middle_name ?? '',
+                        last_name:
+                            item.applicant.applicants?.[0]?.last_name ?? '',
+                    }
+                    : null,
 
                 applied_at: item.created_at,
             }));
@@ -444,6 +447,7 @@ export class EmployerService {
             });
         }
     }
+
     async getJobStageHistory(
         user: Users,
         jobId: number,

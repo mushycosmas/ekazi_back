@@ -44,6 +44,7 @@ import { MetaKeywordsModule } from './metas/meta-keywords.module';
 import { CompanyTypeModule } from './companytype/company-type.module';
 import { StagesModule } from './stage/stages.module';
 import { PositionLevelsModule } from './positionlevel/position-levels.module';
+import { TasksModule } from './tasks/tasks.module';
 
  
 // ... other imports
@@ -57,7 +58,7 @@ import { PositionLevelsModule } from './positionlevel/position-levels.module';
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
     CvbuilderModule, AuthModule,EmployerModule, CompanySizesModule,MetaKeywordsModule,
-    RegionsModule, CountriesModule,CompanyTypeModule,StagesModule,PositionLevelsModule,
+    RegionsModule, CountriesModule,CompanyTypeModule,StagesModule,PositionLevelsModule,TasksModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
@@ -66,9 +67,9 @@ import { PositionLevelsModule } from './positionlevel/position-levels.module';
 
     // ... other modules
   ],
-  controllers: [EmployerController,
-    RegionsController, CountriesController],
-  providers: [EmployerUserService, RegionsService, CountriesService],
+  // controllers: [EmployerController,
+  //   RegionsController, CountriesController],
+  // providers: [EmployerUserService, RegionsService, CountriesService],
 
 })
 export class AppModule { }
