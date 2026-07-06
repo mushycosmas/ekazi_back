@@ -56,8 +56,12 @@ export class Users {
   @Column({ type: 'boolean', default: false })
   hide: boolean;
 
-  @Column({ type: 'boolean', nullable: true })
-  verified: boolean | null;
+  // @Column({ type: 'boolean', nullable: true })
+  // verified: boolean | null;
+  // @Column({ default: 0 })
+  // verified: number;
+  @Column({ default: false })
+  verified: boolean;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   verify_key: string | null;
