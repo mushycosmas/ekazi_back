@@ -6,7 +6,8 @@ import {
   ManyToMany,
   JoinTable,
   ManyToOne,
-  JoinColumn // Add this import
+  JoinColumn, // Add this import
+  ValueTransformer
 } from 'typeorm';
 import { Applicants } from './applicants/applicants.entity';
 import { Role } from './role.entity';
@@ -20,6 +21,18 @@ import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
 import { Task } from 'src/tasks/entities/tasks.entity';
 import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
+
+const VerifiedTransformer: ValueTransformer = {
+  to: (value: number | boolean): number => {
+    if (typeof value === 'boolean') {
+      return value ? 1 : 0;
+    }
+    return value;
+  },
+  from: (value: number): number => {
+    return value;
+  }
+};
 
 @Entity('users')
 export class Users {
@@ -62,20 +75,17 @@ export class Users {
   // verified: number;
   // @Column({ type: 'int' })
   // verified: number;
-  @Column({ type: 'int' })
-  private _verified: number;
-
-  set verified(value: number | boolean) {
-    if (typeof value === 'boolean') {
-      this._verified = value ? 1 : 0;
-    } else {
-      this._verified = value;
-    }
-  }
-
-  get verified(): number {
-    return this._verified;
-  }
+  //  @Column({ 
+  //   type: 'int', 
+  //   transformer: VerifiedTransformer 
+  // })
+  // verified: number;
+ @Column({
+  type: 'tinyint',
+  width: 1,
+  default: 0,
+})
+verified: boolean;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   verify_key: string | null;
