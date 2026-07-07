@@ -42,8 +42,9 @@ export class EmployerController {
   // ) {
   //   return this.employerService.updateCompanyProfile(req.user, dto);
   // }
-  @UseGuards(SanctumGuard)
+
   @Put('company-profile')
+  @UseGuards(SanctumGuard)
   @UseInterceptors(
     FileInterceptor(
       'attachment',

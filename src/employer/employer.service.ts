@@ -247,19 +247,23 @@ export class EmployerService {
             // ======================
             // ADDRESS (FIRST RECORD)
             // ======================
-            if (client.addresses?.length) {
-                const address = client.addresses[0];
+            let address = client.addresses?.[0];
 
-                address.region_id = dto.region_id ?? address.region_id;
-                address.sub_location = dto.sub_location ?? address.sub_location;
-                address.website = dto.website ?? address.website;
-                address.location_notes =
-                    dto.location_notes ?? address.location_notes;
-                address.extra_communication =
-                    dto.extra_communication ?? address.extra_communication;
-
-                await this.addressRepository.save(address);
+            if (!address) {
+                address = this.addressRepository.create({
+                    client_id: client.id,
+                });
             }
+
+            address.region_id = dto.region_id ?? address.region_id;
+            address.sub_location = dto.sub_location ?? address.sub_location;
+            address.website = dto.website ?? address.website;
+            address.location_notes =
+                dto.location_notes ?? address.location_notes;
+            address.extra_communication =
+                dto.extra_communication ?? address.extra_communication;
+
+            await this.addressRepository.save(address);
 
             // ======================
             // EMAIL (FIRST)
@@ -281,27 +285,28 @@ export class EmployerService {
             // ======================
             // DESCRIPTION (FIRST RECORD)
             // ======================
-            if (client.descriptions?.length) {
-                const description = client.descriptions[0];
+            let description = client.descriptions?.[0];
 
-                description.description =
-                    dto.description ?? description.description;
+            if (!description) {
+                description = this.clientDescriptionRepository.create({
+                    client_id: client.id,
+                });
+            }
 
-                description.website =
-                    dto.website ?? description.website;
+            description.description =
+                dto.description ?? description.description;
 
-                // description.attachment =
-                //     dto.attachment ?? description.attachment;
-                // ✅ SAVE FILE PATH HERE
-                if (file) {
-                    description.attachment = file.path.replace(process.cwd(), '')
+            description.website =
+                dto.website ?? description.website;
+
+            if (file) {
+                description.attachment = file.path
+                    .replace(process.cwd(), '')
                     .replace(/\\/g, '/')
                     .replace(/^\/+/, '');
-                }
-
-
-                await this.clientDescriptionRepository.save(description);
             }
+
+            await this.clientDescriptionRepository.save(description);
 
             return {
                 success: true,
