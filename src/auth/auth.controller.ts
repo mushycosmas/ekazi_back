@@ -60,7 +60,7 @@ export class AuthController {
         if (!user.email) {
             throw new BadRequestException('User email is missing');
         }
-          if (!user.username) {
+        if (!user.username) {
             throw new BadRequestException('User email is missing');
         }
 
@@ -71,11 +71,17 @@ export class AuthController {
     }
 
     // ✅ Verify email (clicked from frontend link)
-    @Get('verify-email')
-    async verifyEmail(
-        @Query('email') email: string,
-        @Query('token') token: string,
+    @Post('verify-email')
+    verifyEmail(
+        @Body('token') token: string,
     ) {
-        return this.authService.verifyEmail(email, token);
+        return this.authService.verifyEmail(token);
+    }
+
+    @Post('resend-verification')
+    resendVerification(
+        @Body('email') email: string,
+    ) {
+        return this.authService.resendVerificationEmail(email);
     }
 }

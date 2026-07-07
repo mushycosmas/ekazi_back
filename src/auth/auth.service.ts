@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { flatten, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes, createHash, createHmac } from 'crypto';
@@ -539,100 +539,267 @@ export class AuthService {
     // ===============================
     // SEND VERIFICATION EMAIL (NO DB)
     // ===============================
+    // async sendVerificationEmail(email: string, username: string) {
+    //     const secret = this.configService.get('APP_KEY');
+
+    //     const token = randomBytes(32).toString('hex');
+
+    //     const signature = createHmac('sha256', secret)
+    //         .update(token + email)
+    //         .digest('hex');
+
+    //     const fullToken = `${token}.${signature}`;
+
+    //     const verifyLink = `${this.configService.get(
+    //         'FRONTEND_URL',
+    //     )}/verify-email?token=${fullToken}&email=${email}`;
+
+    //     await this.mailService.sendMail({
+    //         from: `"${this.configService.get('APP_NAME')}" <${this.configService.get(
+    //             'MAIL_FROM_ADDRESS',
+    //         )}>`,
+    //         to: 'ibrahim@exactmanpower.co.tz',
+    //         cc: ['halidiselemani94@gmail.com'],
+    //         subject: 'New Employer Registered',
+    //         html: `
+    //     <h2>📣 New Employer Registered</h2>
+
+    //     <p>A new employer has successfully registered on the <strong>eKazi Portal</strong>.</p>
+
+    //     <table cellpadding="6" cellspacing="0" border="0">
+    //         <tr>
+    //             <td><strong>Name:</strong></td>
+    //             <td>${username}</td>
+    //         </tr>
+    //         <tr>
+    //             <td><strong>Email:</strong></td>
+    //             <td>${email}</td>
+    //         </tr>
+    //         <tr>
+    //             <td><strong>Registered At:</strong></td>
+    //             <td>${new Date().toLocaleString()}</td>
+    //         </tr>
+    //     </table>
+
+    //     <br>
+
+    //     <p>The employer can verify their email using the link below:</p>
+
+    //     <a href="${verifyLink}"
+    //        style="display:inline-block;padding:12px 20px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:6px;">
+    //         Verify Email
+    //     </a>
+
+    //     <br><br>
+
+    //     <p>Regards,<br><strong>eKazi Portal System</strong></p>
+    // `,
+    //     });
+    // }
     async sendVerificationEmail(email: string, username: string) {
-        const secret = this.configService.get('APP_KEY');
+        const verificationCode = Math.floor(
+            100000 + Math.random() * 900000,
+        ).toString();
 
-        const token = randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
-        const signature = createHmac('sha256', secret)
-            .update(token + email)
-            .digest('hex');
+        // Format expiry time
+        const expiryTime = expiresAt.toLocaleString('en-US', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        });
 
-        const fullToken = `${token}.${signature}`;
-
-        const verifyLink = `${this.configService.get(
-            'FRONTEND_URL',
-        )}/verify-email?token=${fullToken}&email=${email}`;
+        // Save code to database
+        await this.usersRepository.update(
+            { email },
+            {
+                verify_key: verificationCode,
+                verified: false,
+                verify_key_expires_at: expiresAt,
+            },
+        );
 
         await this.mailService.sendMail({
             from: `"${this.configService.get('APP_NAME')}" <${this.configService.get(
                 'MAIL_FROM_ADDRESS',
             )}>`,
-            to: 'ibrahim@exactmanpower.co.tz',
-            cc: ['halidiselemani94@gmail.com'],
-            subject: 'New Employer Registered',
+            to: email,
+            subject: 'Verify Your eKazi Account',
             html: `
-        <h2>📣 New Employer Registered</h2>
+        <h2>Welcome to eKazi</h2>
 
-        <p>A new employer has successfully registered on the <strong>eKazi Portal</strong>.</p>
+        <p>Hello <strong>${username}</strong>,</p>
 
-        <table cellpadding="6" cellspacing="0" border="0">
-            <tr>
-                <td><strong>Name:</strong></td>
-                <td>${username}</td>
-            </tr>
-            <tr>
-                <td><strong>Email:</strong></td>
-                <td>${email}</td>
-            </tr>
-            <tr>
-                <td><strong>Registered At:</strong></td>
-                <td>${new Date().toLocaleString()}</td>
-            </tr>
-        </table>
+        <p>Thank you for registering with eKazi.</p>
+
+        <p>Your verification code is:</p>
+
+        <div style="
+            font-size:32px;
+            font-weight:bold;
+            letter-spacing:6px;
+            background:#f4f4f4;
+            padding:15px;
+            text-align:center;
+            border-radius:8px;
+        ">
+            ${verificationCode}
+        </div>
+
+        <p>
+            This verification code will expire in 
+            <strong>10 minutes</strong>.
+        </p>
+
+        <p>
+            Expiry time:
+            <strong>${expiryTime}</strong>
+        </p>
+
+        <p>
+            Please enter this code before the expiry time to activate your account.
+        </p>
+
+        <p>
+            If you did not create this account, you can ignore this email.
+        </p>
 
         <br>
 
-        <p>The employer can verify their email using the link below:</p>
-
-        <a href="${verifyLink}"
-           style="display:inline-block;padding:12px 20px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:6px;">
-            Verify Email
-        </a>
-
-        <br><br>
-
-        <p>Regards,<br><strong>eKazi Portal System</strong></p>
-    `,
+        <p><strong>eKazi Team</strong></p>
+        `,
         });
     }
-    async verifyEmail(email: string, token: string) {
-        const secret = this.configService.get<string>('APP_KEY');
 
-        if (!secret) {
-            throw new InternalServerErrorException('APP_KEY is not set');
-        }
+    async resendVerificationEmail(email: string) {
 
-        const parts = token.split('.');
+    const user = await this.usersRepository.findOne({
+        where: { email },
+    });
 
-        if (parts.length !== 2) {
-            throw new UnauthorizedException('Invalid verification token');
-        }
+    if (!user) {
+        throw new NotFoundException({
+            success: false,
+            message: 'User not found',
+        });
+    }
 
-        const [rawToken, signature] = parts;
 
-        const expectedSignature = createHmac('sha256', secret)
-            .update(rawToken + email)
-            .digest('hex');
+    if (user.verified === true) {
+        return {
+            success: false,
+            message: 'Account already verified',
+        };
+    }
 
-        if (expectedSignature !== signature) {
-            throw new UnauthorizedException('Invalid verification token');
-        }
+
+    const verificationCode = Math.floor(
+        100000 + Math.random() * 900000,
+    ).toString();
+
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(
+        expiresAt.getMinutes() + 10,
+    );
+
+
+    user.verify_key = verificationCode;
+    user.verify_key_expires_at = expiresAt;
+
+
+    await this.usersRepository.save(user);
+
+
+    await this.mailService.sendMail({
+        from: `"eKazi" <${this.configService.get('MAIL_FROM_ADDRESS')}>`,
+        to: email,
+        subject: 'New eKazi Verification Code',
+        html: `
+            <h2>Email Verification</h2>
+
+            <p>Your new verification code is:</p>
+
+            <h1>${verificationCode}</h1>
+
+            <p>
+                This code expires at:
+                <strong>${expiresAt.toLocaleString()}</strong>
+            </p>
+
+            <p>
+                If you did not request this code, ignore this email.
+            </p>
+
+            <br>
+            <strong>eKazi Team</strong>
+        `,
+    });
+
+
+    return {
+        success: true,
+        message: 'New verification code sent successfully',
+    };
+}
+    async verifyEmail(token: string) {
 
         const user = await this.usersRepository.findOne({
-            where: { email },
+            where: {
+                verify_key: token,
+            },
         });
 
         if (!user) {
-            throw new UnauthorizedException('User not found');
+            throw new UnauthorizedException({
+                success: false,
+                message: 'Invalid verification token',
+            });
         }
 
-        user.verified = true;
-        await this.usersRepository.save(user);
+
+        // Already verified check
+        if (user.verified === true) {
+            throw new BadRequestException({
+                success: false,
+                message: 'Account already verified',
+            });
+        }
+
+
+        // Check token expiry
+        if (
+            !user.verify_key_expires_at ||
+            new Date() > user.verify_key_expires_at
+        ) {
+            throw new UnauthorizedException({
+                success: false,
+                message: 'Verification token has expired. Please request a new one.',
+            });
+        }
+
+
+        // Verify account
+        user.verified = true,
+            user.email_verified_at = new Date();
+
+        // Clear token after success
+        user.verify_key = null,
+            user.verify_key_expires_at = null,
+
+
+            await this.usersRepository.save(user);
+
 
         return {
             success: true,
             message: 'Email verified successfully',
+            data: {
+                id: user.id,
+                email: user.email,
+                verified: user.verified,
+            },
         };
     }
     async myaccount(user: Users) {

@@ -80,12 +80,12 @@ export class Users {
   //   transformer: VerifiedTransformer 
   // })
   // verified: number;
- @Column({
-  type: 'tinyint',
-  width: 1,
-  default: 0,
-})
-verified: boolean;
+  @Column({
+    type: 'tinyint',
+    width: 1,
+    default: 0,
+  })
+  verified: boolean | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   verify_key: string | null;
@@ -104,6 +104,12 @@ verified: boolean;
 
   @Column({ type: 'datetime', nullable: true })
   updated_at: Date | null;
+
+ @Column({
+  type: 'timestamp',
+  nullable: true,
+})
+verify_key_expires_at: Date | null;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   password_changed_at: Date;
