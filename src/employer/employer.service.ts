@@ -268,20 +268,33 @@ export class EmployerService {
             // ======================
             // EMAIL (FIRST)
             // ======================
-            if (dto.email && client.emails?.length) {
-                client.emails[0].client_email = dto.email;
-                await this.emailRepository.save(client.emails[0]);
+            let email = client.emails?.[0];
+
+            if (!email) {
+                email = this.emailRepository.create({
+                    client_id: client.id,
+                });
             }
+
+            email.client_email = dto.email ?? email.client_email;
+
+            await this.emailRepository.save(email);
 
             // ======================
             // PHONE (FIRST)
             // ======================
-            if (dto.phone && client.phones?.length) {
-                client.phones[0].phone_number = dto.phone;
-                client.phones[0].fax = dto.fax ?? client.phones[0].fax;
+            let phone = client.phones?.[0];
 
-                await this.phoneRepository.save(client.phones[0]);
+            if (!phone) {
+                phone = this.phoneRepository.create({
+                    client_id: client.id,
+                });
             }
+
+            phone.phone_number = dto.phone ?? phone.phone_number;
+            phone.fax = dto.fax ?? phone.fax;
+
+            await this.phoneRepository.save(phone);
             // ======================
             // DESCRIPTION (FIRST RECORD)
             // ======================
