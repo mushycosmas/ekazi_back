@@ -674,49 +674,49 @@ export class AuthService {
 
     async resendVerificationEmail(email: string) {
 
-    const user = await this.usersRepository.findOne({
-        where: { email },
-    });
-
-    if (!user) {
-        throw new NotFoundException({
-            success: false,
-            message: 'User not found',
+        const user = await this.usersRepository.findOne({
+            where: { email },
         });
-    }
+
+        if (!user) {
+            throw new NotFoundException({
+                success: false,
+                message: 'User not found',
+            });
+        }
 
 
-    if (user.verified === true) {
-        return {
-            success: false,
-            message: 'Account already verified',
-        };
-    }
+        if (user.verified === true) {
+            return {
+                success: false,
+                message: 'Account already verified',
+            };
+        }
 
 
-    const verificationCode = Math.floor(
-        100000 + Math.random() * 900000,
-    ).toString();
+        const verificationCode = Math.floor(
+            100000 + Math.random() * 900000,
+        ).toString();
 
 
-    const expiresAt = new Date();
-    expiresAt.setMinutes(
-        expiresAt.getMinutes() + 10,
-    );
+        const expiresAt = new Date();
+        expiresAt.setMinutes(
+            expiresAt.getMinutes() + 10,
+        );
 
 
-    user.verify_key = verificationCode;
-    user.verify_key_expires_at = expiresAt;
+        user.verify_key = verificationCode;
+        user.verify_key_expires_at = expiresAt;
 
 
-    await this.usersRepository.save(user);
+        await this.usersRepository.save(user);
 
 
-    await this.mailService.sendMail({
-        from: `"eKazi" <${this.configService.get('MAIL_FROM_ADDRESS')}>`,
-        to: email,
-        subject: 'New eKazi Verification Code',
-        html: `
+        await this.mailService.sendMail({
+            from: `"eKazi" <${this.configService.get('MAIL_FROM_ADDRESS')}>`,
+            to: email,
+            subject: 'New eKazi Verification Code',
+            html: `
             <h2>Email Verification</h2>
 
             <p>Your new verification code is:</p>
@@ -735,14 +735,14 @@ export class AuthService {
             <br>
             <strong>eKazi Team</strong>
         `,
-    });
+        });
 
 
-    return {
-        success: true,
-        message: 'New verification code sent successfully',
-    };
-}
+        return {
+            success: true,
+            message: 'New verification code sent successfully',
+        };
+    }
     async verifyEmail(token: string) {
 
         const user = await this.usersRepository.findOne({
