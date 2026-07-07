@@ -417,69 +417,83 @@ export class AuthService {
             message: 'Password changed successfully',
         };
     }
-    async forgotPassword(email: string) {
-        try {
-            console.log('[FORGOT PASSWORD] Request received:', {
-                email,
-                time: new Date().toISOString(),
-            });
+   
 
-            const user = await this.usersRepository.findOne({
-                where: { email },
-            });
+async forgotPassword(email: string) {
+    try {
+        console.log('[FORGOT PASSWORD] Request received:', {
+            email,
+            time: new Date().toISOString(),
+        });
 
-            if (!user) {
-                console.log('[FORGOT PASSWORD] User not found:', email);
+        const user = await this.usersRepository.findOne({
+            where: { email },
+        });
 
-                return {
-                    success: true,
-                    message: 'If the email exists, a reset link has been sent.',
-                };
-            }
-
-            console.log('[FORGOT PASSWORD] User found:', {
-                id: user.id,
-                email: user.email,
-            });
-
-            const token = randomBytes(32).toString('hex');
-
-            console.log('[FORGOT PASSWORD] Generated token:', token);
-
-            await this.passwordResetRepository.delete({ email });
-
-            console.log('[FORGOT PASSWORD] Old reset tokens cleared');
-
-            await this.passwordResetRepository.save({
-                email,
-                token,
-                expires_at: new Date(Date.now() + 15 * 60 * 1000),
-            });
-
-            console.log('[FORGOT PASSWORD] Token saved in DB');
-
-            await this.mailService.sendPasswordReset(email, token);
-
-            console.log('[FORGOT PASSWORD] Email sent successfully');
+        // Prevent email enumeration
+        if (!user) {
+            console.log('[FORGOT PASSWORD] User not found:', email);
 
             return {
                 success: true,
-                message: 'Password reset link sent.',
-            };
-        } catch (error) {
-            console.error('[FORGOT PASSWORD ERROR]', {
-                message: error.message,
-                stack: error.stack,
-                email,
-            });
-
-            return {
-                success: false,
-                message: 'Failed to process forgot password request',
-                error: error.message,
+                message:
+                    'If the email exists, a password reset code has been sent.',
             };
         }
+
+        console.log('[FORGOT PASSWORD] User found:', {
+            id: user.id,
+            email: user.email,
+        });
+
+        // Generate plain token
+        const plainToken = randomBytes(32).toString('hex');
+
+        // Hash before saving
+        const hashedToken = createHash('sha256')
+            .update(plainToken)
+            .digest('hex');
+
+        console.log('[FORGOT PASSWORD] Generated token');
+
+        // Remove old tokens
+        await this.passwordResetRepository.delete({ email });
+
+        console.log('[FORGOT PASSWORD] Old reset tokens cleared');
+
+        // Save hashed token
+        await this.passwordResetRepository.save({
+            email,
+            token: hashedToken,
+            expires_at: new Date(Date.now() + 15 * 60 * 1000),
+        });
+
+        console.log('[FORGOT PASSWORD] Token saved');
+
+        // Send plain token to email
+        await this.mailService.sendPasswordReset(email, plainToken);
+
+        console.log('[FORGOT PASSWORD] Email sent successfully');
+
+        return {
+            success: true,
+            message:
+                'A password reset link has been sent to your email.',
+        };
+    } catch (error) {
+        console.error('[FORGOT PASSWORD ERROR]', {
+            message: error.message,
+            stack: error.stack,
+            email,
+        });
+
+        return {
+            success: false,
+            message: 'Failed to process forgot password request',
+            error: error.message,
+        };
     }
+}
 
     async resetPassword(dto: ResetPasswordDto) {
         const { email, token, newPassword } = dto;
