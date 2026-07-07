@@ -791,15 +791,33 @@ export class AuthService {
 
             await this.usersRepository.save(user);
 
+        // ==========================
+        // CREATE LOGIN TOKEN
+        // ==========================
+        const plainToken = randomBytes(40).toString('hex');
+
+        const hashedToken = createHash('sha256')
+            .update(plainToken)
+            .digest('hex');
+
+        const personalToken = this.tokenRepository.create({
+            tokenable_type: 'Users',
+            tokenable_id: user.id,
+            name: 'api-token',
+            token: hashedToken,
+            abilities: '["*"]',
+            expires_at: new Date(
+                Date.now() + 30 * 24 * 60 * 60 * 1000,
+            ),
+        });
+
+        await this.tokenRepository.save(personalToken);
 
         return {
             success: true,
-            message: 'Email verified successfully',
-            data: {
-                id: user.id,
-                email: user.email,
-                verified: user.verified,
-            },
+            message: 'Email verified successfully.',
+            token: plainToken,
+            data: user,
         };
     }
     async myaccount(user: Users) {
