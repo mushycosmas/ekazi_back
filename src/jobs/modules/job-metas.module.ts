@@ -12,5 +12,6 @@ import { JobEducationModule } from './job-education.module';
     ],
     controllers: [JobMetasController],
     providers: [JobMetaService],
+    exports:[JobMetaService],
 })
 export class JobMetasModule {}

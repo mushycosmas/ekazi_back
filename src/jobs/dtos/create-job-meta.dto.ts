@@ -10,13 +10,5 @@ export class CreateJobMetaDto {
     @IsNumber()
     meta_keyword_id: number;
 
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    creator_id?: number;
-
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    updator_id?: number;
+  
 }

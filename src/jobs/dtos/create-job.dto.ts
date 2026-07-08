@@ -11,8 +11,7 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateJobDto {
-  @IsNumber()
-  client_id: number;
+ 
 
   @IsNumber()
   category_id: number;
@@ -20,32 +19,15 @@ export class CreateJobDto {
   @IsNumber()
   country_id: number;
 
-  @IsNumber()
-  creator_id: number;
-
-  @IsNumber()
-  updator_id: number;
-
+ 
   @IsNumber()
   type_id: number;
-
-  @IsNumber()
-  stage_id: number;
 
   @IsOptional()
   position_id: any;
 
   @IsNumber()
   position_level_id: number;
-
-  @IsString()
-  @IsOptional()
-  @MaxLength(300)
-  title: string;
-
-  @IsString()
-  @IsOptional()
-  duty: string;
 
   @IsString()
   @IsOptional()

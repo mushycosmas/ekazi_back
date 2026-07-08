@@ -23,6 +23,13 @@ import { ClientDescription } from 'src/client/entities/client-descriptions.entit
 import { Task } from 'src/tasks/entities/tasks.entity';
 import { TasksModule } from 'src/tasks/tasks.module';
 import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
+import { JobsModule } from 'src/jobs/jobs.module';
+import { JobMetasModule } from 'src/jobs/modules/job-metas.module';
+import { JobReportTosModule } from 'src/jobs/modules/job-report-tos.module';
+import { JobEducationModule } from 'src/jobs/modules/job-education.module';
+import { JobLanguagesModule } from 'src/jobs/modules/job-languages.module';
+import { JobRequirementsModule } from 'src/jobs/modules/job-requirements.module';
+import { JobOtherRequirementsModule } from 'src/jobs/modules/job-other-requirements.module';
 
 @Module({
   imports: [
@@ -40,7 +47,14 @@ import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
       Task,
       TaskAssignment,
     ]),
-     TasksModule, // ✅ ADD THIS
+     TasksModule, 
+     JobsModule,
+     JobMetasModule,
+     JobReportTosModule,
+     JobEducationModule,
+     JobLanguagesModule,
+     JobRequirementsModule,
+     JobOtherRequirementsModule,
   ],
  
   controllers: [

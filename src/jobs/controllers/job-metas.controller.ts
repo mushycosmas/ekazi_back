@@ -9,36 +9,36 @@ export class JobMetasController {
         private readonly jobMetasService: JobMetaService,
     ) {}
 
-    @Post()
-    create(
-        @Body() createDto: CreateJobMetaDto,
-    ) {
-        return this.jobMetasService.create(createDto);
-    }
+    // @Post()
+    // create(
+    //     @Body() createDto: CreateJobMetaDto,
+    // ) {
+    //     return this.jobMetasService.create(createDto);
+    // }
 
-    @Get()
-    findAll() {
-        return this.jobMetasService.findAll();
-    }
+    // @Get()
+    // findAll() {
+    //     return this.jobMetasService.findAll();
+    // }
 
-    @Get(':id')
-    findOne(@Param('id') id: number) {
-        return this.jobMetasService.findOne(+id);
-    }
+    // @Get(':id')
+    // findOne(@Param('id') id: number) {
+    //     return this.jobMetasService.findOne(+id);
+    // }
 
-    @Patch(':id')
-    update(
-        @Param('id') id: number,
-        @Body() updateDto: UpdateJobMetaDto,
-    ) {
-        return this.jobMetasService.update(
-            +id,
-            updateDto,
-        );
-    }
+    // @Patch(':id')
+    // update(
+    //     @Param('id') id: number,
+    //     @Body() updateDto: UpdateJobMetaDto,
+    // ) {
+    //     return this.jobMetasService.update(
+    //         +id,
+    //         updateDto,
+    //     );
+    // }
 
-    @Delete(':id')
-    remove(@Param('id') id: number) {
-        return this.jobMetasService.remove(+id);
-    }
+    // @Delete(':id')
+    // remove(@Param('id') id: number) {
+    //     return this.jobMetasService.remove(+id);
+    // }
 }

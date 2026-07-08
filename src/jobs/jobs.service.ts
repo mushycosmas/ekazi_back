@@ -23,6 +23,7 @@ import { BadRequestException } from '@nestjs/common';
 import { CompleteJobProfileDto } from './dtos/complete-job-profile.dto';
 import { generateSlug } from 'src/utils/slug';
 import { JobSalaries } from './entities/job-salaries.entity';
+import { Users } from 'src/entities/users.entity';
 
 @Injectable()
 export class JobsService {
@@ -63,11 +64,19 @@ export class JobsService {
     // =========================
     // CREATE
     // =========================
-    async create(createJobDto: CreateJobDto) {
-        const client = await this.clientRepository.findOne({
-            where: { id: createJobDto.client_id },
-        });
+    async create(user: Users, createJobDto: CreateJobDto) {
+        if (!user.client_id) {
+            throw new BadRequestException(
+                'User is not linked to a client'
+            );
+        }
 
+
+        const client = await this.clientRepository.findOne({
+            where: {
+                id: user.client_id,
+            },
+        });
         if (!client) {
             throw new NotFoundException('Client not found');
         }
@@ -93,9 +102,9 @@ export class JobsService {
                     position = await queryRunner.manager.save(Positions, {
                         position_name: positionName,
                         slug: generateSlug(positionName), // ✅ HERE
-                        creator_id: createJobDto.client_id ?? 1,
-                        updator_id: createJobDto.client_id ?? 1,
-                        industry_id: createJobDto.industry_id ?? 1,
+                        creator_id: user.id ?? null,
+                        updator_id: user.id ?? null,
+                        industry_id: createJobDto.industry_id ?? null,
                         hide: 0,
                         created_at: new Date(),
                         updated_at: new Date(),
@@ -114,6 +123,10 @@ export class JobsService {
             const job = await queryRunner.manager.save(Jobs, {
                 ...createJobDto,
                 position_id: positionId,
+                client_id: user.client_id,
+                creator_id: user.id,
+                updator_id: user.id,
+                stage_id: 1,
                 status: createJobDto.status ?? 'unpublish',
                 created_at: new Date(),
                 updated_at: new Date(),
@@ -209,7 +222,7 @@ export class JobsService {
                     'jobUniversalType.type_name',
 
                     'addresses.id',
-                    'addresses.sub_location', 
+                    'addresses.sub_location',
                 ])
 
                 .orderBy('job.id', 'DESC');
@@ -411,13 +424,21 @@ export class JobsService {
     // =========================
     // UPDATE JOB
     // =========================
-    async update(id: number, dto: UpdateJobDto) {
+    async update(id: number,
+        dto: UpdateJobDto,
+        user: Users,
+    ) {
         const existingJob = await this.jobsRepository.findOne({
             where: { id },
         });
 
         if (!existingJob) {
             throw new NotFoundException('Job not found');
+        }
+        if (!user.client_id) {
+            throw new BadRequestException(
+                'User is not linked to client',
+            );
         }
 
         const queryRunner = this.dataSource.createQueryRunner();
@@ -432,7 +453,7 @@ export class JobsService {
             const positionId = await this.getOrCreatePosition(
                 dto.position_id,
                 queryRunner,
-                dto.client_id ?? existingJob.client_id,
+                user.client_id,   
                 dto.industry_id ?? existingJob.industry_id,
             );
 
@@ -455,6 +476,7 @@ export class JobsService {
                 { id },
                 {
                     ...jobData,
+                    updator_id: user.id,
                     position_id: positionId,
                     updated_at: new Date(),
                 },

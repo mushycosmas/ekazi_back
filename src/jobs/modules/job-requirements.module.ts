@@ -14,5 +14,6 @@ import { JobRequirementsController } from '../controllers/job-requirements.contr
     JobRequirementsController,
   ],
   providers: [JobRequirementsService],
+  exports: [JobRequirementsService],
 })
 export class JobRequirementsModule {}

@@ -1,20 +1,31 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { JobReportTos } from '../entities/job-report-tos.entity';
 import { CreateJobReportTosDto } from '../dtos/create-job-report-tos.dto';
 import { UpdateJobReportTosDto } from '../dtos/update-job-report-tos.dto';
-import { NotFoundException } from '@nestjs/common';
+
+import { Users } from 'src/entities/users.entity';
 
 @Injectable()
 export class JobReportTosService {
     constructor(
         @InjectRepository(JobReportTos)
-        private repo: Repository<JobReportTos>,
+        private readonly repo: Repository<JobReportTos>,
     ) { }
 
     // CREATE
-    async create(dto: CreateJobReportTosDto) {
+    async create(
+        user: Users,
+        dto: CreateJobReportTosDto,
+    ) {
+        if (!user) {
+            throw new BadRequestException(
+                'User is not linked to a client',
+            );
+        }
+
         const entity = this.repo.create({
             ...dto,
             created_at: new Date(),
@@ -31,7 +42,13 @@ export class JobReportTosService {
     }
 
     // FIND ALL
-    async findAll() {
+    async findAll(user: Users) {
+        if (!user.client_id) {
+            throw new BadRequestException(
+                'User is not linked to a client',
+            );
+        }
+
         return this.repo
             .createQueryBuilder('report')
             .leftJoin('report.job', 'job')
@@ -47,12 +64,24 @@ export class JobReportTosService {
                 'job.id',
                 'job.title',
             ])
+            .where('job.client_id = :clientId', {
+                clientId: user.client_id,
+            })
             .orderBy('report.id', 'DESC')
             .getMany();
     }
 
     // FIND ONE
-    async findOne(id: number) {
+    async findOne(
+        user: Users,
+        id: number,
+    ) {
+        if (!user.client_id) {
+            throw new BadRequestException(
+                'User is not linked to a client',
+            );
+        }
+
         const data = await this.repo
             .createQueryBuilder('report')
             .leftJoin('report.job', 'job')
@@ -62,33 +91,49 @@ export class JobReportTosService {
                 'job.title',
             ])
             .where('report.id = :id', { id })
+            .andWhere('job.client_id = :clientId', {
+                clientId: user.client_id,
+            })
             .getOne();
 
         if (!data) {
-            throw new NotFoundException('Job report not found');
+            throw new NotFoundException(
+                'Job report not found',
+            );
         }
 
         return data;
     }
 
-    // UPDATE (IMPORTANT PART)
-    async update(id: number, dto: UpdateJobReportTosDto) {
-        const updateData: any = {
-            ...dto,
-            updated_at: new Date(),
-        };
+    // UPDATE
+    async update(
+        user: Users,
+        id: number,
+        dto: UpdateJobReportTosDto,
+    ) {
+        const report = await this.findOne(user, id);
 
         if (dto.job_id) {
-            updateData.job = { id: dto.job_id };
-            delete updateData.job_id;
+            report.job = {
+                id: dto.job_id,
+            } as any;
         }
 
-        await this.repo
-            .createQueryBuilder()
-            .update()
-            .set(updateData)
-            .where('id = :id', { id })
-            .execute();
+        if (dto.supervises !== undefined) {
+            report.supervises = dto.supervises;
+        }
+
+        if (dto.interacts_with !== undefined) {
+            report.interacts_with = dto.interacts_with;
+        }
+
+        if (dto.report_to !== undefined) {
+            report.report_to = dto.report_to;
+        }
+
+        report.updated_at = new Date();
+
+        await this.repo.save(report);
 
         return {
             success: true,
@@ -97,12 +142,13 @@ export class JobReportTosService {
     }
 
     // DELETE
-    async remove(id: number) {
-        await this.repo
-            .createQueryBuilder()
-            .delete()
-            .where('id = :id', { id })
-            .execute();
+    async remove(
+        user: Users,
+        id: number,
+    ) {
+        const report = await this.findOne(user, id);
+
+        await this.repo.remove(report);
 
         return {
             success: true,

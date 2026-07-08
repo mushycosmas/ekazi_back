@@ -7,28 +7,28 @@ import { UpdateJobReportTosDto } from '../dtos/update-job-report-tos.dto';
 export class JobReportTosController {
     constructor(private readonly service: JobReportTosService) { }
 
-    @Post()
-    create(@Body() dto: CreateJobReportTosDto) {
-        return this.service.create(dto);
-    }
+    // @Post()
+    // create(@Body() dto: CreateJobReportTosDto) {
+    //     return this.service.create(dto);
+    // }
 
-    @Get()
-    findAll() {
-        return this.service.findAll();
-    }
+    // @Get()
+    // findAll() {
+    //     return this.service.findAll();
+    // }
 
-    @Get(':id')
-    findOne(@Param('id') id: number) {
-        return this.service.findOne(Number(id));
-    }
+    // @Get(':id')
+    // findOne(@Param('id') id: number) {
+    //     return this.service.findOne(Number(id));
+    // }
 
-    @Patch(':id')
-    update(@Param('id') id: number, @Body() dto: UpdateJobReportTosDto) {
-        return this.service.update(Number(id), dto);
-    }
+    // @Patch(':id')
+    // update(@Param('id') id: number, @Body() dto: UpdateJobReportTosDto) {
+    //     return this.service.update(Number(id), dto);
+    // }
 
-    @Delete(':id')
-    remove(@Param('id') id: number) {
-        return this.service.remove(Number(id));
-    }
+    // @Delete(':id')
+    // remove(@Param('id') id: number) {
+    //     return this.service.remove(Number(id));
+    // }
 }

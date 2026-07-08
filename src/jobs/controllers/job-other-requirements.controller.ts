@@ -15,42 +15,42 @@ export class JobOtherRequirementsController {
     private readonly service: JobOtherRequirementsService,
   ) {}
 
-  @Post()
-  create(
-    @Body()
-    createDto: CreateJobOtherRequirementDto,
-  ) {
-    return this.service.create(createDto);
-  }
+  // @Post()
+  // create(
+  //   @Body()
+  //   createDto: CreateJobOtherRequirementDto,
+  // ) {
+  //   return this.service.create(createDto);
+  // }
 
-  @Get()
-  findAll() {
-    return this.service.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.service.findAll();
+  // }
 
-  @Get(':id')
-  findOne(
-    @Param('id', ParseIntPipe)
-    id: number,
-  ) {
-    return this.service.findOne(id);
-  }
+  // @Get(':id')
+  // findOne(
+  //   @Param('id', ParseIntPipe)
+  //   id: number,
+  // ) {
+  //   return this.service.findOne(id);
+  // }
 
-  @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe)
-    id: number,
-    @Body()
-    updateDto: UpdateJobOtherRequirementDto,
-  ) {
-    return this.service.update(id, updateDto);
-  }
+  // @Patch(':id')
+  // update(
+  //   @Param('id', ParseIntPipe)
+  //   id: number,
+  //   @Body()
+  //   updateDto: UpdateJobOtherRequirementDto,
+  // ) {
+  //   return this.service.update(id, updateDto);
+  // }
 
-  @Delete(':id')
-  remove(
-    @Param('id', ParseIntPipe)
-    id: number,
-  ) {
-    return this.service.remove(id);
-  }
+  // @Delete(':id')
+  // remove(
+  //   @Param('id', ParseIntPipe)
+  //   id: number,
+  // ) {
+  //   return this.service.remove(id);
+  // }
 }

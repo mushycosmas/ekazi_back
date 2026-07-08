@@ -16,5 +16,6 @@ import { JobOtherRequirementsService } from '../services/job-other-requirements.
     providers: [
         JobOtherRequirementsService,
     ],
+    exports:[JobOtherRequirementsService],
 })
 export class JobOtherRequirementsModule { }

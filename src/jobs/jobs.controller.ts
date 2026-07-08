@@ -19,11 +19,11 @@ import { CompleteJobProfileDto } from './dtos/complete-job-profile.dto';
 export class JobsController {
   constructor(private readonly jobsService: JobsService) { }
 
-  @Post()
-  create(@Body() createJobDto: CreateJobDto) {
-    console.log('BODY:', createJobDto);
-    return this.jobsService.create(createJobDto);
-  }
+  // @Post()
+  // create(@Body() createJobDto: CreateJobDto) {
+  //   console.log('BODY:', createJobDto);
+  //   return this.jobsService.create(createJobDto);
+  // }
 
 @Get()
 findAll(
@@ -47,13 +47,13 @@ findAll(
     return this.jobsService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateJobDto: UpdateJobDto,
-  ) {
-    return this.jobsService.update(+id, updateJobDto);
-  }
+  // @Patch(':id')
+  // update(
+  //   @Param('id') id: string,
+  //   @Body() updateJobDto: UpdateJobDto,
+  // ) {
+  //   return this.jobsService.update(+id, updateJobDto);
+  // }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
