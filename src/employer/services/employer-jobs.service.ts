@@ -468,6 +468,10 @@ export class EmployerJobsService {
                 data: {
                     id: job?.id,
                     title: job?.title,
+                    show_client_name: job?.show_client_name,
+                    applicant_min_age:job?.applicant_min_age,
+                    applicant_max_age:job?.applicant_max_age,
+                    hide:job?.hide,
                     quantity: job?.quantity,
                     years_experience: job?.years_experience,
                     published: job?.published,
