@@ -24,6 +24,9 @@ import { CreateJobRequirementDto } from 'src/jobs/dtos/create-job-requirement.dt
 import { JobOtherRequirementsService } from 'src/jobs/services/job-other-requirements.service';
 import { CreateJobOtherRequirementDto } from 'src/jobs/dtos/create-job-other-requirement.dto';
 import { UpdateJobOtherRequirementDto } from 'src/jobs/dtos/update-job-other-requirement.dto';
+import { CompleteJobProfileDto } from 'src/jobs/dtos/complete-job-profile.dto';
+import { JobSettingsService } from 'src/jobs/services/job-settings.service';
+import { UpdateJobSettingsDto } from 'src/jobs/dtos/update-job-settings.dto';
 
 @Controller('employer-jobs')
 export class EmployerJobsController {
@@ -36,9 +39,10 @@ export class EmployerJobsController {
         private readonly jobLnagugaeService: JobLanguagesService,
         private readonly jobRequirementsService: JobRequirementsService,
         private readonly otherRequiremnetservice: JobOtherRequirementsService,
-
-
+        private readonly jobSettingsService: JobSettingsService,
+    
     ) { }
+
     @Get('jobs')
     @UseGuards(SanctumGuard)
     myJobs(
@@ -97,6 +101,45 @@ export class EmployerJobsController {
         );
 
     }
+
+
+    @Delete('jobs/:id')
+    @UseGuards(SanctumGuard)
+    removejob(
+        @CurrentUser() user: Users,
+        @Param('id') id: Number,
+    ) {
+        return this.jobService.remove(
+            user,
+            Number(id),
+
+        );
+    }
+
+    @Put('jobs/:id/restore')
+    @UseGuards(SanctumGuard)
+    restoreJob(
+        @CurrentUser() user: Users,
+        @Param('id') id: string,
+    ) {
+        return this.jobService.restore(
+            user,
+            Number(id),
+        );
+    }
+    @Put('jobs/:id/publish')
+    @UseGuards(SanctumGuard)
+    togglePublish(
+        @CurrentUser() user: Users,
+        @Param('id') id: string,
+    ) {
+
+        return this.jobService.togglePublish(
+            user,
+            Number(id),
+        );
+    }
+
 
     @Post('job-metas')
     @UseGuards(SanctumGuard)
@@ -403,4 +446,32 @@ export class EmployerJobsController {
     ) {
         return this.otherRequiremnetservice.remove(id);
     }
+
+    @Put('complete-profile/:id')
+    @UseGuards(SanctumGuard)
+    updateCompleteProfile(
+        @CurrentUser() user: Users,
+        @Param('id') id: number,
+        @Body() dto: CompleteJobProfileDto,
+    ) {
+        return this.jobService.completeProfile(
+            user,
+            Number(id),
+            dto,
+        );
+    }
+
+  
+    
+      @Put('job-settings/:id')
+      @UseGuards(SanctumGuard)
+      updateSettings(
+        @Param('id') id: string,
+        @Body() dto: UpdateJobSettingsDto,
+      ) {
+        return this.jobSettingsService.updateSettings(
+          Number(id),
+          dto,
+        );
+      }
 }

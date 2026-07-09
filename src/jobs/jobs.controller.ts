@@ -13,6 +13,7 @@ import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dtos/create-job.dto';
 import { UpdateJobDto } from './dtos/update-job.dto';
 import { CompleteJobProfileDto } from './dtos/complete-job-profile.dto';
+import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 
 
 @Controller('jobs')
@@ -55,25 +56,25 @@ findAll(
   //   return this.jobsService.update(+id, updateJobDto);
   // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.jobsService.remove(+id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.jobsService.remove(+id);
+  // }
   @Get(':id/complete-profile')
   getCompleteProfile(@Param('id') id: number) {
     return this.jobsService.getCompleteProfile(Number(id));
   }
 
-  @Patch(':id/complete-profile')
-  updateCompleteProfile(
-    @Param('id') id: number,
-    @Body() dto: CompleteJobProfileDto,
-  ) {
-    return this.jobsService.completeProfile(
-      Number(id),
-      dto,
-    );
-  }
+  // @Patch(':id/complete-profile')
+  // updateCompleteProfile(
+  //   @Param('id') id: number,
+  //   @Body() dto: CompleteJobProfileDto,
+  // ) {
+  //   return this.jobsService.completeProfile(
+  //     Number(id),
+  //     dto,
+  //   );
+  // }
 
   @Delete(':id/complete-profile')
   deleteCompleteProfile(

@@ -27,3 +27,4 @@ import { JobAddresses } from './entities/job-addresses.entity';
     exports: [JobsService],
 })
 export class JobsModule { }
+  

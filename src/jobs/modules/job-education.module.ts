@@ -7,9 +7,10 @@ import { JobLanguagesModule } from './job-languages.module';
 import { JobReportTosModule } from './job-report-tos.module';
 import { JobRequirementsModule } from './job-requirements.module';
 import { JobOtherRequirementsModule } from './job-other-requirements.module';
+import { JobSettingsModule } from './job-settings.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([JobEducation]), JobLanguagesModule, JobReportTosModule, JobRequirementsModule, JobOtherRequirementsModule],
+    imports: [TypeOrmModule.forFeature([JobEducation]), JobLanguagesModule, JobReportTosModule, JobRequirementsModule, JobOtherRequirementsModule, JobSettingsModule],
     controllers: [JobEducationController],
     providers: [JobEducationService],
     exports: [JobEducationService], // optional (use if other modules need it)

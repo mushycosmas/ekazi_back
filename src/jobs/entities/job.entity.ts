@@ -5,6 +5,7 @@ import {
     ManyToOne,
     JoinColumn,
     OneToMany,
+    DeleteDateColumn,
 } from 'typeorm';
 import { Transform } from 'class-transformer';
 
@@ -202,6 +203,12 @@ export class Jobs {
         value ? new Date(value).toISOString().split('T')[0] : null,
     )
     updated_at: Date;
+
+    @DeleteDateColumn({
+        name: 'deleted_at',
+        nullable: true,
+    })
+    deleted_at: Date;
 
 
 

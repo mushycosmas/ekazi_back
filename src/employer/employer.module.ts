@@ -30,6 +30,7 @@ import { JobEducationModule } from 'src/jobs/modules/job-education.module';
 import { JobLanguagesModule } from 'src/jobs/modules/job-languages.module';
 import { JobRequirementsModule } from 'src/jobs/modules/job-requirements.module';
 import { JobOtherRequirementsModule } from 'src/jobs/modules/job-other-requirements.module';
+import { JobSettingsModule } from 'src/jobs/modules/job-settings.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { JobOtherRequirementsModule } from 'src/jobs/modules/job-other-requireme
      JobLanguagesModule,
      JobRequirementsModule,
      JobOtherRequirementsModule,
+     JobSettingsModule,
   ],
  
   controllers: [

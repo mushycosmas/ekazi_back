@@ -8,7 +8,7 @@ import {
 
 import { Jobs } from './job.entity';
 
-@Entity('job_external_url')
+@Entity('job_external_urls')
 export class JobExternalUrls {
   @PrimaryGeneratedColumn({ unsigned: true })
   id: number;

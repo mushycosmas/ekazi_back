@@ -369,6 +369,7 @@ export class EmployerJobsService {
                         id: jobId,
                         client_id: clientId,
                     },
+                     // withDeleted: true, include deleted job
                     relations: [
                         'client',
                         'country',

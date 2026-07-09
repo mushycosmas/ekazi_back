@@ -2,6 +2,7 @@ import {
     Injectable,
     NotFoundException,
     InternalServerErrorException,
+    ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets, DataSource, QueryRunner } from 'typeorm';
@@ -344,6 +345,8 @@ export class JobsService {
     async findOne(id: number) {
         const job = await this.jobsRepository
             .createQueryBuilder('job')
+            //.withDeleted() include deleted job
+            // .where('job.deleted_at IS NOT NULL')
 
             // ======================
             // RELATIONS
@@ -453,7 +456,7 @@ export class JobsService {
             const positionId = await this.getOrCreatePosition(
                 dto.position_id,
                 queryRunner,
-                user.client_id,   
+                user.client_id,
                 dto.industry_id ?? existingJob.industry_id,
             );
 
@@ -552,22 +555,170 @@ export class JobsService {
     // =========================
     // DELETE JOB
     // =========================
-    async remove(id: number) {
+    // async remove(id: number) {
+    //     const job = await this.jobsRepository.findOne({
+    //         where: { id },
+    //     });
+
+    //     if (!job) {
+    //         throw new NotFoundException('Job not found');
+    //     }
+
+    //     await this.jobsRepository.remove(job);
+
+    //     return {
+    //         success: true,
+    //         message: 'Job deleted successfully',
+    //     };
+    // }
+    async remove(
+        user: Users,
+        id: number,
+    ) {
+
         const job = await this.jobsRepository.findOne({
-            where: { id },
+            where: {
+                id,
+            },
         });
 
         if (!job) {
-            throw new NotFoundException('Job not found');
+            throw new NotFoundException(
+                {
+                    success: false,
+                    message: 'Job not found',
+                }
+            );
         }
 
-        await this.jobsRepository.remove(job);
+        // Ensure the logged-in user owns this job
+        if (job.creator_id !== user.id) {
+            throw new ForbiddenException(
+                {
+                    success: false,
+                    message: 'You are not allowed to delete this job',
+                }
+
+            );
+        }
+
+        await this.jobsRepository.softDelete(id);
 
         return {
             success: true,
             message: 'Job deleted successfully',
         };
     }
+
+    async restore(
+        user: Users,
+        id: number,
+    ) {
+
+        const job = await this.jobsRepository.findOne({
+            where: {
+                id,
+            },
+            withDeleted: true, // include soft deleted jobs
+        });
+
+
+        if (!job) {
+            throw new NotFoundException({
+                success: false,
+                message: 'Job not found',
+            });
+        }
+
+
+        // Check ownership
+        if (job.creator_id !== user.id) {
+            throw new ForbiddenException({
+                success: false,
+                message: 'You are not allowed to restore this job',
+            });
+        }
+
+
+        if (!job.deleted_at) {
+            return {
+                success: false,
+                message: 'Job is already active',
+            };
+        }
+
+
+        await this.jobsRepository.restore(id);
+
+
+        return {
+            success: true,
+            message: 'Job restored successfully',
+        };
+    }
+
+
+    async togglePublish(
+        user: Users,
+        jobId: number,
+    ) {
+
+        const job = await this.jobsRepository.findOne({
+            where: {
+                id: jobId,
+            },
+        });
+
+
+        if (!job) {
+            throw new NotFoundException({
+                success: false,
+                message: 'Job not found',
+            });
+        }
+
+
+        // Check ownership
+        if (job.creator_id !== user.id) {
+            throw new ForbiddenException({
+                success: false,
+                message: 'You are not allowed to publish this job',
+            });
+        }
+
+
+        // Toggle publish status
+        if (job.published === '1') {
+
+            job.published = '0';
+            job.status = 'unpublished';
+
+        } else {
+
+            job.published = '1';
+            job.status = 'published';
+
+        }
+
+
+        await this.jobsRepository.save(job);
+
+
+        return {
+            success: true,
+            message: job.status === 'published'
+                ? 'Job published successfully'
+                : 'Job unpublished successfully',
+
+            data: {
+                id: job.id,
+                published: job.published,
+                status: job.status,
+            },
+        };
+    }
+
+
     private async getOrCreatePosition(
         position: number | string,
         queryRunner: QueryRunner,
@@ -612,7 +763,12 @@ export class JobsService {
     // =========================
     // COMPLETE PROFILE
     // =========================
-    async completeProfile(jobId: number, dto: CompleteJobProfileDto) {
+    async completeProfile(
+        user: Users,
+        jobId: number,
+        dto: CompleteJobProfileDto,
+    ) {
+
         const queryRunner =
             this.jobsRepository.manager.connection.createQueryRunner();
 
@@ -620,12 +776,20 @@ export class JobsService {
         await queryRunner.startTransaction();
 
         try {
+
             const job = await queryRunner.manager.findOne(Jobs, {
-                where: { id: jobId },
+                where: {
+                    id: jobId,
+                    creator_id: user.id,
+                },
             });
 
+
             if (!job) {
-                throw new NotFoundException('Job not found');
+                throw new NotFoundException({
+                    success: false,
+                    message: 'Job not found or unauthorized',
+                });
             }
 
             // UPDATE JOB MAIN FIELDS
@@ -661,6 +825,8 @@ export class JobsService {
                     dto.culture_ids.map((culture_id) => ({
                         job_id: jobId,
                         culture_id,
+                        created_at: new Date(),
+                        updated_at: new Date(),
                     })),
                 );
             }
@@ -672,6 +838,8 @@ export class JobsService {
                     dto.personality_ids.map((personality_id) => ({
                         job_id: jobId,
                         personality_id,
+                        created_at: new Date(),
+                        updated_at: new Date(),
                     })),
                 );
             }
@@ -683,6 +851,8 @@ export class JobsService {
                     dto.software_ids.map((software_id) => ({
                         job_id: jobId,
                         software_id,
+                        created_at: new Date(),
+                        updated_at: new Date(),
                     })),
                 );
             }
@@ -694,9 +864,11 @@ export class JobsService {
                     dto.tool_ids.map((tool_id) => ({
                         job_id: jobId,
                         tool_id,
-                        user_id: 1,
+                        user_id: user.id,
                         hide: 0,
-                    })),
+                        created_at: new Date(),
+                        updated_at: new Date(),
+                    }))
                 );
             }
 
@@ -707,6 +879,8 @@ export class JobsService {
                     dto.knowledge_ids.map((knowledge_id) => ({
                         job_id: jobId,
                         knowledge_id,
+                        created_at: new Date(),
+                        updated_at: new Date(),
                     })),
                 );
             }
@@ -718,6 +892,8 @@ export class JobsService {
                     dto.proficiency_ids.map((proficiency_id) => ({
                         job_id: jobId,
                         proficiency_id,
+                        created_at: new Date(),
+                        updated_at: new Date(),
                     })),
                 );
             }
