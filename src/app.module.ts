@@ -46,6 +46,8 @@ import { StagesModule } from './stage/stages.module';
 import { PositionLevelsModule } from './positionlevel/position-levels.module';
 import { TasksModule } from './tasks/tasks.module';
 import { JobSettingsModule } from './jobs/modules/job-settings.module';
+import { ApplicantStagesModule } from './stage/applicant-stages.module';
+import { JobUniversalTypesModule } from './jobtypes/job-universal-types.module';
 
  
 // ... other imports
@@ -59,12 +61,12 @@ import { JobSettingsModule } from './jobs/modules/job-settings.module';
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
     CvbuilderModule, AuthModule,EmployerModule, CompanySizesModule,MetaKeywordsModule,JobSettingsModule,
-    RegionsModule, CountriesModule,CompanyTypeModule,StagesModule,PositionLevelsModule,TasksModule,
+    RegionsModule, CountriesModule,CompanyTypeModule,StagesModule,PositionLevelsModule,TasksModule,ApplicantStagesModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
-    JobRequirementsModule,JobOtherRequirementsModule,
+    JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule,
 
     // ... other modules
   ],

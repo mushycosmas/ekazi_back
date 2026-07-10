@@ -11,7 +11,7 @@ import {
 import { Users } from 'src/entities/users.entity';
 import { Jobs } from 'src/jobs/entities/job.entity';
 import { Stage } from '../stage.entity';
- 
+
 
 @Entity('applicant_applications')
 export class ApplicantApplication {
@@ -43,7 +43,9 @@ export class ApplicantApplication {
     attachment: string;
 
     // relations (optional but recommended)
-    @ManyToOne(() => Jobs, (job) => job.id)
+    @ManyToOne(() => Jobs, (job) => job.applications, {
+        onDelete: 'CASCADE',
+    })
     @JoinColumn({ name: 'job_id' })
     job: Jobs;
 
@@ -51,7 +53,7 @@ export class ApplicantApplication {
     @JoinColumn({ name: 'applicant_id' })
     applicant: Users;
 
- 
+
     // Timestamps - ONLY DECLARE ONCE!
     @CreateDateColumn()
     created_at: Date;

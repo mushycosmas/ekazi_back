@@ -1,0 +1,284 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Job Alerts</title>
+
+    <style type="text/css">
+
+        h1 a {
+            color: rgb(87,149,184) !important;
+        }
+        .button-container {
+            display:flex;
+            justify-content:center;
+            flex-wrap:wrap;
+            gap:10px;
+            margin:20px 0;
+        }
+        .response-btn {
+            color:#fff;
+            display:inline-block;
+            padding:8px 16px;
+            font-size:14px;
+            text-align:center;
+            text-decoration:none;
+            border-radius:6px;
+            width:auto;
+            min-width:120px;
+            max-width:200px;
+            margin:5px 10px;
+        }
+        .may-attend {
+            background-color:#198754;
+        }
+
+
+        .decline {
+            background-color:#dc3545;
+        }
+
+        .not-available {
+            background-color:#6c757d;
+        }
+
+    </style>
+
+</head>
+
+<body>
+<div class="row">
+
+<div class="large-12" 
+style="margin-top:10px;margin-left:20px">
+
+<p>
+Dear {{first_name}} {{last_name}},
+</p>
+
+{{#if (eq stage_name "Shortlisted")}}
+
+<p>
+We are pleased to inform you that you have been 
+<strong>shortlisted</strong> for the position of
+<strong>{{position_name}}</strong>
+following our review of your application.
+</p>
+<p>
+Our team will be in touch shortly with the next steps 
+in the recruitment process.
+</p>
+<p>
+Thank you for your interest in the position, 
+and congratulations on making it to the next stage.
+</p>
+{{else if (eq stage_name "Interview")}}
+
+<p>
+Congratulations! We are pleased to inform you that you 
+have been invited for an interview for the position of 
+{{position_name}}.
+</p>
+<p>
+Your interview has been scheduled as follows:
+</p>
+<ul>
+<li>
+<strong>Position:</strong>
+{{position_name}}
+</li>
+<li>
+<strong>Date:</strong>
+{{invite_date_formatted}}
+</li>
+<li>
+<strong>Time:</strong>
+{{invite_time_formatted}}
+</li>
+<li>
+<strong>Interview Mode:</strong>
+{{interview_type}}
+</li>
+{{#if (eq interview_type "Online Interview")}}
+<li>
+<strong>Platform:</strong>
+{{online_platform}}
+</li>
+<li>
+<strong>Meeting Link:</strong>
+
+<a href="{{online_link}}">
+{{online_link}}
+</a>
+
+</li>
+{{else}}
+
+<li>
+
+<strong>Venue:</strong>
+
+{{invite_locations.country.name}},
+{{invite_locations.region_name}}
+
+<br>
+
+<a href="{{address}}">
+View Location
+</a>
+
+</li>
+{{/if}}
+
+</ul>
+<p>
+Kindly ensure your availability at the scheduled time.
+Should you have any questions or require additional information,
+please contact our recruitment team.
+</p>
+<p>
+We look forward to meeting you and discussing your experience
+and qualifications in more detail.
+</p>
+
+{{else if (eq stage_name "Selection")}}
+<p>
+After careful consideration and interview evaluation,
+we are delighted to inform you that you have been selected
+for the position
+<b>
+{{position_name}}
+</b>.
+You will receive a notification for the next stage
+of our recruitment process.
+
+</p>
+
+{{else if (eq stage_name "Background Check")}}
+<p>
+We are delighted to inform you that we will be conducting
+a pre-employment background investigation in conjunction
+with your application for employment with our company
+for the position
+
+<b>
+{{position_name}}
+</b>.
+
+</p>
+
+{{else if (eq stage_name "Screening")}}
+
+<p>
+I hope all is well with you.
+</p>
+<p>
+
+You have been invited to attend an online aptitude test
+for the position of
+<strong>
+{{position_name}}
+</strong>
+
+at
+
+{{client_name}}.
+
+</p>
+<ul>
+<li>
+Test Date:
+
+<strong>
+{{test_date_formatted}}
+</strong>
+
+</li>
+<li>
+Test Duration:
+
+<strong>
+{{test_duration}}
+</strong>
+
+Minutes
+
+</li>
+<li>
+Test Deadline:
+
+<strong>
+{{test_deadline_formatted}}
+</strong>
+
+</li>
+</ul>
+<p>
+
+<a href="https://aptitude.ekazi.co.tz/">
+
+Click here to open test link
+
+</a>
+
+</p>
+<p>
+If the link doesn't work, copy this URL:
+</p>
+
+<p>
+<code>
+https://aptitude.ekazi.co.tz/
+</code>
+</p>
+
+<p>
+
+<strong>
+Username:
+</strong>
+
+{{user_name}}
+
+<br>
+<strong>
+Password:
+</strong>
+{{user_password}}
+</p>
+{{/if}}
+<p>
+Best regards,
+<br>
+<strong>
+The eKazi Team
+</strong>
+</p>
+<p>
+<em>
+This is an automated message from eKazi.co.tz.
+Please do not reply directly to this email.
+</em>
+</p>
+
+<hr>
+{{client_name}}
+<br>
+
+Tel:
+
+{{#each job_details.client.client_phones}}
+
+{{phone_number}}
+
+{{/each}}
+
+<br>
+<hr>
+You have received this email because you registered on
+<a href="https://ekazi.co.tz/">ekazi</a>
+
+</div>
+</div>
+</body>
+</html>

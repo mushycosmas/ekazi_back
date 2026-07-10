@@ -21,6 +21,7 @@ import { JobShortListings } from 'src/jobs/entities/job-short-listings.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
 import { Task } from 'src/tasks/entities/tasks.entity';
 import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
+import { ApplicantApplication } from './applicants/applicant-applicantions.entity';
 
 const VerifiedTransformer: ValueTransformer = {
   to: (value: number | boolean): number => {
@@ -164,4 +165,10 @@ verify_key_expires_at: Date | null;
 
   @OneToMany(() => TaskAssignment, (a) => a.user)
   taskAssignments: TaskAssignment[];
+
+  @OneToMany(
+    () => ApplicantApplication,
+    (application) => application.applicant
+)
+applications: ApplicantApplication[];
 }

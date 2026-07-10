@@ -6,12 +6,15 @@ import {
     UpdateDateColumn,
     ManyToOne,
     JoinColumn,
+    OneToOne,
+    OneToMany,
 } from 'typeorm';
 
 import { Stage } from 'src/entities/stage.entity';
 import { Users } from 'src/entities/users.entity';
 import { Jobs } from 'src/jobs/entities/job.entity';
 import { Applicants } from 'src/entities/applicants/applicants.entity';
+import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 
 @Entity('job_stages')
 export class JobStage {
@@ -73,4 +76,10 @@ export class JobStage {
         onUpdate: 'CURRENT_TIMESTAMP',
     })
     updated_at: Date;
+
+    @OneToMany(
+        () => ApplicantApplication,
+        application => application.job
+    )
+    applications: ApplicantApplication[];
 }

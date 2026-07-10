@@ -24,26 +24,14 @@ export class EmployerController {
   employerAccount(@CurrentUser() user: Users) {
     return this.employerService.employerAccount(user);
   }
-
-  @Get('company-profile')
+//company-profile
+  @Get()
   @UseGuards(SanctumGuard)
   getCompanyProfile(@Req() req: any) {
     return this.employerService.getCompanyProfile(req.user);
   }
 
-  // =========================
-  // UPDATE COMPANY PROFILE
-  // =========================
-  // @UseGuards(SanctumGuard)
-  // @Put('company-profile')
-  // updateCompanyProfile(
-  //   @Req() req,
-  //   @Body() dto: UpdateCompanyProfileDto,
-  // ) {
-  //   return this.employerService.updateCompanyProfile(req.user, dto);
-  // }
-
-  @Put('company-profile')
+  @Put()
   @UseGuards(SanctumGuard)
   @UseInterceptors(
     FileInterceptor(
@@ -82,7 +70,7 @@ export class EmployerController {
       stageId ? Number(stageId) : undefined,
     );
   }
-  @Get('jobs/:jobId/applications-by-stage')
+  @Get(':jobId/applications')
   @UseGuards(SanctumGuard)
   getByStage(
     @Req() req,

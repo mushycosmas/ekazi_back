@@ -334,137 +334,370 @@ export class EmployerService {
         }
     }
 
-    async getApplicantsByJob(
-        user: Users,
-        jobId: number,
-        page = 1,
-        limit = 20,
-        search?: string,
-        stageId?: number,
-    ) {
-        try {
-            // Ensure the job belongs to the employer
-            if (!user.client_id) {
-                throw new NotFoundException('No company is associated with this user.');
+
+ async getApplicantsByJob(
+    user: Users,
+    jobId: number,
+    page = 1,
+    limit = 20,
+    search?: string,
+    stageId?: number,
+) {
+
+    try {
+
+        if (!user.client_id) {
+            throw new NotFoundException(
+                'No company assigned'
+            );
+        }
+
+
+        // Check employer owns the job
+        const job = await this.jobsRepository.findOne({
+            where: {
+                id: jobId,
+                client_id: user.client_id
             }
+        });
 
-            const job = await this.jobsRepository.findOne({
-                where: {
-                    id: jobId,
-                    client_id: user.client_id,
-                },
-            });
 
-            if (!job) {
-                throw new NotFoundException(
-                    'Job not found or you do not have permission to view applicants.',
-                );
-            }
+        if (!job) {
+            throw new NotFoundException(
+                'Job not found'
+            );
+        }
 
-            const query = this.applicationRepository
+
+
+        const query =
+            this.applicationRepository
                 .createQueryBuilder('application')
-                .leftJoinAndSelect('application.stage', 'stage')
-                .leftJoinAndSelect('application.applicant', 'user')
-                // .leftJoinAndSelect('user.applicants', 'applicant')
-                .leftJoinAndSelect('user.applicants', 'applicantProfile')
-                .leftJoinAndSelect(
-                    'applicant.applicant_addresses',
-                    'address',
-                )
-                .leftJoinAndSelect(
-                    'applicant.applicant_phones',
-                    'phone',
-                )
-                .leftJoinAndSelect(
-                    'applicant.positions',
-                    'position',
-                )
-                .where('application.job_id = :jobId', {
-                    jobId,
-                });
 
-            // Stage Filter
-            if (stageId) {
-                query.andWhere(
-                    'application.stage_id = :stageId',
-                    {
-                        stageId: Number(stageId),
-                    },
-                );
-            }
-            // Search
-            if (search) {
-                query.andWhere(
+
+
+                // current stage from applicant_applications
+                .leftJoinAndSelect(
+                    'application.stage',
+                    'currentStage'
+                )
+
+
+
+                // applicant user
+                .leftJoinAndSelect(
+                    'application.applicant',
+                    'user'
+                )
+
+
+
+                // applicant profile
+                .leftJoinAndSelect(
+                    'user.applicants',
+                    'profile'
+                )
+
+
+
+                // applicant stage history
+                .leftJoin(
+                    JobStage,
+                    'stageHistory',
                     `
+                    stageHistory.job_id = application.job_id
+                    AND 
+                    stageHistory.applicant_id = application.applicant_id
+                    `
+                )
+
+
+                .where(
+                    'application.job_id = :jobId',
+                    {
+                        jobId
+                    }
+                )
+
+
+                .distinct(true);
+
+
+
+
+        /**
+         * Filter applicant by stage history
+         * 
+         * Applied = 1
+         * Shortlisted = 2
+         * Screening = 3
+         */
+        if(stageId){
+
+            query.andWhere(
+                `
+                stageHistory.stage_id = :stageId
+                `,
+                {
+                    stageId:Number(stageId)
+                }
+            );
+
+        }
+
+
+
+
+        /**
+         * Search applicant
+         */
+        if(search){
+
+            query.andWhere(
+                `
                 (
-                    applicant.first_name LIKE :search
-                    OR applicant.middle_name LIKE :search
-                    OR applicant.last_name LIKE :search
+                    profile.first_name LIKE :search
+                    OR profile.middle_name LIKE :search
+                    OR profile.last_name LIKE :search
                     OR user.email LIKE :search
-                    OR phone.phone_number LIKE :search
-                    OR position.position_name LIKE :search
                 )
                 `,
+                {
+                    search:`%${search}%`
+                }
+            );
+
+        }
+
+
+
+
+        const total =
+            await query.getCount();
+
+
+
+
+        const applications =
+            await query
+
+            .select([
+
+                // applicant_applications table
+                'application.id',
+                'application.job_id',
+                'application.applicant_id',
+                'application.stage_id',
+                'application.letter',
+                'application.hide',
+                'application.consent_verified',
+                'application.status',
+                'application.attachment',
+                'application.created_at',
+                'application.updated_at',
+
+
+                // stages
+                'currentStage.id',
+                'currentStage.stage_name',
+                'currentStage.stage_code',
+
+
+                // users
+                'user.id',
+                'user.email',
+
+
+                // applicants profile
+                'profile.id',
+                'profile.first_name',
+                'profile.middle_name',
+                'profile.last_name',
+                'profile.picture',
+
+            ])
+
+            .orderBy(
+                'application.created_at',
+                'DESC'
+            )
+
+            .skip(
+                (page - 1) * limit
+            )
+
+            .take(limit)
+
+            .getMany();
+
+
+
+
+
+        const data =
+            applications.map(item => {
+
+
+                const profile =
+                    item.applicant?.applicants?.[0];
+
+
+
+                return {
+
+
+                    /**
+                     * applicant_application
+                     */
+                    id:item.id,
+
+                    job_id:item.job_id,
+
+                    applicant_id:item.applicant_id,
+
+
+                    letter:item.letter,
+
+
+                    attachment:item.attachment,
+
+
+                    status:item.status,
+
+
+                    hide:item.hide,
+
+
+                    consent_verified:
+                    item.consent_verified,
+
+
+                    created_at:
+                    item.created_at,
+
+
+                    updated_at:
+                    item.updated_at,
+
+
+
+
+
+                    /**
+                     * Current stage
+                     */
+                    current_stage:
+                    item.stage
+                    ?
                     {
-                        search: `%${search}%`,
-                    },
-                );
-            }
+                        id:item.stage.id,
 
-            const total = await query.getCount();
-            const applications = await query
-                .orderBy('application.created_at', 'DESC')
-                .skip((page - 1) * limit)
-                .take(limit)
-                .getMany();
+                        name:
+                        item.stage.stage_name,
 
-            const data = applications.map((item) => ({
-                id: item.id,
-                status: item.status,
-                letter: item.letter,
-
-                stage: item.stage
-                    ? {
-                        id: item.stage.id,
-                        name: item.stage.stage_name,
-                        code: item.stage.stage_code,
+                        code:
+                        item.stage.stage_code
                     }
-                    : null,
+                    :
+                    null,
 
-                applicant: item.applicant
-                    ? {
-                        id: item.applicant.id,
-                        email: item.applicant.email,
+
+
+
+
+                    /**
+                     * Applicant information
+                     */
+                    applicant:
+                    item.applicant
+                    ?
+                    {
+
+                        id:item.applicant.id,
+
+
+                        email:item.applicant.email,
+
 
                         first_name:
-                            item.applicant.applicants?.[0]?.first_name ?? '',
+                        profile?.first_name ?? '',
+
+
                         middle_name:
-                            item.applicant.applicants?.[0]?.middle_name ?? '',
+                        profile?.middle_name ?? '',
+
+
                         last_name:
-                            item.applicant.applicants?.[0]?.last_name ?? '',
+                        profile?.last_name ?? '',
+
+
+                        picture:
+                        profile?.picture ?? ''
+
                     }
-                    : null,
+                    :
+                    null
 
-                applied_at: item.created_at,
-            }));
+                };
 
-            return {
-                success: true,
-                message: 'Applicants retrieved successfully',
-                data,
-                current_page: page,
-                per_page: limit,
-                total_pages: Math.ceil(total / limit),
-                total,
-            };
-        } catch (error) {
-            throw new InternalServerErrorException({
-                success: false,
-                message: 'Failed to fetch applicants',
-                error: error.message,
             });
-        }
+
+
+
+
+
+        return {
+
+            success:true,
+
+
+            message:
+            stageId
+            ?
+            'Applicants filtered by stage successfully'
+            :
+            'Applicants retrieved successfully',
+
+
+
+            data,
+
+
+
+            pagination:{
+
+                page,
+
+                limit,
+
+                total,
+
+                total_pages:
+                Math.ceil(total / limit)
+
+            }
+
+        };
+
+
     }
+    catch(error){
+
+
+        throw new InternalServerErrorException({
+
+            success:false,
+
+            message:'Failed to fetch applicants',
+
+            error:error.message
+
+        });
+
+    }
+
+}
+
 
     async getJobStageHistory(
         user: Users,

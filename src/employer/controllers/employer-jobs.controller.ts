@@ -28,7 +28,7 @@ import { CompleteJobProfileDto } from 'src/jobs/dtos/complete-job-profile.dto';
 import { JobSettingsService } from 'src/jobs/services/job-settings.service';
 import { UpdateJobSettingsDto } from 'src/jobs/dtos/update-job-settings.dto';
 
-@Controller('employer-jobs')
+@Controller('employer')
 export class EmployerJobsController {
     constructor(
         private readonly employerJobsService: EmployerJobsService,
