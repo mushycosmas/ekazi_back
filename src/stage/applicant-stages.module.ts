@@ -13,6 +13,8 @@ import { Regions } from 'src/entities/regions.entity';
  
 
 import { MailService } from 'src/mail/mail.service';
+import { Users } from 'src/entities/users.entity';
+import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
 
 
 @Module({
@@ -23,7 +25,9 @@ import { MailService } from 'src/mail/mail.service';
             Jobs,
             JobStage,
             ApplicantApplication,
-            Regions
+            Regions,
+            Users,
+            PersonalAccessToken,
         ])],
 
     controllers: [ApplicantStagesController],

@@ -1,4 +1,4 @@
- import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 
@@ -21,379 +21,416 @@ import * as path from 'path';
 export class ApplicantStagesService {
 
 
-constructor(
+    constructor(
 
-    private readonly dataSource:DataSource,
+        private readonly dataSource: DataSource,
 
 
-    @InjectRepository(Jobs)
-    private readonly jobRepository:Repository<Jobs>,
-    @InjectRepository(Stage)
-    private readonly stageRepository:Repository<Stage>,
-    @InjectRepository(JobStage)
-    private readonly jobStageRepository:Repository<JobStage>,
+        @InjectRepository(Jobs)
+        private readonly jobRepository: Repository<Jobs>,
+        @InjectRepository(Stage)
+        private readonly stageRepository: Repository<Stage>,
+        @InjectRepository(JobStage)
+        private readonly jobStageRepository: Repository<JobStage>,
 
 
-    @InjectRepository(ApplicantApplication)
-    private readonly applicantApplicationRepository:Repository<ApplicantApplication>,
+        @InjectRepository(ApplicantApplication)
+        private readonly applicantApplicationRepository: Repository<ApplicantApplication>,
 
 
-    @InjectRepository(Regions)
-    private readonly regionRepository:Repository<Regions>,
+        @InjectRepository(Regions)
+        private readonly regionRepository: Repository<Regions>,
 
 
-    private readonly mailService:MailService
+        private readonly mailService: MailService
 
-){}
+    ) { }
 
+    async bulkShortList(
+        dto: BulkShortListDto,
+        user: Users
+    ) {
 
 
+        const stage =
+            await this.stageRepository.findOne({
 
+                where: {
+                    id: dto.stage_id
+                }
 
-async bulkShortList(
-    dto:BulkShortListDto,
-    user:Users
-){
+            });
 
 
-const stage =
-await this.stageRepository.findOne({
+        if (!stage) {
+            throw new NotFoundException(
+                'Stage not found'
+            );
+        }
+        switch (stage.stage_name) {
 
-where:{
-id:dto.stage_id
-}
+            case 'Shortlisted':
 
-});
+                await this.shortListedStage(
+                    dto,
+                    user.id
+                );
 
+                break;
 
-if(!stage)
-{
-throw new NotFoundException(
-'Stage not found'
-);
-}
+            case 'Screening':
 
+                await this.screenStage(dto);
 
+                break;
 
-switch(stage.stage_name)
-{
+            case 'Interview':
 
+                await this.interViewStage(dto);
 
-case 'Shortlisted':
+                break;
 
-await this.shortListedStage(
-    dto,
-    user.id
-);
+            case 'Selection':
 
-break;
+                await this.selectionStage(dto);
 
+                break;
 
+            case 'Background Check':
 
-case 'Screening':
+                await this.backgroundStage(dto);
 
-await this.screenStage(dto);
+                break;
 
-break;
+            default:
 
+                throw new Error(
+                    'Invalid stage selected'
+                );
 
+        }
 
-case 'Interview':
+        return true;
 
-await this.interViewStage(dto);
+    }
 
-break;
 
 
 
-case 'Selection':
 
-await this.selectionStage(dto);
 
-break;
+    private async screenStage(
+        dto: BulkShortListDto
+    ) {
 
+        // Screening logic
 
+    }
 
-case 'Background Check':
 
-await this.backgroundStage(dto);
 
-break;
 
 
+    private async interViewStage(
+        dto: BulkShortListDto
+    ) {
 
-default:
+        // Interview logic
 
-throw new Error(
-'Invalid stage selected'
-);
+    }
 
 
-}
 
 
-return true;
 
-}
+    private async selectionStage(
+        dto: BulkShortListDto
+    ) {
 
+        // Selection logic
 
+    }
 
+    private async backgroundStage(
+        dto: BulkShortListDto
+    ) {
 
+        // Background Check logic
 
+    }
 
-private async screenStage(
-dto:BulkShortListDto
-)
-{
+    async shortListedStage(
+        dto: BulkShortListDto,
+        userId: number
+    ) {
 
-// Screening logic
 
-}
+        const queryRunner =
+            this.dataSource.createQueryRunner();
 
 
+        await queryRunner.connect();
 
+        await queryRunner.startTransaction();
 
+        try {
 
-private async interViewStage(
-dto:BulkShortListDto
-)
-{
+            const stage =
+                await this.stageRepository.findOne({
 
-// Interview logic
+                    where: {
+                        id: dto.stage_id
+                    }
 
-}
+                });
 
+            if (!stage) {
+                throw new Error(
+                    'Stage not found'
+                );
+            }
+            const job =
+                await this.jobRepository.findOne({
 
+                    where: {
+                        id: dto.job_id
+                    },
 
+                    relations: [
+                        'client'
+                    ]
 
+                });
 
-private async selectionStage(
-dto:BulkShortListDto
-)
-{
+            if (!job) {
+                throw new Error(
+                    'Job not found'
+                );
+            }
 
-// Selection logic
+            // Update Job Stage
 
-}
+            await queryRunner.manager.update(
 
+                Jobs,
 
+                dto.job_id,
 
+                {
 
+                    stage_id: dto.stage_id
 
-private async backgroundStage(
-dto:BulkShortListDto
-)
-{
+                }
 
-// Background Check logic
+            );
 
-}
+            // Location
 
+            const inviteLocation =
+                await this.regionRepository.findOne({
 
+                    where: {
+                        id: dto.region_id
+                    }
 
+                });
+            for (
+                const applicantId of dto.applicant_id
+            ) {
 
 
 
 
-async shortListedStage(
-dto:BulkShortListDto,
-userId:number
-){
 
+                // =============================
+                // Create Job Stage
+                // =============================
 
-const queryRunner =
-this.dataSource.createQueryRunner();
 
+                let jobStage =
+                    await this.jobStageRepository.findOne({
 
-await queryRunner.connect();
+                        where: {
 
-await queryRunner.startTransaction();
+                            job_id: dto.job_id,
 
+                            stage_id: dto.stage_id,
 
+                            applicant_id: applicantId
 
-try {
+                        }
 
+                    });
 
 
-const stage =
-await this.stageRepository.findOne({
 
-where:{
-id:dto.stage_id
-}
 
-});
+                if (!jobStage) {
 
+                    jobStage =
+                        await queryRunner.manager.save(
 
+                            JobStage,
 
-if(!stage)
-{
-throw new Error(
-'Stage not found'
-);
-}
+                            {
 
+                                job_id: dto.job_id,
 
+                                stage_id: dto.stage_id,
 
+                                applicant_id: applicantId,
 
+                                creator_id: userId,
 
-const job =
-await this.jobRepository.findOne({
+                                updator_id: userId
 
-where:{
-id:dto.job_id
-},
+                            }
 
-relations:[
-'client'
-]
+                        );
 
-});
 
+                }
 
+                // =============================
+                // Update Applicant Application
+                // =============================
 
-if(!job)
-{
-throw new Error(
-'Job not found'
-);
-}
 
+                await queryRunner.manager.update(
 
+                    ApplicantApplication,
 
+                    {
 
+                        job_id: dto.job_id,
 
-// Update Job Stage
+                        applicant_id: applicantId
 
-await queryRunner.manager.update(
+                    },
 
-Jobs,
+                    {
 
-dto.job_id,
+                        stage_id: dto.stage_id,
 
-{
+                        status: stage.stage_name
 
-stage_id:dto.stage_id
+                    }
 
-}
+                );
 
-);
 
 
 
 
 
 
-// Location
 
-const inviteLocation =
-await this.regionRepository.findOne({
+                // =============================
+                // Get Applicant
+                // =============================
 
-where:{
-id:dto.region_id
-}
 
-});
+                const applicant =
 
+                    await queryRunner.manager
 
+                        .createQueryBuilder()
 
+                        .select([
 
+                            'user.email AS email',
 
+                            'user.first_name AS first_name',
 
+                            'user.last_name AS last_name'
 
+                        ])
 
-for(
-const applicantId of dto.applicant_id
-)
-{
 
+                        .from(
+                            'applicants',
+                            'applicant'
+                        )
 
 
+                        .innerJoin(
 
+                            'users',
 
-// =============================
-// Create Job Stage
-// =============================
+                            'user',
 
+                            'user.id = applicant.user_id'
 
-let jobStage =
-await this.jobStageRepository.findOne({
+                        )
 
-where:{
 
-job_id:dto.job_id,
+                        .where(
 
-stage_id:dto.stage_id,
+                            'applicant.id = :id',
 
-applicant_id:applicantId
+                            {
+                                id: applicantId
+                            }
 
-}
+                        )
 
-});
+                        .getRawOne();
 
 
 
 
-if(!jobStage)
-{
 
-jobStage =
-await queryRunner.manager.save(
 
-JobStage,
+                if (applicant) {
 
-{
 
-job_id:dto.job_id,
+                    await this.sendShortListEmail({
 
-stage_id:dto.stage_id,
+                        applicant,
 
-applicant_id:applicantId,
+                        job,
 
-creator_id:userId,
+                        stage,
 
-updator_id:userId
+                        inviteLocation,
 
-}
+                        dto
 
-);
+                    });
 
 
-}
+                }
 
 
 
+            }
 
 
 
+            await queryRunner.commitTransaction();
 
 
-// =============================
-// Update Applicant Application
-// =============================
 
+        }
 
-await queryRunner.manager.update(
+        catch (error) {
 
-ApplicantApplication,
 
-{
+            await queryRunner.rollbackTransaction();
 
-job_id:dto.job_id,
+            throw error;
 
-applicant_id:applicantId
 
-},
+        }
 
-{
+        finally {
 
-stage_id:dto.stage_id,
+            await queryRunner.release();
 
-status:stage.stage_name
+        }
 
-}
 
-);
+    }
 
 
 
@@ -402,313 +439,195 @@ status:stage.stage_name
 
 
 
-// =============================
-// Get Applicant
-// =============================
 
+    private async sendShortListEmail(
+        data: any
+    ) {
 
-const applicant =
 
-await queryRunner.manager
+        const {
 
-.createQueryBuilder()
+            applicant,
 
-.select([
+            job,
 
-'user.email AS email',
+            stage,
 
-'user.first_name AS first_name',
+            inviteLocation,
 
-'user.last_name AS last_name'
+            dto
 
-])
+        } = data;
 
 
-.from(
-'applicants',
-'applicant'
-)
 
 
-.innerJoin(
 
-'users',
 
-'user',
+        const templateData = {
 
-'user.id = applicant.user_id'
 
-)
+            subject:
 
+                `Shortlisted: ${dto.position_name} Application Update`,
 
-.where(
 
-'applicant.id = :id',
+            position_name:
 
-{
-id:applicantId
-}
+                dto.position_name ?? '',
 
-)
 
-.getRawOne();
 
+            client_name:
 
+                job.client?.client_name ?? '',
 
 
 
+            stage_name:
 
-if(applicant)
-{
+                stage.stage_name,
 
 
-await this.sendShortListEmail({
 
-applicant,
+            address:
 
-job,
+                dto.address ?? '',
 
-stage,
 
-inviteLocation,
 
-dto
+            invite_date:
 
-});
+                dto.invite_date ?? '',
 
 
-}
 
+            message_body:
 
+                dto.message_body ?? '',
 
-}
 
 
+            first_name:
 
-await queryRunner.commitTransaction();
+                applicant.first_name,
 
 
 
-}
+            last_name:
 
-catch(error)
-{
+                applicant.last_name,
 
 
-await queryRunner.rollbackTransaction();
 
-throw error;
+            region_name:
 
+                inviteLocation?.region_name ?? '',
 
-}
 
-finally
-{
 
-await queryRunner.release();
+            country:
 
-}
+                inviteLocation?.country?.name ?? ''
 
+        };
 
-}
 
 
 
 
 
+        const templatePath = path.join(
 
+            process.cwd(),
 
+            'src',
 
+            'mail',
 
-private async sendShortListEmail(
-data:any
-)
-{
+            'templates',
 
+            'emails',
 
-const {
+            'recruitment',
 
-applicant,
+            'invite.template.html'
 
-job,
+        );
 
-stage,
 
-inviteLocation,
 
-dto
 
-}=data;
+        let html = fs.readFileSync(
 
+            templatePath,
 
+            'utf8'
 
+        );
 
 
 
-const templateData = {
 
 
-subject:
 
-`Shortlisted: ${dto.position_name} Application Update`,
 
+        Object.keys(templateData)
+            .forEach(key => {
 
-position_name:
 
-dto.position_name ?? '',
+                html =
+                    html.replace(
 
+                        new RegExp(
+                            `{{\\s*${key}\\s*}}`,
+                            'g'
+                        ),
 
+                        String(
+                            templateData[key] ?? ''
+                        )
 
-client_name:
+                    );
 
-job.client?.client_name ?? '',
 
 
+            });
 
-stage_name:
 
-stage.stage_name,
 
 
 
-address:
 
-dto.address ?? '',
 
+        await this.mailService.sendMail({
 
+            from:
 
-invite_date:
+                `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
 
-dto.invite_date ?? '',
 
 
+            to:
 
-message_body:
+                applicant.email,
 
-dto.message_body ?? '',
 
 
+            subject:
 
-first_name:
+                templateData.subject,
 
-applicant.first_name,
 
 
+            html
 
-last_name:
 
-applicant.last_name,
+        });
 
 
 
-region_name:
-
-inviteLocation?.region_name ?? '',
-
-
-
-country:
-
-inviteLocation?.country?.name ?? ''
-
-};
-
-
-
-
-
-
-const templatePath = path.join(
-
-process.cwd(),
-
-'src',
-
-'mail',
-
-'templates',
-
-'emails',
-
-'recruitment',
-
-'invite.template.html'
-
-);
-
-
-
-
-let html = fs.readFileSync(
-
-templatePath,
-
-'utf8'
-
-);
-
-
-
-
-
-
-
-Object.keys(templateData)
-.forEach(key=>{
-
-
-html =
-html.replace(
-
-new RegExp(
-`{{\\s*${key}\\s*}}`,
-'g'
-),
-
-String(
-templateData[key] ?? ''
-)
-
-);
-
-
-
-});
-
-
-
-
-
-
-
-await this.mailService.sendMail({
-
-from:
-
-`"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
-
-
-
-to:
-
-applicant.email,
-
-
-
-subject:
-
-templateData.subject,
-
-
-
-html
-
-
-});
-
-
-
-}
+    }
 
 
 }

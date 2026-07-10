@@ -2,11 +2,13 @@ import {
     Controller,
     Post,
     Body,
-    Req
+    Req,
+    UseGuards
 } from '@nestjs/common';
-import { ApplicantStagesService }from './applicant-stages.service';
+import { ApplicantStagesService } from './applicant-stages.service';
 import { BulkShortListDto } from './dto/bulk-shortlist.dto';
-import { Users }from 'src/entities/users.entity';
+import { Users } from 'src/entities/users.entity';
+import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 
 @Controller('applicant-stages')
 export class ApplicantStagesController {
@@ -16,6 +18,7 @@ export class ApplicantStagesController {
     ) { }
 
     @Post('bulk-shortlist')
+    @UseGuards(SanctumGuard)
     async bulkShortList(
         @Body() dto: BulkShortListDto,
         @Req() req: any

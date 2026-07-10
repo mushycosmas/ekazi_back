@@ -3,6 +3,8 @@ import {
     NotFoundException,
     InternalServerErrorException,
     ForbiddenException,
+    HttpException,
+    HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets, DataSource, QueryRunner } from 'typeorm';
@@ -68,7 +70,11 @@ export class JobsService {
     async create(user: Users, createJobDto: CreateJobDto) {
         if (!user.client_id) {
             throw new BadRequestException(
-                'User is not linked to a client'
+
+                {
+                    success: false,
+                    mesage: 'User is not linked to a client'
+                }
             );
         }
 
@@ -79,7 +85,13 @@ export class JobsService {
             },
         });
         if (!client) {
-            throw new NotFoundException('Client not found');
+            throw new NotFoundException(
+
+                {
+                    success: false,
+                    mesage: 'Client not found'
+                }
+            );
         }
 
         const queryRunner = this.dataSource.createQueryRunner();
@@ -117,7 +129,13 @@ export class JobsService {
 
             // Optional: ensure number
             if (!positionId) {
-                throw new BadRequestException('Position is required');
+                throw new BadRequestException(
+
+                    {
+                        succcess: false,
+                        message: 'Position is required'
+                    }
+                );
             }
 
             // ✅ STEP 2: Create Job
@@ -149,8 +167,19 @@ export class JobsService {
             };
 
         } catch (error) {
+
             await queryRunner.rollbackTransaction();
-            throw error;
+
+            console.error(error);
+
+            throw new HttpException(
+                {
+                    success: false,
+                    message: 'Failed to process applicants',
+                    error: error.message,
+                },
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         } finally {
             await queryRunner.release();
         }
