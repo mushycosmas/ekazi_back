@@ -175,7 +175,7 @@ export class JobsService {
             throw new HttpException(
                 {
                     success: false,
-                    message: 'Failed to process applicants',
+                    message: 'Failed to process  job application',
                     error: error.message,
                 },
                 HttpStatus.INTERNAL_SERVER_ERROR,

@@ -48,6 +48,8 @@ import { TasksModule } from './tasks/tasks.module';
 import { JobSettingsModule } from './jobs/modules/job-settings.module';
 import { ApplicantStagesModule } from './stage/applicant-stages.module';
 import { JobUniversalTypesModule } from './jobtypes/job-universal-types.module';
+import { LanguageWritesModule } from './Languagewrites/language-writes.module';
+import { LanguageUnderstandsModule } from './languageunderstands/language-understands.module';
 
  
 // ... other imports
@@ -66,7 +68,7 @@ import { JobUniversalTypesModule } from './jobtypes/job-universal-types.module';
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
-    JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule,
+    JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule,
 
     // ... other modules
   ],

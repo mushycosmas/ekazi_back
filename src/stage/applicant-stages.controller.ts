@@ -9,6 +9,8 @@ import { ApplicantStagesService } from './applicant-stages.service';
 import { BulkShortListDto } from './dto/bulk-shortlist.dto';
 import { Users } from 'src/entities/users.entity';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
+import { BulkScreeningDto } from './dto/bulk-screning.dto';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 
 @Controller('applicant-stages')
 export class ApplicantStagesController {
@@ -17,14 +19,14 @@ export class ApplicantStagesController {
             ApplicantStagesService
     ) { }
 
-    @Post('bulk-shortlist')
+    @Post('shortlist')
     @UseGuards(SanctumGuard)
     async bulkShortList(
+        @CurrentUser() user: Users,
         @Body() dto: BulkShortListDto,
-        @Req() req: any
-
+    
     ) {
-        const user: Users = req.user;
+        
         await this.applicantStagesService.bulkShortList(
             dto,
             user
@@ -34,5 +36,16 @@ export class ApplicantStagesController {
             message:
                 'Applicants processed successfully'
         };
+    }
+    @Post('screening')
+    @UseGuards(SanctumGuard)
+    async screeningStage(
+        @CurrentUser() user: Users,
+        @Body() dto: BulkScreeningDto,
+    ) {
+        return this.applicantStagesService.screeningStage(
+            dto,
+            user,
+        );
     }
 }

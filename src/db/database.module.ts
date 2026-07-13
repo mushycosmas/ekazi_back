@@ -119,6 +119,8 @@ import { Stage } from 'src/entities/stage.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
 import { Task } from 'src/tasks/entities/tasks.entity';
 import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
+import { ApplicantListing } from 'src/entities/applicants/applicant-listings.entity';
+import { JobTestResult } from 'src/jobs/entities/job-test-results.entity';
  
 
 
@@ -240,6 +242,8 @@ const allEntities = [
   Stage,
   Task,
   TaskAssignment,
+  ApplicantListing,
+  JobTestResult,
   
 ];
 
