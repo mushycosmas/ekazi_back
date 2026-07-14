@@ -26,7 +26,7 @@ export class LanguageWritesService {
         private readonly repository:
             Repository<LanguageWrites>,
 
-    ) { }
+    ) {}
 
 
 
@@ -42,9 +42,53 @@ export class LanguageWritesService {
             this.repository.create(dto);
 
 
-        return await this.repository.save(
-            language,
-        );
+        const saved =
+            await this.repository.save(language);
+
+
+        return {
+            success: true,
+            message: 'Language write created successfully.',
+            data: {
+                id: saved.id,
+                name: saved.write_ability,
+            },
+        };
+
+    }
+
+
+
+    // ==========================
+    // FIND ENTITY (PRIVATE)
+    // ==========================
+
+    private async findLanguageEntity(
+        id: number,
+    ): Promise<LanguageWrites> {
+
+
+        const language =
+            await this.repository.findOne({
+
+                where: {
+                    id,
+                    hide: false,
+                },
+
+            });
+
+
+        if (!language) {
+
+            throw new NotFoundException(
+                'Language write not found',
+            );
+
+        }
+
+
+        return language;
 
     }
 
@@ -55,119 +99,179 @@ export class LanguageWritesService {
     // ==========================
 
     async findAll() {
-        const languageWrites = await this.repository.find({
-            select: {
-                id: true,
-                write_ability: true,
-            },
-            where: {
-                hide: false,
-            },
-            order: {
-                write_ability: 'DESC',
-            },
-        });
+
+
+        const languageWrites =
+            await this.repository.find({
+
+                select: {
+                    id: true,
+                    write_ability: true,
+                },
+
+                where: {
+                    hide: false,
+                },
+
+                order: {
+                    write_ability: 'DESC',
+                },
+
+            });
+
+
+
+        const data =
+            languageWrites.map(language => ({
+
+                id: language.id,
+
+                name: language.write_ability,
+
+            }));
+
+
 
         return {
+
             success: true,
-            message: 'Language writes fetched successfully.',
-            data: languageWrites,
+
+            message:
+                'Language writes fetched successfully.',
+
+            data,
+
         };
+
     }
+
+
+
     // ==========================
     // FIND ONE
     // ==========================
 
-async findOne(id: number) {
+    async findOne(
+        id: number,
+    ) {
 
-    const language =
-        await this.repository.findOne({
 
-            select: {
-                id: true,
-                write_ability: true,
-                hide: true,
+        const language =
+            await this.findLanguageEntity(id);
+
+
+
+        return {
+
+            success: true,
+
+            message:
+                'Language write fetched successfully.',
+
+            data: {
+
+                id: language.id,
+
+                name:
+                    language.write_ability,
+
             },
 
-            where: {
-                id,
-                hide: false,
-            },
-
-        });
-
-
-    if (!language) {
-
-        throw new NotFoundException(
-            'Language write not found',
-        );
+        };
 
     }
 
 
-    return language;
-
-}
 
     // ==========================
     // UPDATE
     // ==========================
 
-async update(
-    id: number,
-    dto: UpdateLanguageWriteDto,
-) {
+    async update(
 
-    const language =
-        await this.findOne(id);
+        id: number,
 
+        dto: UpdateLanguageWriteDto,
 
-    Object.assign(
-        language,
-        dto,
-    );
+    ) {
 
 
-    const updated =
-        await this.repository.save(language);
+        const language =
+            await this.findLanguageEntity(id);
 
 
-    return {
-        success: true,
-        message: 'Language write updated successfully.',
-        data: updated,
-    };
 
-}
+        Object.assign(
+
+            language,
+
+            dto,
+
+        );
+
+
+
+        const updated =
+            await this.repository.save(language);
+
+
+
+        return {
+
+            success: true,
+
+            message:
+                'Language write updated successfully.',
+
+            data: {
+
+                id: updated.id,
+
+                name:
+                    updated.write_ability,
+
+            },
+
+        };
+
+    }
+
+
 
     // ==========================
     // SOFT DELETE
     // ==========================
 
-async remove(
-    id: number,
-) {
+    async remove(
 
-    const language =
-        await this.findOne(id);
+        id: number,
 
-
-    language.hide = true;
+    ) {
 
 
-    const deleted =
+        const language =
+            await this.findLanguageEntity(id);
+
+
+
+        language.hide = true;
+
+
+
         await this.repository.save(language);
 
 
-    return {
-        success: true,
-        message: 'Language write deleted successfully.',
-        data: deleted,
-    };
 
-}
+        return {
 
+            success: true,
+
+            message:
+                'Language write deleted successfully.',
+
+        };
+
+    }
 
 
 }
