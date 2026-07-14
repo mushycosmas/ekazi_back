@@ -222,6 +222,11 @@ export class Jobs {
     @JoinColumn({ name: 'industry_id' })
     industry: Industries;
 
+    // Category relation (also points to industries table)
+    @ManyToOne(() => Industries,)
+    @JoinColumn({ name: 'category_id', })
+    category: Industries;
+
     @ManyToOne(() => Countries)
     @JoinColumn({ name: 'country_id' })
     country: Countries;
