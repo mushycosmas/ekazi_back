@@ -24,6 +24,7 @@ export class ApplicantStagesController {
     ) { }
 
     @Get(':jobId/:stageName')
+    @UseGuards(SanctumGuard)
     getApplicantsByStage(
 
         @Param('jobId', ParseIntPipe)

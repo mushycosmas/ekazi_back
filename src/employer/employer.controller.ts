@@ -11,6 +11,7 @@ import { TaskQueryDto } from 'src/tasks/dto/task-query.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/common/upload/multer.config';
 import { CvbuilderService } from 'src/cvbuilder/cvbuilder.service';
+import { ApplicantStagesService } from 'src/stage/applicant-stages.service';
 
 
 @Controller('employer')
@@ -18,7 +19,8 @@ export class EmployerController {
   constructor(
     private readonly employerService: EmployerService,
     private readonly tasksService: TasksService,
-    private readonly cvbuilderService: CvbuilderService
+    private readonly cvbuilderService: CvbuilderService,
+    private readonly applicantStagesService:ApplicantStagesService
   ) { }
 
   @UseGuards(SanctumGuard)
@@ -152,6 +154,35 @@ export class EmployerController {
       }
       return applicant;
     }
+
+   
+      
+        @Get(':jobId/application-stages/:stageName')
+        @UseGuards(SanctumGuard)
+        getApplicantsByStage(
+    
+            @Param('jobId', ParseIntPipe)
+            jobId: number,
+            @Param('stageName')
+            stageName: string,
+            @Query('page')
+            page: number = 1,
+            @Query('limit')
+            limit: number = 10,
+            @Query('search')
+            search?: string,
+    
+        ) {
+    
+            return this.applicantStagesService.getApplicantsByStage(
+                jobId,
+                stageName,
+                Number(page),
+                Number(limit),
+                search,
+            );
+    
+        }
 
 }
 

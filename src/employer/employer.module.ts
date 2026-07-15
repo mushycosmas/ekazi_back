@@ -32,6 +32,7 @@ import { JobRequirementsModule } from 'src/jobs/modules/job-requirements.module'
 import { JobOtherRequirementsModule } from 'src/jobs/modules/job-other-requirements.module';
 import { JobSettingsModule } from 'src/jobs/modules/job-settings.module';
 import { CvbuilderModule } from 'src/cvbuilder/cvbuilder.module';
+import { ApplicantStagesModule } from 'src/stage/applicant-stages.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { CvbuilderModule } from 'src/cvbuilder/cvbuilder.module';
      JobOtherRequirementsModule,
      JobSettingsModule,
      CvbuilderModule,
+     ApplicantStagesModule,
   ],
  
   controllers: [
