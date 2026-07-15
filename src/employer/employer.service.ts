@@ -335,126 +335,117 @@ export class EmployerService {
     }
 
 
- async getApplicantsByJob(
-    user: Users,
-    jobId: number,
-    page = 1,
-    limit = 20,
-    search?: string,
-    stageId?: number,
-) {
+    async getApplicantsByJob(
+        user: Users,
+        jobId: number,
+        page = 1,
+        limit = 20,
+        search?: string,
+        stageId?: number,
+    ) {
 
-    try {
+        try {
 
-        if (!user.client_id) {
-            throw new NotFoundException(
-                'No company assigned'
-            );
-        }
-
-
-        // Check employer owns the job
-        const job = await this.jobsRepository.findOne({
-            where: {
-                id: jobId,
-                client_id: user.client_id
+            if (!user.client_id) {
+                throw new NotFoundException(
+                    'No company assigned'
+                );
             }
-        });
 
 
-        if (!job) {
-            throw new NotFoundException(
-                'Job not found'
-            );
-        }
+            // Check employer owns the job
+            const job = await this.jobsRepository.findOne({
+                where: {
+                    id: jobId,
+                    client_id: user.client_id
+                }
+            });
 
 
-
-        const query =
-            this.applicationRepository
-                .createQueryBuilder('application')
-
-
-
-                // current stage from applicant_applications
-                .leftJoinAndSelect(
-                    'application.stage',
-                    'currentStage'
-                )
+            if (!job) {
+                throw new NotFoundException(
+                    'Job not found'
+                );
+            }
 
 
 
-                // applicant user
-                .leftJoinAndSelect(
-                    'application.applicant',
-                    'user'
-                )
+            const query =
+                this.applicationRepository
+                    .createQueryBuilder('application')
 
 
 
-                // applicant profile
-                .leftJoinAndSelect(
-                    'user.applicants',
-                    'profile'
-                )
+                    // current stage from applicant_applications
+                    .leftJoinAndSelect(
+                        'application.stage',
+                        'currentStage'
+                    )
+
+
+                    // applicant user
+                    .leftJoinAndSelect(
+                        'application.applicant',
+                        'applicant'
+                    )
 
 
 
-                // applicant stage history
-                .leftJoin(
-                    JobStage,
-                    'stageHistory',
-                    `
+                    // applicant stage history
+                    .leftJoin(
+                        JobStage,
+                        'stageHistory',
+                        `
                     stageHistory.job_id = application.job_id
                     AND 
                     stageHistory.applicant_id = application.applicant_id
                     `
-                )
+                    )
 
 
-                .where(
-                    'application.job_id = :jobId',
-                    {
-                        jobId
-                    }
-                )
+                    .where(
+                        'application.job_id = :jobId',
+                        {
+                            jobId
+                        }
+                    )
 
 
-                .distinct(true);
+                    .distinct(true);
 
 
 
 
-        /**
-         * Filter applicant by stage history
-         * 
-         * Applied = 1
-         * Shortlisted = 2
-         * Screening = 3
-         */
-        if(stageId){
+            /**
+             * Filter applicant by stage history
+             * 
+             * Applied = 1
+             * Shortlisted = 2
+             * Screening = 3
+             */
+            if (stageId) {
 
-            query.andWhere(
-                `
+                query.andWhere(
+                    `
                 stageHistory.stage_id = :stageId
                 `,
-                {
-                    stageId:Number(stageId)
-                }
-            );
+                    {
+                        stageId: Number(stageId)
+                    }
+                );
 
-        }
-
-
+            }
 
 
-        /**
-         * Search applicant
-         */
-        if(search){
 
-            query.andWhere(
-                `
+
+            /**
+             * Search applicant
+             */
+            if (search) {
+
+                query.andWhere(
+                    `
                 (
                     profile.first_name LIKE :search
                     OR profile.middle_name LIKE :search
@@ -462,241 +453,225 @@ export class EmployerService {
                     OR user.email LIKE :search
                 )
                 `,
-                {
-                    search:`%${search}%`
-                }
-            );
-
-        }
-
-
-
-
-        const total =
-            await query.getCount();
-
-
-
-
-        const applications =
-            await query
-
-            .select([
-
-                // applicant_applications table
-                'application.id',
-                'application.job_id',
-                'application.applicant_id',
-                'application.stage_id',
-                'application.letter',
-                'application.hide',
-                'application.consent_verified',
-                'application.status',
-                'application.attachment',
-                'application.created_at',
-                'application.updated_at',
-
-
-                // stages
-                'currentStage.id',
-                'currentStage.stage_name',
-                'currentStage.stage_code',
-
-
-                // users
-                'user.id',
-                'user.email',
-
-
-                // applicants profile
-                'profile.id',
-                'profile.first_name',
-                'profile.middle_name',
-                'profile.last_name',
-                'profile.picture',
-
-            ])
-
-            .orderBy(
-                'application.created_at',
-                'DESC'
-            )
-
-            .skip(
-                (page - 1) * limit
-            )
-
-            .take(limit)
-
-            .getMany();
-
-
-
-
-
-        const data =
-            applications.map(item => {
-
-
-                const profile =
-                    item.applicant?.applicants?.[0];
-
-
-
-                return {
-
-
-                    /**
-                     * applicant_application
-                     */
-                    id:item.id,
-
-                    job_id:item.job_id,
-
-                    applicant_id:item.applicant_id,
-
-
-                    letter:item.letter,
-
-
-                    attachment:item.attachment,
-
-
-                    status:item.status,
-
-
-                    hide:item.hide,
-
-
-                    consent_verified:
-                    item.consent_verified,
-
-
-                    created_at:
-                    item.created_at,
-
-
-                    updated_at:
-                    item.updated_at,
-
-
-
-
-
-                    /**
-                     * Current stage
-                     */
-                    current_stage:
-                    item.stage
-                    ?
                     {
-                        id:item.stage.id,
-
-                        name:
-                        item.stage.stage_name,
-
-                        code:
-                        item.stage.stage_code
+                        search: `%${search}%`
                     }
-                    :
-                    null,
-
-
-
-
-
-                    /**
-                     * Applicant information
-                     */
-                    applicant:
-                    item.applicant
-                    ?
-                    {
-
-                        id:item.applicant.id,
-
-
-                        email:item.applicant.email,
-
-
-                        first_name:
-                        profile?.first_name ?? '',
-
-
-                        middle_name:
-                        profile?.middle_name ?? '',
-
-
-                        last_name:
-                        profile?.last_name ?? '',
-
-
-                        picture:
-                        profile?.picture ?? ''
-
-                    }
-                    :
-                    null
-
-                };
-
-            });
-
-
-
-
-
-        return {
-
-            success:true,
-
-
-            message:
-            stageId
-            ?
-            'Applicants filtered by stage successfully'
-            :
-            'Applicants retrieved successfully',
-
-
-
-            data,
-
-
-
-            pagination:{
-
-                page,
-
-                limit,
-
-                total,
-
-                total_pages:
-                Math.ceil(total / limit)
+                );
 
             }
 
-        };
 
+
+
+            const total =
+                await query.getCount();
+
+
+
+
+            const applications =
+                await query
+
+                    .select([
+
+                        // applicant_applications table
+                        'application.id',
+                        'application.job_id',
+                        'application.applicant_id',
+                        'application.stage_id',
+                        'application.letter',
+                        'application.hide',
+                        'application.consent_verified',
+                        'application.status',
+                        'application.attachment',
+                        'application.created_at',
+                        'application.updated_at',
+
+
+                        // stages
+                        'currentStage.id',
+                        'currentStage.stage_name',
+                        'currentStage.stage_code',
+
+
+                        'applicant.id',
+                        'applicant.first_name',
+                        'applicant.middle_name',
+                        'applicant.last_name',
+                        'applicant.picture',
+
+                    ])
+
+                    .orderBy(
+                        'application.created_at',
+                        'DESC'
+                    )
+
+                    .skip(
+                        (page - 1) * limit
+                    )
+
+                    .take(limit)
+
+                    .getMany();
+
+
+
+
+
+            const data =
+                applications.map(item => {
+
+                    const profile =
+                        item.applicant;
+
+
+
+                    return {
+
+
+                        /**
+                         * applicant_application
+                         */
+                        id: item.id,
+
+                        job_id: item.job_id,
+
+                        applicant_id: item.applicant_id,
+
+
+                        letter: item.letter,
+
+
+                        attachment: item.attachment,
+
+
+                        status: item.status,
+
+
+                        hide: item.hide,
+
+
+                        consent_verified:
+                            item.consent_verified,
+
+
+                        created_at:
+                            item.created_at,
+
+
+                        updated_at:
+                            item.updated_at,
+
+
+
+
+
+                        /**
+                         * Current stage
+                         */
+                        current_stage:
+                            item.stage
+                                ?
+                                {
+                                    id: item.stage.id,
+
+                                    name:
+                                        item.stage.stage_name,
+
+                                    code:
+                                        item.stage.stage_code
+                                }
+                                :
+                                null,
+
+
+
+
+
+                        /**
+                         * Applicant information
+                         */
+                        applicant:
+                            item.applicant
+                                ?
+                                {
+                                    id: item.applicant.id,
+
+                                    first_name:
+                                        item.applicant.first_name,
+
+                                    middle_name:
+                                        item.applicant.middle_name,
+
+                                    last_name:
+                                        item.applicant.last_name,
+
+                                    picture:
+                                        item.applicant.picture
+                                }
+                                :
+                                null
+
+                    };
+
+                });
+
+
+
+
+
+            return {
+
+                success: true,
+
+
+                message:
+                    stageId
+                        ?
+                        'Applicants filtered by stage successfully'
+                        :
+                        'Applicants retrieved successfully',
+
+
+
+                data,
+
+
+
+                pagination: {
+
+                    page,
+
+                    limit,
+
+                    total,
+
+                    total_pages:
+                        Math.ceil(total / limit)
+
+                }
+
+            };
+
+
+        }
+        catch (error) {
+
+
+            throw new InternalServerErrorException({
+
+                success: false,
+
+                message: 'Failed to fetch applicants',
+
+                error: error.message
+
+            });
+
+        }
 
     }
-    catch(error){
-
-
-        throw new InternalServerErrorException({
-
-            success:false,
-
-            message:'Failed to fetch applicants',
-
-            error:error.message
-
-        });
-
-    }
-
-}
 
 
     async getJobStageHistory(

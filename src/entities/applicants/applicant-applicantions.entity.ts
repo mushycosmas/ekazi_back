@@ -11,6 +11,7 @@ import {
 import { Users } from 'src/entities/users.entity';
 import { Jobs } from 'src/jobs/entities/job.entity';
 import { Stage } from '../stage.entity';
+import { Applicants } from './applicants.entity';
 
 
 @Entity('applicant_applications')
@@ -49,9 +50,14 @@ export class ApplicantApplication {
     @JoinColumn({ name: 'job_id' })
     job: Jobs;
 
-    @ManyToOne(() => Users, (user) => user.id)
-    @JoinColumn({ name: 'applicant_id' })
-    applicant: Users;
+    // @ManyToOne(() => Users, (user) => user.id)
+    // @JoinColumn({ name: 'applicant_id' })
+    // applicant: Users;
+    @ManyToOne(() => Applicants)
+    @JoinColumn({
+        name: 'applicant_id'
+    })
+    applicant: Applicants;
 
 
     // Timestamps - ONLY DECLARE ONCE!

@@ -93,155 +93,305 @@ export class ApplicantStagesService {
         return this.getApplicantsByStage(jobId, 'Employed');
     }
 
- async getApplicantsByStage(
-    jobId: number,
-    stageName: string,
-    page: number = 1,
-    limit: number = 10,
-    search?: string,
-) {
+    private async getStageStatistics(jobId: number) {
 
-    const stage =
-        await this.stageRepository.findOne({
+        const stages = await this.stageRepository.find({
+            where: {},
+        });
+
+
+        const statistics = {};
+
+        const result = await this.applicantListingRepository
+            .createQueryBuilder('listing')
+            .leftJoin(
+                'listing.stage',
+                'stage',
+            )
+            .select(
+                'stage.stage_name',
+                'stage_name',
+            )
+            .addSelect(
+                'COUNT(listing.id)',
+                'total',
+            )
+            .where(
+                'listing.job_id = :jobId',
+                {
+                    jobId,
+                },
+            )
+            .groupBy(
+                'stage.stage_name',
+            )
+            .getRawMany();
+
+        // initialize all stages with 0
+
+        stages.forEach((stage) => {
+
+            statistics[stage.stage_name] = 0;
+
+        });
+
+        // fill counts
+
+        result.forEach((item) => {
+
+            statistics[item.stage_name] =
+                Number(item.total);
+
+        });
+        return statistics;
+    }
+
+    async getApplicantsByStage(
+        jobId: number,
+        stageName: string,
+        page: number = 1,
+        limit: number = 10,
+        search?: string,
+    ) {
+
+        // ============================
+        // Find Stage
+        // ============================
+        const stage = await this.stageRepository.findOne({
             where: {
                 stage_name: stageName,
             },
         });
 
 
-    if (!stage) {
-        throw new NotFoundException(
-            'Stage not found',
-        );
-    }
-
-
-    const query =
-        this.jobStageRepository
-            .createQueryBuilder('jobStage')
-            .leftJoinAndSelect(
-                'jobStage.applicant',
-                'applicant',
-            )
-            .leftJoinAndSelect(
-                'applicant.user',
-                'user',
-            )
-            .leftJoinAndSelect(
-                'jobStage.stage',
-                'stage',
-            )
-            .where(
-                'jobStage.job_id = :jobId',
-                {
-                    jobId,
-                },
-            )
-            .andWhere(
-                'jobStage.stage_id = :stageId',
-                {
-                    stageId: stage.id,
-                },
+        if (!stage) {
+            throw new NotFoundException(
+                'Stage not found',
             );
+        }
+
+        // ============================
+        // Query Applicants
+        // ============================
+        const query =
+            this.applicantListingRepository
+                .createQueryBuilder('listing')
 
 
-    // SEARCH
-    if (search) {
+                // Applicant
+                .leftJoinAndSelect(
+                    'listing.applicant',
+                    'applicant',
+                )
 
-        query.andWhere(
-            `
+                // User email
+                .leftJoinAndSelect(
+                    'applicant.user',
+                    'user',
+                )
+
+                // Stage
+                .leftJoinAndSelect(
+                    'listing.stage',
+                    'stage',
+                )
+
+                // Applicant Application
+                .leftJoinAndSelect(
+                    'listing.application',
+                    'application',
+                )
+
+                // Screening Test Result
+                .leftJoinAndSelect(
+                    JobTestResult,
+                    'test',
+                    `
+                test.job_id = listing.job_id
+                AND 
+                test.applicant_id = listing.applicant_id
+                `,
+                )
+
+
+                .where(
+                    'listing.job_id = :jobId',
+                    {
+                        jobId,
+                    },
+                )
+
+
+                .andWhere(
+                    'listing.stage_id = :stageId',
+                    {
+                        stageId: stage.id,
+                    },
+                );
+
+
+        // ============================
+        // Search
+        // ============================
+        if (search) {
+
+            query.andWhere(
+                `
             (
                 applicant.first_name LIKE :search
+                OR applicant.middle_name LIKE :search
                 OR applicant.last_name LIKE :search
                 OR user.email LIKE :search
+                OR application.letter LIKE :search
             )
             `,
-            {
-                search: `%${search}%`,
-            },
-        );
+                {
+                    search: `%${search}%`,
+                },
+            );
+        }
 
-    }
 
 
-    const [applicants, total] =
-        await query
+        // ============================
+        // Pagination
+        // ============================
+        const [
+            rows,
+            total,
+        ] = await query
+
+            .orderBy(
+                'listing.id',
+                'DESC',
+            )
 
             .skip(
                 (page - 1) * limit,
             )
 
-            .take(limit)
-
-            .orderBy(
-                'jobStage.id',
-                'DESC',
+            .take(
+                limit,
             )
 
             .getManyAndCount();
 
-    return {
+        //==========================
+        // Stage Statics
 
-        success: true,
+        ///===================
+        const statistics = await this.getStageStatistics(jobId);
 
-        message:
-            `${stageName} applicants fetched successfully.`,
+        // ============================
+        // Response
+        // ============================
+        return {
 
-   
+            success: true,
 
-        data: applicants.map(item => ({
+            message:
+                `${stageName} applicants fetched successfully.`,
+            data:
 
-            id: item.id,
+                rows.map((item) => ({
 
-            job_id: item.job_id,
 
-            stage_id: item.stage_id,
+                    id: item.id,
+                    job_id:
+                        item.job_id,
+                    applicant_id:
+                        item.applicant_id,
+                    application_id:
+                        item.application_id,
+                    moved_at:item.created_at,    
+                    stage_id:
+                        item.stage_id,
+                    status:
+                        item.status,
+                    hide:
+                        item.hide,
+                    // Stage
+                    stage:
+                        item.stage
+                            ? {
+                                id:
+                                    item.stage.id,
 
-            applicant_id:
-                item.applicant_id,
+                                name:
+                                    item.stage.stage_name,
+                            }
 
-            stage: {
+                            : null,
 
-                id:
-                    item.stage.id,
 
-                name:
-                    item.stage.stage_name,
+
+                    // Applicant
+                    applicant:
+                        item.applicant
+                            ? {
+
+                                id:
+                                    item.applicant.id,
+                                first_name: item.applicant.first_name,
+                                middle_name: item.applicant.middle_name,
+                                last_name: item.applicant.last_name,
+                                email: item.applicant.user?.email
+                                    ?? null,
+                                picture: item.applicant.picture,
+
+                            }
+                            : null,
+                    // Application
+                    application:
+                        item.application
+                            ? {
+                                id: item.application.id,
+                                letter: item.application.letter,
+                                attachment: item.application.attachment,
+                                status: item.application.status,
+                                hide: item.application.hide,
+                                consent_verified: item.application.consent_verified,
+                                created_at: item.application.created_at,
+                                updated_at: item.application.updated_at,
+
+                            }
+                            : null,
+
+                    // Screening
+                    screening:
+                        item['test']
+                            ? {
+                                test_date: item['test'].test_date,
+                                test_duration: item['test'].test_duration,
+                                test_deadline: item['test'].test_deadline,
+                                user_name: item['test'].user_name,
+                                user_password: item['test'].user_password,
+
+                            }
+
+                            : null,
+
+                    statistics,
+                })),
+
+
+            pagination: {
+
+                total,
+
+                page,
+
+                limit,
+
+                totalPages:
+                    Math.ceil(
+                        total / limit,
+                    ),
 
             },
 
-            applicant: item.applicant ? {
-                id:
-                    item.applicant.id,
-
-                first_name:
-                    item.applicant.first_name,
-
-                last_name:
-                    item.applicant.last_name,
-
-                email:
-                    item.applicant.user?.email ?? null,
-
-            } : null,
-
-        })),
-             pagination: {
-
-            total,
-
-            page,
-
-            limit,
-
-            totalPages:
-                Math.ceil(total / limit),
-
-        },
-
-    };
-}
-
+        };
+    }
 
     async bulkShortList(
         dto: BulkShortListDto,
