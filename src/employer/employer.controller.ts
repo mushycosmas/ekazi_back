@@ -157,7 +157,7 @@ export class EmployerController {
 
    
       
-        @Get(':jobId/application-stages/:stageName')
+        @Get('jobs/:jobId/application-stages/:stageName')
         @UseGuards(SanctumGuard)
         getApplicantsByStage(
     

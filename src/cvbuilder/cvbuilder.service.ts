@@ -96,7 +96,8 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
       .leftJoinAndSelect('applicant.applicant_software', 'applicantSoftware')
       .leftJoinAndSelect('applicantSoftware.software', 'software')
-      .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
+      .leftJoinAndSelect('applicant.applicant_proficiencies', 'applicant_proficiencies')
+      .leftJoinAndSelect('applicant_proficiencies.proficiency', 'proficiency')
       .leftJoinAndSelect('applicant.applicant_education', 'education')
       .leftJoinAndSelect('education.college', 'college')
       .leftJoinAndSelect('education.course', 'course')
@@ -360,10 +361,17 @@ export class CvbuilderService {
       proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
         id: prof.id,
         proficiency_id: prof.proficiency_id,
+        proficiency: prof.proficiency
+          ? {
+            id: prof.proficiency.id,
+            name: prof.proficiency.proficiency_name
+          }
+          : null,
         started: this.formatDate(prof.started),
         ended: this.formatDate(prof.ended),
         award: prof.award,
         attachment: prof.attachment
+
       })),
 
       // =============================================

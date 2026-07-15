@@ -303,7 +303,7 @@ export class ApplicantStagesService {
                         item.applicant_id,
                     application_id:
                         item.application_id,
-                    moved_at:item.created_at,    
+                    moved_at: item.created_at,
                     stage_id:
                         item.stage_id,
                     status:
@@ -371,9 +371,9 @@ export class ApplicantStagesService {
 
                             : null,
 
-                    statistics,
-                })),
 
+                })),
+            statistics,
 
             pagination: {
 
