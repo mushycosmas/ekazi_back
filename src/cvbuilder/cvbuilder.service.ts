@@ -324,6 +324,10 @@ export class CvbuilderService {
       })),
     };
 
-    return data;
+   return {
+  success: true,
+  message: 'Applicant data retrieved successfully',
+  data,
+};
   }
 }
