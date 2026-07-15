@@ -13,7 +13,7 @@ export class CvbuilderService {
 
     @InjectRepository(ApplicantPositions)
     private readonly applicantPositionsRepo: Repository<ApplicantPositions>,
-  ) {}
+  ) { }
 
   // Helper function to format position name (like ucwords in PHP)
   private formatPositionName(positionName: string): string | null {
@@ -24,7 +24,7 @@ export class CvbuilderService {
   // Method to get current position (matching PHP logic)
   private async getCurrentPosition(applicantId: number): Promise<string | null> {
     const now = new Date();
-    
+
     const currentPosition = await this.applicantPositionsRepo
       .createQueryBuilder('pos')
       .leftJoinAndSelect('pos.position', 'position')
@@ -54,7 +54,7 @@ export class CvbuilderService {
   // Date formatter helper
   private formatDate(dateValue: any): string | null {
     if (!dateValue) return null;
-    
+
     try {
       if (dateValue instanceof Date) {
         const year = dateValue.getFullYear();
@@ -62,10 +62,10 @@ export class CvbuilderService {
         const day = String(dateValue.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       const date = new Date(dateValue);
       if (isNaN(date.getTime())) return null;
-      
+
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
@@ -98,6 +98,10 @@ export class CvbuilderService {
       .leftJoinAndSelect('applicantSoftware.software', 'software')
       .leftJoinAndSelect('applicant.applicant_proficiencies', 'proficiency')
       .leftJoinAndSelect('applicant.applicant_education', 'education')
+      .leftJoinAndSelect('education.college', 'college')
+      .leftJoinAndSelect('education.course', 'course')
+      .leftJoinAndSelect('education.major', 'major')
+      .leftJoinAndSelect('education.education_level', 'educationLevel')
       .leftJoinAndSelect('applicant.applicant_objectives', 'objective')
       .leftJoinAndSelect('applicant.applicant_addresses', 'address')
       .leftJoinAndSelect('address.region', 'addressRegion')
@@ -173,7 +177,7 @@ export class CvbuilderService {
         id: phone.id,
         phone_number: phone.phone_number
       })),
-      
+
       address: (applicant.applicant_addresses || []).map(address => ({
         id: address.id,
         region: address.region?.region_name || null,
@@ -210,15 +214,69 @@ export class CvbuilderService {
       // =============================================
       // 5. EDUCATION
       // =============================================
+      // education: (applicant.applicant_education || []).map(edu => ({
+      //   id: edu.id,
+      //   college_id: edu.college_id,
+      //   course_id: edu.course_id,
+      //   major_id: edu.major_id,
+      //   education_level_id: edu.education_level_id,
+      //   attachment: edu.attachment,
+      //   started: this.formatDate(edu.started),
+      //   ended: this.formatDate(edu.ended)
+      // })),
       education: (applicant.applicant_education || []).map(edu => ({
+
         id: edu.id,
-        college_id: edu.college_id,
+
+
+        college_id:
+          edu.college_id,
+
+        college:
+          edu.college
+            ? {
+              id: edu.college.id,
+              name: edu.college.college_name,
+              town: edu.college.town,
+              registration: edu.college.reg
+            }
+            : null,
         course_id: edu.course_id,
+        course: edu.course
+          ? {
+            id: edu.course.id,
+            name: edu.course.course_name
+          }
+          : null,
         major_id: edu.major_id,
+        major: edu.major
+          ? {
+            id: edu.major.id,
+            name: edu.major.name
+          }
+          : null,
         education_level_id: edu.education_level_id,
-        attachment: edu.attachment,
-        started: this.formatDate(edu.started),
-        ended: this.formatDate(edu.ended)
+        education_level: edu.education_level
+          ? {
+            id: edu.education_level.id,
+            name: edu.education_level.education_level
+          }
+          : null,
+        attachment:
+          edu.attachment,
+
+
+        started:
+          this.formatDate(
+            edu.started
+          ),
+
+
+        ended:
+          this.formatDate(
+            edu.ended
+          )
+
       })),
 
       // =============================================
@@ -246,7 +304,7 @@ export class CvbuilderService {
             id: tool.id,
             name: tool.tool_name
           })),
-        
+
         knowledge: (applicant.applicant_knowledge || [])
           .map(k => k.knowledge)
           .filter(knowledge => knowledge && !knowledge.hide)
@@ -254,7 +312,7 @@ export class CvbuilderService {
             id: knowledge.id,
             name: knowledge.knowledge_name
           })),
-        
+
         software: software
           .filter(software => software && !software.hide)
           .map(software => ({
@@ -285,10 +343,10 @@ export class CvbuilderService {
           id: culture.id,
           name: culture.culture_name
         })),
-      
+
       applicant_personality: (applicant.applicant_personalities || [])
         .map(ap => ap.personality)
-        .filter((personality): personality is NonNullable<typeof personality> => 
+        .filter((personality): personality is NonNullable<typeof personality> =>
           personality !== null && personality !== undefined
         )
         .map(personality => ({
@@ -324,10 +382,10 @@ export class CvbuilderService {
       })),
     };
 
-   return {
-  success: true,
-  message: 'Applicant data retrieved successfully',
-  data,
-};
+    return {
+      success: true,
+      message: 'Applicant data retrieved successfully',
+      data,
+    };
   }
 }
