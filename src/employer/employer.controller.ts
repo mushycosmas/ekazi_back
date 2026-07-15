@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Req, Put, Body, Param, Query, ParseIntPipe, Post, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, Put, Body, Param, Query, ParseIntPipe, Post, Delete, UseInterceptors, UploadedFile, NotFoundException } from '@nestjs/common';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { EmployerService } from './employer.service';
@@ -10,13 +10,15 @@ import { UpdateTaskDto } from 'src/tasks/dto/update-task.dto';
 import { TaskQueryDto } from 'src/tasks/dto/task-query.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/common/upload/multer.config';
+import { CvbuilderService } from 'src/cvbuilder/cvbuilder.service';
 
 
 @Controller('employer')
 export class EmployerController {
   constructor(
     private readonly employerService: EmployerService,
-    private readonly tasksService: TasksService
+    private readonly tasksService: TasksService,
+    private readonly cvbuilderService: CvbuilderService
   ) { }
 
   @UseGuards(SanctumGuard)
@@ -131,6 +133,25 @@ export class EmployerController {
   ) {
     return this.tasksService.assignTask(Number(taskId), Number(userId));
   }
+
+  
+  
+    // Endpoint to get applicant CV
+    @Get('applicant/:id')
+    @UseGuards(SanctumGuard)
+    async getApplicantCv(@Param('id') id: string) {
+      const applicant = await this.cvbuilderService.getApplicantCv(+id);
+      if (!applicant) {
+        throw new NotFoundException(
+          {
+            success: false,
+            message:'Applicant not found'
+          }
+      
+        );
+      }
+      return applicant;
+    }
 
 }
 

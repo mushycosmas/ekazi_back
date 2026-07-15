@@ -31,6 +31,7 @@ import { JobLanguagesModule } from 'src/jobs/modules/job-languages.module';
 import { JobRequirementsModule } from 'src/jobs/modules/job-requirements.module';
 import { JobOtherRequirementsModule } from 'src/jobs/modules/job-other-requirements.module';
 import { JobSettingsModule } from 'src/jobs/modules/job-settings.module';
+import { CvbuilderModule } from 'src/cvbuilder/cvbuilder.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { JobSettingsModule } from 'src/jobs/modules/job-settings.module';
       ClientDescription,
       Task,
       TaskAssignment,
+      
     ]),
      TasksModule, 
      JobsModule,
@@ -57,6 +59,7 @@ import { JobSettingsModule } from 'src/jobs/modules/job-settings.module';
      JobRequirementsModule,
      JobOtherRequirementsModule,
      JobSettingsModule,
+     CvbuilderModule,
   ],
  
   controllers: [

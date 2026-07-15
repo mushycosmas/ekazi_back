@@ -60,6 +60,189 @@ export class ApplicantStagesService {
 
     ) { }
 
+
+    async applied(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Applied');
+    }
+
+    async shortlisted(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Shortlisted');
+    }
+
+    async screening(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Screening');
+    }
+
+    async interview(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Interview');
+    }
+
+    async selected(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Selection');
+    }
+
+    async background(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Background Check');
+    }
+
+    async offer(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Offer');
+    }
+
+    async employed(jobId: number) {
+        return this.getApplicantsByStage(jobId, 'Employed');
+    }
+
+ async getApplicantsByStage(
+    jobId: number,
+    stageName: string,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+) {
+
+    const stage =
+        await this.stageRepository.findOne({
+            where: {
+                stage_name: stageName,
+            },
+        });
+
+
+    if (!stage) {
+        throw new NotFoundException(
+            'Stage not found',
+        );
+    }
+
+
+    const query =
+        this.jobStageRepository
+            .createQueryBuilder('jobStage')
+            .leftJoinAndSelect(
+                'jobStage.applicant',
+                'applicant',
+            )
+            .leftJoinAndSelect(
+                'applicant.user',
+                'user',
+            )
+            .leftJoinAndSelect(
+                'jobStage.stage',
+                'stage',
+            )
+            .where(
+                'jobStage.job_id = :jobId',
+                {
+                    jobId,
+                },
+            )
+            .andWhere(
+                'jobStage.stage_id = :stageId',
+                {
+                    stageId: stage.id,
+                },
+            );
+
+
+    // SEARCH
+    if (search) {
+
+        query.andWhere(
+            `
+            (
+                applicant.first_name LIKE :search
+                OR applicant.last_name LIKE :search
+                OR user.email LIKE :search
+            )
+            `,
+            {
+                search: `%${search}%`,
+            },
+        );
+
+    }
+
+
+    const [applicants, total] =
+        await query
+
+            .skip(
+                (page - 1) * limit,
+            )
+
+            .take(limit)
+
+            .orderBy(
+                'jobStage.id',
+                'DESC',
+            )
+
+            .getManyAndCount();
+
+    return {
+
+        success: true,
+
+        message:
+            `${stageName} applicants fetched successfully.`,
+
+   
+
+        data: applicants.map(item => ({
+
+            id: item.id,
+
+            job_id: item.job_id,
+
+            stage_id: item.stage_id,
+
+            applicant_id:
+                item.applicant_id,
+
+            stage: {
+
+                id:
+                    item.stage.id,
+
+                name:
+                    item.stage.stage_name,
+
+            },
+
+            applicant: item.applicant ? {
+                id:
+                    item.applicant.id,
+
+                first_name:
+                    item.applicant.first_name,
+
+                last_name:
+                    item.applicant.last_name,
+
+                email:
+                    item.applicant.user?.email ?? null,
+
+            } : null,
+
+        })),
+             pagination: {
+
+            total,
+
+            page,
+
+            limit,
+
+            totalPages:
+                Math.ceil(total / limit),
+
+        },
+
+    };
+}
+
+
     async bulkShortList(
         dto: BulkShortListDto,
         user: Users
@@ -684,73 +867,73 @@ export class ApplicantStagesService {
             dto,
         } = data;
 
-      const templateData = {
+        const templateData = {
 
-    subject:
-        `Invitation to aptitude: ${job.position?.position_name} Application`,
+            subject:
+                `Invitation to aptitude: ${job.position?.position_name} Application`,
 
-    email:
-        applicant.user.email,
+            email:
+                applicant.user.email,
 
-    first_name:
-        applicant.first_name,
+            first_name:
+                applicant.first_name,
 
-    last_name:
-        applicant.last_name,
+            last_name:
+                applicant.last_name,
 
-    position_name:
-        job.position?.position_name ?? '',
+            position_name:
+                job.position?.position_name ?? '',
 
-    client_name:
-        job.client?.client_name ?? '',
+            client_name:
+                job.client?.client_name ?? '',
 
-    phone:
-        job.client?.phones?.[0]?.phone_number ?? '',
+            phone:
+                job.client?.phones?.[0]?.phone_number ?? '',
 
-    stage_name:
-        stage.stage_name,
-
-
-    test_date:
-        dto.test_date ?? '',
-
-    test_date_formatted:
-        dto.test_date
-            ? new Date(dto.test_date)
-                .toLocaleDateString('en-GB')
-            : '',
+            stage_name:
+                stage.stage_name,
 
 
-    test_duration:
-        dto.test_duration ?? '',
+            test_date:
+                dto.test_date ?? '',
+
+            test_date_formatted:
+                dto.test_date
+                    ? new Date(dto.test_date)
+                        .toLocaleDateString('en-GB')
+                    : '',
 
 
-    test_deadline:
-        dto.test_deadline ?? '',
+            test_duration:
+                dto.test_duration ?? '',
 
 
-    test_deadline_formatted:
-        dto.test_deadline
-            ? new Date(dto.test_deadline)
-                .toLocaleDateString('en-GB')
-            : '',
+            test_deadline:
+                dto.test_deadline ?? '',
 
 
-    user_name:
-        dto.user_name ?? '',
+            test_deadline_formatted:
+                dto.test_deadline
+                    ? new Date(dto.test_deadline)
+                        .toLocaleDateString('en-GB')
+                    : '',
 
 
-    user_password:
-        dto.user_password ?? '',
+            user_name:
+                dto.user_name ?? '',
 
 
-    test_link:
-        dto.test_link ?? '',
+            user_password:
+                dto.user_password ?? '',
 
 
-    job_details:
-        job,
-};
+            test_link:
+                dto.test_link ?? '',
+
+
+            job_details:
+                job,
+        };
 
         const templatePath = path.join(
 

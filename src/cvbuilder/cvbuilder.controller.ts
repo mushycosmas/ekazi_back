@@ -10,7 +10,13 @@ export class CvbuilderController {
   async getApplicantCv(@Param('id') id: string) {
     const applicant = await this.cvbuilderService.getApplicantCv(+id);
     if (!applicant) {
-      throw new NotFoundException('Applicant not found');
+      throw new NotFoundException(
+        {
+          success: false,
+          message:'Applicant not found'
+        }
+    
+      );
     }
     return applicant;
   }
