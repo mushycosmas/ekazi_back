@@ -310,11 +310,6 @@ export class JobSettingsService {
                     'Apply using external URL'
                 );
 
-
-
-
-
-
                 await queryRunner.manager.save(
                     JobExternalUrls,
                     {
@@ -326,18 +321,7 @@ export class JobSettingsService {
 
             }
 
-
-
-
-
-
-
             await queryRunner.commitTransaction();
-
-
-
-
-
 
             return {
 

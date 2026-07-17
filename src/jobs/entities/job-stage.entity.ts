@@ -30,6 +30,19 @@ export class JobStage {
     @Column({ type: 'int', unsigned: true })
     stage_id: number;
 
+    @Column({
+        name: 'creator_id',
+        nullable: true
+    })
+    creator_id: number;
+
+
+    @Column({
+        name: 'updator_id',
+        nullable: true
+    })
+    updator_id: number;
+
     // ======================
     // RELATIONS
     // ======================

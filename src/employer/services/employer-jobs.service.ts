@@ -350,6 +350,7 @@ export class EmployerJobsService {
             });
         }
     }
+    
     async myJobDetail(user: Users, jobId: number) {
         try {
             const clientId = user.client_id;

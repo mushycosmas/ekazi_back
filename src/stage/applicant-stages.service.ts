@@ -460,168 +460,403 @@ export class ApplicantStagesService {
 
     }
 
+    // async shortListedStage(
+    //     dto: BulkShortListDto,
+    //     user: Users,
+    // ) {
+
+
+    //     const queryRunner = this.dataSource.createQueryRunner();
+    //     await queryRunner.connect();
+
+    //     await queryRunner.startTransaction();
+
+    //     try {
+
+    //         const stage =
+    //             await this.stageRepository.findOne({
+
+    //                 where: {
+    //                     id: dto.stage_id
+    //                 }
+
+    //             });
+
+    //         if (!stage) {
+    //             throw new Error(
+    //                 'Stage not found'
+    //             );
+    //         }
+    //         const job = await this.jobRepository.findOne({
+
+    //             where: {
+    //                 id: dto.job_id
+    //             },
+
+    //             relations: [
+    //                 'client',
+    //                 'position'
+    //             ]
+
+    //         });
+
+    //         if (!job) {
+    //             throw new Error(
+    //                 'Job not found'
+    //             );
+    //         }
+
+    //         // Update Job Stage
+
+    //         await queryRunner.manager.update(
+
+    //             Jobs,
+
+    //             dto.job_id,
+
+    //             {
+
+    //                 stage_id: dto.stage_id
+
+    //             }
+
+    //         );
+
+    //         // Location
+
+    //         const inviteLocation =
+    //             await this.regionRepository.findOne({
+
+    //                 where: {
+    //                     id: dto.region_id
+    //                 }
+
+    //             });
+    //         for (
+    //             const applicantId of dto.applicant_id
+    //         ) {
+
+    //             // =============================
+    //             // Create Job Stage
+    //             // =============================
+
+
+    //             let jobStage =
+    //                 await this.jobStageRepository.findOne({
+
+    //                     where: {
+
+    //                         job_id: dto.job_id,
+    //                         stage_id: dto.stage_id,
+    //                         applicant_id: applicantId
+
+    //                     }
+
+    //                 });
+
+    //             if (!jobStage) {
+
+    //                 jobStage =
+    //                     await queryRunner.manager.save(
+
+    //                         JobStage,
+
+    //                         {
+
+    //                             job_id: dto.job_id,
+
+    //                             stage_id: dto.stage_id,
+
+    //                             applicant_id: applicantId,
+    //                             creator_id: job.client.user_id,
+    //                             updator_id: job.client.user_id,
+
+    //                         }
+
+    //                     );
+
+
+    //             }
+
+    //             // =============================
+    //             // Update Applicant Application
+    //             // =============================
+
+
+    //             await queryRunner.manager.update(
+
+    //                 ApplicantApplication,
+
+    //                 {
+
+    //                     job_id: dto.job_id,
+
+    //                     applicant_id: applicantId
+
+    //                 },
+
+    //                 {
+
+    //                     stage_id: dto.stage_id,
+
+    //                     status: stage.stage_name
+
+    //                 }
+
+    //             );
+
+    //             // =============================
+    //             // Get Applicant
+    //             // =============================
+
+    //             const applicant = await queryRunner.manager
+    //                 .getRepository(Applicants)
+    //                 .createQueryBuilder('applicant')
+    //                 .leftJoin('applicant.user', 'user')
+    //                 .select([
+    //                     'user.email',
+    //                     'applicant.first_name',
+    //                     'applicant.last_name',
+    //                 ])
+    //                 .where('applicant.id = :id', {
+    //                     id: applicantId,
+    //                 })
+    //                 .getOne();
+
+    //             if (applicant) {
+    //                 await this.sendShortListEmail({
+
+    //                     applicant,
+
+    //                     job,
+
+    //                     stage,
+
+    //                     inviteLocation,
+
+    //                     dto
+
+    //                 });
+    //             }
+
+    //         }
+
+    //         await queryRunner.commitTransaction();
+
+    //     }
+
+    //     catch (error) {
+
+
+    //         await queryRunner.rollbackTransaction();
+
+    //         throw error;
+
+    //     }
+
+    //     finally {
+
+    //         await queryRunner.release();
+
+    //     }
+
+
+    // }
     async shortListedStage(
         dto: BulkShortListDto,
         user: Users,
     ) {
 
-
+        console.log('current user', user);
         const queryRunner = this.dataSource.createQueryRunner();
-        await queryRunner.connect();
 
+        await queryRunner.connect();
         await queryRunner.startTransaction();
 
         try {
 
-            const stage =
-                await this.stageRepository.findOne({
+            // ============================
+            // Stage
+            // ============================
+            const stage = await this.stageRepository.findOne({
+                where: {
+                    id: dto.stage_id,
+                },
+            });
 
-                    where: {
-                        id: dto.stage_id
-                    }
-
-                });
 
             if (!stage) {
-                throw new Error(
+                throw new NotFoundException(
                     'Stage not found'
                 );
             }
-            const job = await this.jobRepository.findOne({
 
+
+
+            // ============================
+            // Job
+            // ============================
+            const job = await this.jobRepository.findOne({
                 where: {
                     id: dto.job_id
                 },
-
                 relations: [
                     'client',
+                    'client.phones',
                     'position'
                 ]
-
             });
 
+
             if (!job) {
-                throw new Error(
+                throw new NotFoundException(
                     'Job not found'
                 );
             }
 
+
+
+            // ============================
             // Update Job Stage
-
+            // ============================
             await queryRunner.manager.update(
-
                 Jobs,
-
                 dto.job_id,
-
                 {
-
                     stage_id: dto.stage_id
-
                 }
-
             );
 
-            // Location
 
-            const inviteLocation =
-                await this.regionRepository.findOne({
 
-                    where: {
-                        id: dto.region_id
-                    }
+            // ============================
+            // Multiple Applicants
+            // ============================
+            for (const applicantId of dto.applicant_id) {
 
-                });
-            for (
-                const applicantId of dto.applicant_id
-            ) {
 
-                // =============================
-                // Create Job Stage
-                // =============================
 
+                // ============================
+                // Job Stage
+                // ============================
 
                 let jobStage =
                     await this.jobStageRepository.findOne({
-
                         where: {
-
                             job_id: dto.job_id,
-                            stage_id: dto.stage_id,
-                            applicant_id: applicantId
-
+                            applicant_id: applicantId,
+                            stage_id: dto.stage_id
                         }
-
                     });
 
+
                 if (!jobStage) {
+                    const data = {
+                        job_id: dto.job_id,
+                        applicant_id: applicantId,
+                        stage_id: dto.stage_id,
+                        creator_id: user.id,
+                        updator_id: user.id,
+                    };
 
-                    jobStage =
-                        await queryRunner.manager.save(
+                
 
-                            JobStage,
+                    jobStage = await queryRunner.manager.save(JobStage, data);
 
-                            {
+                }
+   
+                // ============================
+                // Applicant Application
+                // ============================
 
-                                job_id: dto.job_id,
+                await queryRunner.manager.update(
+                    ApplicantApplication,
+                    {
+                        job_id: dto.job_id,
+                        applicant_id: applicantId
+                    },
+                    {
+                        stage_id: dto.stage_id,
+                        status: stage.stage_name
+                    }
+                );
 
-                                stage_id: dto.stage_id,
+                // ============================
+                // Applicant Listing
+                // ============================
 
-                                applicant_id: applicantId,
-                                creator_id: job.client.user_id,
-                                updator_id: job.client.user_id,
+                let listing =
+                    await this.applicantListingRepository.findOne({
+                        where: {
+                            job_id: dto.job_id,
+                            applicant_id: applicantId
+                        }
+                    });
 
-                            }
 
-                        );
+
+                if (!listing) {
+
+                    listing =
+                        this.applicantListingRepository.create({
+
+                            job_id: dto.job_id,
+
+                            applicant_id: applicantId,
+
+                            application_id: applicantId,
+
+                            stage_id: dto.stage_id,
+
+                            status: stage.stage_name,
+
+                            hide: 1
+
+                        });
 
 
                 }
-
-                // =============================
-                // Update Applicant Application
-                // =============================
+                else {
 
 
-                await queryRunner.manager.update(
+                    listing.stage_id =
+                        dto.stage_id;
 
-                    ApplicantApplication,
+                    listing.status =
+                        stage.stage_name;
 
-                    {
+                    listing.hide = 1;
 
-                        job_id: dto.job_id,
+                }
 
-                        applicant_id: applicantId
 
-                    },
 
-                    {
+                // IMPORTANT
+                // Save applicant listing update
 
-                        stage_id: dto.stage_id,
-
-                        status: stage.stage_name
-
-                    }
-
+                await queryRunner.manager.save(
+                    ApplicantListing,
+                    listing
                 );
 
-                // =============================
-                // Get Applicant
-                // =============================
 
-                const applicant = await queryRunner.manager
-                    .getRepository(Applicants)
-                    .createQueryBuilder('applicant')
-                    .leftJoin('applicant.user', 'user')
-                    .select([
-                        'user.email',
-                        'applicant.first_name',
-                        'applicant.last_name',
-                    ])
-                    .where('applicant.id = :id', {
-                        id: applicantId,
-                    })
-                    .getOne();
+
+
+
+                // ============================
+                // Applicant
+                // ============================
+
+                const applicant =
+                    await this.applicantsRepository.findOne({
+                        where: {
+                            id: applicantId
+                        },
+                        relations: [
+                            'user'
+                        ]
+                    });
+
 
                 if (applicant) {
                     await this.sendShortListEmail({
@@ -632,37 +867,45 @@ export class ApplicantStagesService {
 
                         stage,
 
-                        inviteLocation,
-
                         dto
 
                     });
                 }
 
+
+
             }
+
+
 
             await queryRunner.commitTransaction();
 
+
+            return {
+
+                success: true,
+
+                message:
+                    'Applicants shortlisted successfully'
+
+            };
+
+
         }
-
         catch (error) {
-
 
             await queryRunner.rollbackTransaction();
 
             throw error;
 
         }
-
         finally {
 
             await queryRunner.release();
 
         }
 
-
     }
-
 
     async screeningStage(
         dto: BulkScreeningDto,
