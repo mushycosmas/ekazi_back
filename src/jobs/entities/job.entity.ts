@@ -6,6 +6,7 @@ import {
     JoinColumn,
     OneToMany,
     DeleteDateColumn,
+    OneToOne,
 } from 'typeorm';
 import { Transform } from 'class-transformer';
 
@@ -302,8 +303,15 @@ export class Jobs {
     @OneToMany(() => JobEducation, (jobEducation) => jobEducation.job)
     jobEducation: JobEducation[];
 
-    @OneToMany(() => JobEmails, (jobEmail) => jobEmail.job,)
-    jobEmails: JobEmails[];
+    @OneToOne(
+        () => JobEmails,
+        (jobEmail) => jobEmail.job,
+    )
+    @JoinColumn({
+        name: 'id',
+        referencedColumnName: 'job_id',
+    })
+    jobEmails: JobEmails;
 
     @OneToMany(() => JobEvaluationAptitudes, (aptitude) => aptitude.job,)
     evaluationAptitudes: JobEvaluationAptitudes[];
@@ -311,8 +319,15 @@ export class Jobs {
     @OneToMany(() => JobEvaluationSpecifics, (specific) => specific.job,)
     evaluationSpecifics: JobEvaluationSpecifics[];
 
-    @OneToMany(() => JobExternalUrls, (externalUrl) => externalUrl.job,)
-    externalUrls: JobExternalUrls[];
+    @OneToOne(
+        () => JobExternalUrls,
+        (externalUrl) => externalUrl.job,
+    )
+    @JoinColumn({
+        name: 'id',
+        referencedColumnName: 'job_id',
+    })
+    externalUrls: JobExternalUrls;
 
     @OneToMany(
         () => JobKnowledge,

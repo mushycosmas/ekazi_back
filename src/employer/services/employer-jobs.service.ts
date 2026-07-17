@@ -350,7 +350,7 @@ export class EmployerJobsService {
             });
         }
     }
-    
+
     async myJobDetail(user: Users, jobId: number) {
         try {
             const clientId = user.client_id;
@@ -370,7 +370,7 @@ export class EmployerJobsService {
                         id: jobId,
                         client_id: clientId,
                     },
-                     // withDeleted: true, include deleted job
+                    // withDeleted: true, include deleted job
                     relations: [
                         'client',
                         'country',
@@ -383,8 +383,8 @@ export class EmployerJobsService {
                         'jobStatistics',
                         'jobUniversalType',
                         'currency',
-                         
-                       //ADRESS
+
+                        //ADRESS
                         'addresses.region',
 
                         // META
@@ -439,6 +439,12 @@ export class EmployerJobsService {
                         'jobReportTos',
                         'jobRequirements',
                         'otherRequirements',
+
+                        //External Job
+                        'externalUrls',
+
+                        // Email Jobs
+                        'jobEmails',
                     ],
                 }),
 
@@ -472,9 +478,9 @@ export class EmployerJobsService {
                     id: job?.id,
                     title: job?.title,
                     show_client_name: job?.show_client_name,
-                    applicant_min_age:job?.applicant_min_age,
-                    applicant_max_age:job?.applicant_max_age,
-                    hide:job?.hide,
+                    applicant_min_age: job?.applicant_min_age,
+                    applicant_max_age: job?.applicant_max_age,
+                    hide: job?.hide,
                     quantity: job?.quantity,
                     years_experience: job?.years_experience,
                     published: job?.published,
@@ -494,7 +500,7 @@ export class EmployerJobsService {
                         id: job.industry.id,
                         name: job.industry.industry_name,
                     } : null,
-                       category: job?.category ? {
+                    category: job?.category ? {
                         id: job.category.id,
                         name: job.category.industry_name,
                     } : null,
@@ -536,6 +542,18 @@ export class EmployerJobsService {
                         name: job.jobUniversalType.type_name,
                     } : null,
 
+                    job_email: job?.jobEmails ? {
+                        id: job.jobEmails.id,
+                        name: job.jobEmails.email,
+                    } : null,
+
+                    job_externalUrl: job?.externalUrls ? {
+                        id: job.externalUrls.id,
+                        name: job.externalUrls.external_url,
+                    } : null,
+
+
+        
                     gender: job?.gender ? {
                         id: job.gender.id,
                         name: job.gender.gender_name,
