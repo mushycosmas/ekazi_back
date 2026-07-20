@@ -12,6 +12,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/common/upload/multer.config';
 import { CvbuilderService } from 'src/cvbuilder/cvbuilder.service';
 import { ApplicantStagesService } from 'src/stage/applicant-stages.service';
+import { BulkShortListDto } from 'src/stage/dto/bulk-shortlist.dto';
 
 
 @Controller('employer')
@@ -20,7 +21,7 @@ export class EmployerController {
     private readonly employerService: EmployerService,
     private readonly tasksService: TasksService,
     private readonly cvbuilderService: CvbuilderService,
-    private readonly applicantStagesService:ApplicantStagesService
+    private readonly applicantStagesService: ApplicantStagesService
   ) { }
 
   @UseGuards(SanctumGuard)
@@ -28,7 +29,7 @@ export class EmployerController {
   employerAccount(@CurrentUser() user: Users) {
     return this.employerService.employerAccount(user);
   }
-//company-profile
+  //company-profile
   @Get()
   @UseGuards(SanctumGuard)
   getCompanyProfile(@Req() req: any) {
@@ -136,53 +137,74 @@ export class EmployerController {
     return this.tasksService.assignTask(Number(taskId), Number(userId));
   }
 
-  
-  
-    // Endpoint to get applicant CV
-    @Get('applicant/:id')
-    @UseGuards(SanctumGuard)
-    async getApplicantCv(@Param('id') id: string) {
-      const applicant = await this.cvbuilderService.getApplicantCv(+id);
-      if (!applicant) {
-        throw new NotFoundException(
-          {
-            success: false,
-            message:'Applicant not found'
-          }
-      
-        );
-      }
-      return applicant;
-    }
 
-   
-      
-        @Get('jobs/:jobId/application-stages/:stageName')
-        @UseGuards(SanctumGuard)
-        getApplicantsByStage(
-    
-            @Param('jobId', ParseIntPipe)
-            jobId: number,
-            @Param('stageName')
-            stageName: string,
-            @Query('page')
-            page: number = 1,
-            @Query('limit')
-            limit: number = 10,
-            @Query('search')
-            search?: string,
-    
-        ) {
-    
-            return this.applicantStagesService.getApplicantsByStage(
-                jobId,
-                stageName,
-                Number(page),
-                Number(limit),
-                search,
-            );
-    
+
+  // Endpoint to get applicant CV
+  @Get('applicant/:id')
+  @UseGuards(SanctumGuard)
+  async getApplicantCv(@Param('id') id: string) {
+    const applicant = await this.cvbuilderService.getApplicantCv(+id);
+    if (!applicant) {
+      throw new NotFoundException(
+        {
+          success: false,
+          message: 'Applicant not found'
         }
+
+      );
+    }
+    return applicant;
+  }
+
+
+
+  @Get('jobs/:jobId/application-stages/:stageName')
+  @UseGuards(SanctumGuard)
+  getApplicantsByStage(
+
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Param('stageName')
+    stageName: string,
+    @Query('page')
+    page: number = 1,
+    @Query('limit')
+    limit: number = 10,
+    @Query('search')
+    search?: string,
+
+  ) {
+
+    return this.applicantStagesService.getApplicantsByStage(
+      jobId,
+      stageName,
+      Number(page),
+      Number(limit),
+      search,
+    );
+
+  }
+  @Post('jobs/:jobId/application-stages/shortlist')
+  @UseGuards(SanctumGuard)
+  async bulkShortList(
+    @CurrentUser() user: Users,
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Body() dto: BulkShortListDto,
+
+  ) {
+
+    await this.applicantStagesService.bulkShortList(
+      jobId,
+      dto,
+      user
+    );
+    return {
+      success: true,
+      message:
+        'Applicants processed successfully'
+    };
+  }
 
 }
 

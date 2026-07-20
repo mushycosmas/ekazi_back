@@ -50,15 +50,18 @@ export class ApplicantStagesController {
 
     }
 
-    @Post('shortlist')
+    @Post(':jobId/shortlist')
     @UseGuards(SanctumGuard)
     async bulkShortList(
         @CurrentUser() user: Users,
+        @Param('jobId', ParseIntPipe)
+        jobId: number,
         @Body() dto: BulkShortListDto,
 
     ) {
 
         await this.applicantStagesService.bulkShortList(
+            jobId,
             dto,
             user
         );
@@ -68,13 +71,16 @@ export class ApplicantStagesController {
                 'Applicants processed successfully'
         };
     }
-    @Post('screening')
+    @Post(':jobId/screening')
     @UseGuards(SanctumGuard)
     async screeningStage(
         @CurrentUser() user: Users,
+        @Param('jobId', ParseIntPipe)
+        jobId: number,
         @Body() dto: BulkScreeningDto,
     ) {
         return this.applicantStagesService.screeningStage(
+            jobId,
             dto,
             user,
         );

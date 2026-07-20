@@ -394,6 +394,7 @@ export class ApplicantStagesService {
     }
 
     async bulkShortList(
+        jobId: number,
         dto: BulkShortListDto,
         user: Users
     ) {
@@ -418,6 +419,7 @@ export class ApplicantStagesService {
             case 'Shortlisted':
 
                 await this.shortListedStage(
+                    jobId,
                     dto,
                     user
                 );
@@ -426,7 +428,7 @@ export class ApplicantStagesService {
 
             case 'Screening':
 
-                await this.screeningStage(dto, user);
+                await this.screeningStage(jobId,dto, user);
 
                 break;
 
@@ -663,6 +665,7 @@ export class ApplicantStagesService {
 
     // }
     async shortListedStage(
+        jobId : number,
         dto: BulkShortListDto,
         user: Users,
     ) {
@@ -698,7 +701,7 @@ export class ApplicantStagesService {
             // ============================
             const job = await this.jobRepository.findOne({
                 where: {
-                    id: dto.job_id
+                    id: jobId
                 },
                 relations: [
                     'client',
@@ -721,7 +724,7 @@ export class ApplicantStagesService {
             // ============================
             await queryRunner.manager.update(
                 Jobs,
-                dto.job_id,
+                jobId,
                 {
                     stage_id: dto.stage_id
                 }
@@ -743,7 +746,7 @@ export class ApplicantStagesService {
                 let jobStage =
                     await this.jobStageRepository.findOne({
                         where: {
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             applicant_id: applicantId,
                             stage_id: dto.stage_id
                         }
@@ -752,7 +755,7 @@ export class ApplicantStagesService {
 
                 if (!jobStage) {
                     const data = {
-                        job_id: dto.job_id,
+                        job_id: jobId,
                         applicant_id: applicantId,
                         stage_id: dto.stage_id,
                         creator_id: user.id,
@@ -787,7 +790,7 @@ export class ApplicantStagesService {
                 const application =
                     await this.applicantApplicationRepository.findOne({
                         where: {
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             applicant_id: applicantId,
                         },
                     });
@@ -815,7 +818,7 @@ export class ApplicantStagesService {
                 let listing =
                     await this.applicantListingRepository.findOne({
                         where: {
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             applicant_id: applicantId,
                         },
                     });
@@ -824,7 +827,7 @@ export class ApplicantStagesService {
 
                     listing = this.applicantListingRepository.create({
 
-                        job_id: dto.job_id,
+                        job_id: jobId,
 
                         applicant_id: applicantId,
 
@@ -923,6 +926,7 @@ export class ApplicantStagesService {
     }
 
     async screeningStage(
+        jobId : number,
         dto: BulkScreeningDto,
         user: Users,
     ) {
@@ -947,7 +951,7 @@ export class ApplicantStagesService {
             // Job
             // ============================
             const job = await this.jobRepository.findOne({
-                where: { id: dto.job_id },
+                where: { id: jobId },
                 relations: [
                     'client',
                     'client.phones',
@@ -964,7 +968,7 @@ export class ApplicantStagesService {
             // ============================
             await queryRunner.manager.update(
                 Jobs,
-                dto.job_id,
+                jobId,
                 {
                     stage_id: dto.stage_id,
                 },
@@ -992,7 +996,7 @@ export class ApplicantStagesService {
                 let jobStage =
                     await this.jobStageRepository.findOne({
                         where: {
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             stage_id: dto.stage_id,
                             applicant_id: applicantId,
                         },
@@ -1003,7 +1007,7 @@ export class ApplicantStagesService {
                         await queryRunner.manager.save(
                             JobStage,
                             {
-                                job_id: dto.job_id,
+                                job_id: jobId,
                                 stage_id: dto.stage_id,
                                 applicant_id: applicantId,
                                 creator_id: user.id,
@@ -1018,7 +1022,7 @@ export class ApplicantStagesService {
                 await queryRunner.manager.update(
                     ApplicantApplication,
                     {
-                        job_id: dto.job_id,
+                        job_id: jobId,
                         applicant_id: applicantId,
                     },
                     {
@@ -1033,7 +1037,7 @@ export class ApplicantStagesService {
                 let listing =
                     await this.applicantListingRepository.findOne({
                         where: {
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             applicant_id: applicantId,
                             stage_id: dto.stage_id,
                         },
@@ -1042,7 +1046,7 @@ export class ApplicantStagesService {
                 if (!listing) {
                     listing =
                         this.applicantListingRepository.create({
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             applicant_id: applicantId,
                             application_id: applicantId,
                             stage_id: dto.stage_id,
@@ -1062,7 +1066,7 @@ export class ApplicantStagesService {
                 let test =
                     await this.jobTestResultRepository.findOne({
                         where: {
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             applicant_id: applicantId,
                         },
                     });
@@ -1070,7 +1074,7 @@ export class ApplicantStagesService {
                 if (!test) {
                     test =
                         this.jobTestResultRepository.create({
-                            job_id: dto.job_id,
+                            job_id: jobId,
                             applicant_id: applicantId,
                         });
                 }
@@ -1215,10 +1219,12 @@ export class ApplicantStagesService {
 
             // add this if template uses it
             job_details: job,
+            phone_number: job?.ClientPhone?.phone_number ?? '',
+        
 
         };
 
-
+    
         const templatePath = path.join(
 
             process.cwd(),

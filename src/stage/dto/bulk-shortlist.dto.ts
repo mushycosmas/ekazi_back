@@ -9,8 +9,8 @@ IsString
 export class BulkShortListDto {
 
 
-@IsInt()
-job_id:number;
+// @IsInt()
+// job_id:number;
 
 
 @IsInt()

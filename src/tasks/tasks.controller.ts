@@ -63,4 +63,13 @@ export class TasksController {
   ) {
     return this.service.remove(user.id, id);
   }
+    // Assign task to user
+  @Post(':id/assign')
+  @UseGuards(SanctumGuard)
+  assignTask(
+    @Param('id', ParseIntPipe) taskId: number,
+    @Body('user_id', ParseIntPipe) userId: number,
+  ) {
+    return this.service.assignTask(taskId, userId);
+  }
 }

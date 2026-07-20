@@ -11,9 +11,9 @@ import {
 import { Type } from 'class-transformer';
 
 export class BulkScreeningDto {
-  @Type(() => Number)
-  @IsInt()
-  job_id: number;
+//   @Type(() => Number)
+//   @IsInt()
+//   job_id: number;
 
   @Type(() => Number)
   @IsInt()
