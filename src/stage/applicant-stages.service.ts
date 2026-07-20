@@ -759,27 +759,54 @@ export class ApplicantStagesService {
                         updator_id: user.id,
                     };
 
-                
+
 
                     jobStage = await queryRunner.manager.save(JobStage, data);
 
                 }
-   
+
                 // ============================
                 // Applicant Application
                 // ============================
 
-                await queryRunner.manager.update(
-                    ApplicantApplication,
-                    {
-                        job_id: dto.job_id,
-                        applicant_id: applicantId
-                    },
-                    {
-                        stage_id: dto.stage_id,
-                        status: stage.stage_name
-                    }
-                );
+                //   await queryRunner.manager.update(
+                //         ApplicantApplication,
+
+                //         {
+                //             job_id: dto.job_id,
+                //             applicant_id: applicantId
+                //         },
+                //         {
+                //             stage_id: dto.stage_id,
+                //             status: stage.stage_name
+                //         }
+                //     );
+                // ============================
+                // Applicant Application
+                // ============================
+                const application =
+                    await this.applicantApplicationRepository.findOne({
+                        where: {
+                            job_id: dto.job_id,
+                            applicant_id: applicantId,
+                        },
+                    });
+
+                // Update application only if it exists
+                if (application) {
+                    await queryRunner.manager.update(
+                        ApplicantApplication,
+                        application.id,
+                        {
+                            stage_id: dto.stage_id,
+                            status: stage.stage_name,
+                        },
+                    );
+                }
+
+                // ============================
+                // Applicant Listing
+                // ============================
 
                 // ============================
                 // Applicant Listing
@@ -789,56 +816,44 @@ export class ApplicantStagesService {
                     await this.applicantListingRepository.findOne({
                         where: {
                             job_id: dto.job_id,
-                            applicant_id: applicantId
-                        }
+                            applicant_id: applicantId,
+                        },
                     });
-
-
 
                 if (!listing) {
 
-                    listing =
-                        this.applicantListingRepository.create({
+                    listing = this.applicantListingRepository.create({
 
-                            job_id: dto.job_id,
+                        job_id: dto.job_id,
 
-                            applicant_id: applicantId,
+                        applicant_id: applicantId,
 
-                            application_id: applicantId,
+                        application_id: application?.id ?? null,
 
-                            stage_id: dto.stage_id,
+                        stage_id: dto.stage_id,
 
-                            status: stage.stage_name,
+                        status: stage.stage_name,
 
-                            hide: 1
+                        hide: 1,
 
-                        });
+                    });
 
+                } else {
 
-                }
-                else {
+                    listing.application_id = application?.id ?? null;
 
+                    listing.stage_id = dto.stage_id;
 
-                    listing.stage_id =
-                        dto.stage_id;
-
-                    listing.status =
-                        stage.stage_name;
+                    listing.status = stage.stage_name;
 
                     listing.hide = 1;
 
                 }
 
-
-
-                // IMPORTANT
-                // Save applicant listing update
-
                 await queryRunner.manager.save(
                     ApplicantListing,
-                    listing
+                    listing,
                 );
-
 
 
 

@@ -25,11 +25,10 @@ export class ApplicantListing {
   @Column()
   job_id: number;
 
-  @Column({
-    type: 'int',
-    unsigned: true,
-  })
-  application_id: number;
+@Column({
+    nullable: true,
+})
+application_id: number | null;
 
   @Column({
     type: 'int',

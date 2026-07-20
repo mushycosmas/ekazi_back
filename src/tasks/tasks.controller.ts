@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 
 import { TasksService } from './tasks.service';
@@ -17,17 +18,20 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Users } from 'src/entities/users.entity';
 import { TaskQueryDto } from './dto/task-query.dto';
+import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly service: TasksService) {}
 
   @Post()
+  @UseGuards(SanctumGuard)
   create(@Req() req, @Body() dto: CreateTaskDto) {
     return this.service.create(req.user, dto);
   }
 
   @Get()
+  @UseGuards(SanctumGuard)
   findAll(
     @CurrentUser() user: Users,
     @Query() query: TaskQueryDto,
@@ -36,11 +40,13 @@ export class TasksController {
   }
 
   @Get(':id')
+ @UseGuards(SanctumGuard)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.service.findOne(id);
   }
 
   @Put(':id')
+    @UseGuards(SanctumGuard)
   updateTask(
     @CurrentUser() user: Users,
     @Param('id', ParseIntPipe) id: number,
@@ -50,6 +56,7 @@ export class TasksController {
   }
 
   @Delete(':id')
+    @UseGuards(SanctumGuard)
   removeTask(
     @CurrentUser() user: Users,
     @Param('id', ParseIntPipe) id: number,

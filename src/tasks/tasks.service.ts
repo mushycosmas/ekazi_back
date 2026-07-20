@@ -42,44 +42,141 @@ export class TasksService {
         }
     }
 
+    // async findAll(userId: number, query: TaskQueryDto) {
+    //     const page = Number(query.page || 1);
+    //     const limit = Number(query.limit || 20);
+
+    //     const qb = this.taskRepository
+    //         .createQueryBuilder('task')
+    //         .leftJoinAndSelect('task.creator', 'creator')
+    //         .where('task.created_by = :userId', { userId })
+    //         .orderBy('task.id', 'DESC');
+
+    //     if (query.search) {
+    //         qb.andWhere(
+    //             '(task.title LIKE :search OR task.description LIKE :search)',
+    //             { search: `%${query.search}%` },
+    //         );
+    //     }
+
+    //     if (query.status) {
+    //         qb.andWhere('task.status = :status', {
+    //             status: query.status,
+    //         });
+    //     }
+
+    //     const total = await qb.getCount();
+
+    //     const tasks = await qb
+    //         .skip((page - 1) * limit)
+    //         .take(limit)
+    //         .getMany();
+
+    //     return {
+    //         success: true,
+    //         message: 'Tasks retrieved successfully',
+    //         data: tasks,
+    //         current_page: page,
+    //         per_page: limit,
+    //         total_pages: Math.ceil(total / limit),
+    //         total,
+    //     };
+    // }
     async findAll(userId: number, query: TaskQueryDto) {
         const page = Number(query.page || 1);
         const limit = Number(query.limit || 20);
 
         const qb = this.taskRepository
             .createQueryBuilder('task')
-            .leftJoinAndSelect('task.creator', 'creator')
+            // .leftJoinAndSelect('task.creator', 'creator')
             .where('task.created_by = :userId', { userId })
             .orderBy('task.id', 'DESC');
-
         if (query.search) {
             qb.andWhere(
                 '(task.title LIKE :search OR task.description LIKE :search)',
                 { search: `%${query.search}%` },
             );
         }
-
         if (query.status) {
             qb.andWhere('task.status = :status', {
                 status: query.status,
             });
         }
-
         const total = await qb.getCount();
-
         const tasks = await qb
             .skip((page - 1) * limit)
             .take(limit)
             .getMany();
 
+        // Calculate statistics from tasks
+        const statistics = {
+            pending: tasks.filter(
+                (task) => task.status === 'Pending',
+            ).length,
+
+            in_progress: tasks.filter(
+                (task) => task.status === 'InProgress',
+            ).length,
+
+            completed: tasks.filter(
+                (task) => task.status === 'Completed',
+            ).length,
+
+        };
         return {
             success: true,
             message: 'Tasks retrieved successfully',
+
             data: tasks,
+
             current_page: page,
             per_page: limit,
             total_pages: Math.ceil(total / limit),
             total,
+
+            statistics: {
+                total: total,
+
+                by_status: {
+                    pending: statistics.pending,
+                    in_progress: statistics.in_progress,
+                    completed: statistics.completed,
+
+                },
+
+                percentages: {
+                    pending:
+                        total > 0
+                            ? Number(
+                                (
+                                    (statistics.pending / total) *
+                                    100
+                                ).toFixed(1),
+                            )
+                            : 0,
+
+                    in_progress:
+                        total > 0
+                            ? Number(
+                                (
+                                    (statistics.in_progress / total) *
+                                    100
+                                ).toFixed(1),
+                            )
+                            : 0,
+
+                    completed:
+                        total > 0
+                            ? Number(
+                                (
+                                    (statistics.completed / total) *
+                                    100
+                                ).toFixed(1),
+                            )
+                            : 0,
+
+                },
+            },
         };
     }
 

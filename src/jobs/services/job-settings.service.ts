@@ -88,9 +88,6 @@ export class JobSettingsService {
 
 
 
-
-
-
     async updateSettings(
         jobId:number,
         dto:UpdateJobSettingsDto,
@@ -100,16 +97,10 @@ export class JobSettingsService {
         const queryRunner =
             this.dataSource.createQueryRunner();
 
-
-
         await queryRunner.connect();
 
         await queryRunner.startTransaction();
-
-
-
         try{
-
 
             const job =
                 await queryRunner.manager.findOne(
@@ -120,9 +111,6 @@ export class JobSettingsService {
                         }
                     }
                 );
-
-
-
             if(!job){
 
                 throw new NotFoundException(
@@ -130,10 +118,6 @@ export class JobSettingsService {
                 );
 
             }
-
-
-
-
             /**
              * Update show client name
              */
@@ -150,11 +134,6 @@ export class JobSettingsService {
                 );
 
             }
-
-
-
-
-
             /**
              * Remove old email and external url
              *
@@ -166,22 +145,12 @@ export class JobSettingsService {
                     job_id:jobId
                 }
             );
-
-
-
             await queryRunner.manager.delete(
                 JobExternalUrls,
                 {
                     job_id:jobId
                 }
             );
-
-
-
-
-
-
-
             /**
              * No apply condition
              */
@@ -199,12 +168,6 @@ export class JobSettingsService {
 
             }
 
-
-
-
-
-
-
             /**
              * Apply by email
              */
@@ -212,8 +175,6 @@ export class JobSettingsService {
                 dto.apply_condition === true &&
                 dto.apply_type === 'email'
             ){
-
-
 
                 if(!dto.email){
 
@@ -223,9 +184,6 @@ export class JobSettingsService {
 
                 }
 
-
-
-
                 // remove external url
                 await queryRunner.manager.delete(
                     JobExternalUrls,
@@ -234,19 +192,12 @@ export class JobSettingsService {
                     }
                 );
 
-
-
-
                 await this.saveApplicationModal(
                     queryRunner.manager,
                     jobId,
                     'email',
                     'Apply using email'
                 );
-
-
-
-
 
                 await queryRunner.manager.save(
                     JobEmails,
@@ -256,18 +207,7 @@ export class JobSettingsService {
                     }
                 );
 
-
-
             }
-
-
-
-
-
-
-
-
-
             /**
              * Apply by external URL
              */
@@ -285,11 +225,6 @@ export class JobSettingsService {
                     );
 
                 }
-
-
-
-
-
                 // remove email
                 await queryRunner.manager.delete(
                     JobEmails,
@@ -297,12 +232,6 @@ export class JobSettingsService {
                         job_id:jobId
                     }
                 );
-
-
-
-
-
-
                 await this.saveApplicationModal(
                     queryRunner.manager,
                     jobId,
