@@ -13,6 +13,7 @@ import { multerConfig } from 'src/common/upload/multer.config';
 import { CvbuilderService } from 'src/cvbuilder/cvbuilder.service';
 import { ApplicantStagesService } from 'src/stage/applicant-stages.service';
 import { BulkShortListDto } from 'src/stage/dto/bulk-shortlist.dto';
+import { BulkScreeningDto } from 'src/stage/dto/bulk-screning.dto';
 
 
 @Controller('employer')
@@ -205,7 +206,28 @@ export class EmployerController {
         'Applicants processed successfully'
     };
   }
+    @Post('jobs/:jobId/application-stages/screening')
+  @UseGuards(SanctumGuard)
+  async  screeningStage(
+    @CurrentUser() user: Users,
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Body() dto: BulkScreeningDto,
 
+  ) {
+
+    await this.applicantStagesService.screeningStage(
+      jobId,
+      dto,
+      user
+    );
+    return {
+      success: true,
+      message:
+        'Applicants processed successfully'
+    };
+  }
+ 
 }
 
 

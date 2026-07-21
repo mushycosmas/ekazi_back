@@ -34,9 +34,9 @@ export class BulkScreeningDto {
   @IsString()
   position_name?: string;
 
-  @IsOptional()
-  @IsString()
-  stage_name?: string;
+//   @IsOptional()
+//   @IsString()
+//   stage_name?: string;
 
   @IsOptional()
   @IsString()

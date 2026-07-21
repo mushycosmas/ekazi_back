@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { Logger } from '@nestjs/common';
 
 import { Stage } from 'src/entities/stage.entity';
 import { Users } from 'src/entities/users.entity';
@@ -27,6 +28,8 @@ import { BulkScreeningDto } from './dto/bulk-screning.dto';
 @Injectable()
 export class ApplicantStagesService {
 
+    private readonly logger =
+        new Logger(ApplicantStagesService.name);
 
     constructor(
 
@@ -731,6 +734,22 @@ export class ApplicantStagesService {
         dto: BulkScreeningDto,
         user: Users,
     ) {
+
+        const stage =
+            await this.stageRepository.findOne({
+
+                where: {
+                    id: dto.stage_id
+                }
+
+            });
+
+
+        if (!stage) {
+            throw new NotFoundException(
+                'Stage not found'
+            );
+        }
         const queryRunner = this.dataSource.createQueryRunner();
 
         await queryRunner.connect();
@@ -870,28 +889,20 @@ export class ApplicantStagesService {
                 // Do not update old stage
 
                 if (!existingListing) {
-
                     const listing =
                         queryRunner.manager.create(
                             ApplicantListing,
                             {
-
                                 job_id: jobId,
-
                                 applicant_id:
                                     applicantId,
-
                                 application_id:
                                     application?.id ?? null,
-
                                 stage_id:
                                     dto.stage_id,
-
                                 status:
                                     stage.stage_name,
-
                                 hide: 1,
-
                                 creator_id:
                                     user.id,
 
@@ -963,9 +974,6 @@ export class ApplicantStagesService {
                             applicant_id: applicantId,
                         },
                     });
-
-
-
                 if (!test) {
 
                     test =
@@ -978,9 +986,6 @@ export class ApplicantStagesService {
                         });
 
                 }
-
-
-
                 // ============================
                 // Generate Screening Login
                 // ============================
@@ -994,37 +999,23 @@ export class ApplicantStagesService {
                             'user',
                         ],
                     });
-
-
-
                 if (!applicant) {
                     continue;
                 }
-
-
-
                 let username = '';
                 let password = '';
-
-
-
                 if (applicant.user?.email) {
-
 
                     username =
                         await this.generateUniqueUsername(
                             applicant.user.email,
                         );
 
-
                     password =
                         this.generatePassword();
 
 
                 }
-
-
-
                 // ============================
                 // Save Test Details
                 // ============================
@@ -1033,35 +1024,15 @@ export class ApplicantStagesService {
                     dto.test_date
                         ? new Date(dto.test_date)
                         : undefined;
-
-
                 test.test_duration =
                     dto.test_duration?.toString()
                     ?? '';
-
-
-
                 test.test_deadline =
                     dto.test_deadline
                     ?? '';
-
-
-
-                test.user_name =
-                    username;
-
-
-
-                test.user_password =
-                    password;
-
-
-
-                test.job_stage_id =
-                    jobStage.id;
-
-
-
+                test.user_name = username;
+                test.user_password = password;
+                test.job_stage_id = jobStage.id;
                 test.creator_id =
                     user.id;
 
@@ -1069,6 +1040,8 @@ export class ApplicantStagesService {
 
                 test.updator_id =
                     user.id;
+                test.reminder_sent_12hr = true;
+                test.reminder_sent_18hr = true;
 
 
 
@@ -1256,15 +1229,23 @@ export class ApplicantStagesService {
         });
 
     }
-    private async sendScreeningEmail(data: any) {
-
-        const {
-            applicant,
-            job,
-            stage,
-            inviteLocation,
-            dto,
-        } = data;
+    private async sendScreeningEmail({
+        applicant,
+        job,
+        stage,
+        inviteLocation,
+        dto,
+        username,
+        password,
+    }: {
+        applicant: any;
+        job: any;
+        stage: any;
+        inviteLocation: any;
+        dto: any;
+        username: string;
+        password: string;
+    }) {
 
         const templateData = {
 
@@ -1272,13 +1253,13 @@ export class ApplicantStagesService {
                 `Invitation to aptitude: ${job.position?.position_name} Application`,
 
             email:
-                applicant.user.email,
+                applicant.user?.email ?? '',
 
             first_name:
-                applicant.first_name,
+                applicant.first_name ?? '',
 
             last_name:
-                applicant.last_name,
+                applicant.last_name ?? '',
 
             position_name:
                 job.position?.position_name ?? '',
@@ -1290,8 +1271,21 @@ export class ApplicantStagesService {
                 job.client?.phones?.[0]?.phone_number ?? '',
 
             stage_name:
-                stage.stage_name,
+                stage.stage_name ?? '',
 
+            // ============================
+            // Interview/Test Location
+            // ============================
+
+            location:
+                inviteLocation?.region_name ?? '',
+
+            country:
+                inviteLocation?.country?.country_name ?? '',
+
+            // ============================
+            // Test Information
+            // ============================
 
             test_date:
                 dto.test_date ?? '',
@@ -1299,99 +1293,343 @@ export class ApplicantStagesService {
             test_date_formatted:
                 dto.test_date
                     ? new Date(dto.test_date)
-                        .toLocaleDateString('en-GB')
+                        .toLocaleDateString(
+                            'en-GB',
+                            {
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric',
+                            },
+                        )
                     : '',
 
+            test_time:
+                dto.test_date
+                    ? new Date(dto.test_date)
+                        .toLocaleTimeString(
+                            'en-GB',
+                            {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            },
+                        )
+                    : '',
 
             test_duration:
                 dto.test_duration ?? '',
 
-
             test_deadline:
                 dto.test_deadline ?? '',
-
 
             test_deadline_formatted:
                 dto.test_deadline
                     ? new Date(dto.test_deadline)
-                        .toLocaleDateString('en-GB')
+                        .toLocaleDateString(
+                            'en-GB',
+                            {
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric',
+                            },
+                        )
                     : '',
 
+            // ============================
+            // Generated Credentials
+            // ============================
 
             user_name:
-                dto.user_name ?? '',
-
+                username,
 
             user_password:
-                dto.user_password ?? '',
+                password,
 
+            // ============================
+            // Test Link
+            // ============================
 
             test_link:
-                dto.test_link ?? '',
+                dto.test_link ??
+                process.env.TEST_URL ??
+                '',
 
+            // ============================
+            // Job Information
+            // ============================
 
             job_details:
                 job,
+
+            company_name:
+                process.env.APP_NAME ??
+                'eKazi',
+
+            support_email:
+                process.env.MAIL_FROM_ADDRESS,
+
         };
+
+
+
+        // =====================================
+        // Email Template
+        // =====================================
 
         const templatePath = path.join(
 
             process.cwd(),
 
             'src',
+
             'mail',
+
             'templates',
+
             'recruitment',
-            'invite.template.html'
+
+            'invite.template.html',
 
         );
+
+
 
         const source =
             fs.readFileSync(
                 templatePath,
-                'utf8'
+                'utf8',
             );
 
-        // Register helpers
+
+
         Handlebars.registerHelper(
+
             'eq',
-            (a, b) => a === b
+
+            (a, b) => a === b,
+
         );
 
-        // Compile template
-        const template = Handlebars.compile(source);
 
-        const html = template(templateData);
+
+        Handlebars.registerHelper(
+
+            'formatDate',
+
+            (value) => {
+
+                if (!value) return '';
+
+                return new Date(value)
+                    .toLocaleDateString('en-GB');
+
+            },
+
+        );
+
+
+
+        const template =
+            Handlebars.compile(
+                source,
+            );
+
+
+
+        const html =
+            template(
+                templateData,
+            );
+
+
 
         try {
+
 
             await this.mailService.sendMail({
 
                 from:
+
                     `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
 
+
                 to:
+
                     templateData.email,
 
+
                 subject:
+
                     templateData.subject,
+
 
                 html,
 
             });
 
 
-        } catch (error) {
 
-            console.error(
-                'EMAIL ERROR:',
-                error
+            this.logger.log(
+
+                `Screening email sent to ${templateData.email}`,
+
             );
+
+
+
+        }
+        catch (error) {
+
+
+            this.logger.error(
+
+                `Failed to send screening email to ${templateData.email}`,
+
+                error.stack,
+
+            );
+
 
             throw error;
 
         }
+
     }
+    // private async sendScreeningEmail(data: any) {
+
+    //     const {
+    //         applicant,
+    //         job,
+    //         stage,
+    //         inviteLocation,
+    //         dto,
+    //     } = data;
+
+    //     const templateData = {
+
+    //         subject:
+    //             `Invitation to aptitude: ${job.position?.position_name} Application`,
+
+    //         email:
+    //             applicant.user.email,
+
+    //         first_name:
+    //             applicant.first_name,
+
+    //         last_name:
+    //             applicant.last_name,
+
+    //         position_name:
+    //             job.position?.position_name ?? '',
+
+    //         client_name:
+    //             job.client?.client_name ?? '',
+
+    //         phone:
+    //             job.client?.phones?.[0]?.phone_number ?? '',
+
+    //         stage_name:
+    //             stage.stage_name,
+
+
+    //         test_date:
+    //             dto.test_date ?? '',
+
+    //         test_date_formatted:
+    //             dto.test_date
+    //                 ? new Date(dto.test_date)
+    //                     .toLocaleDateString('en-GB')
+    //                 : '',
+
+
+    //         test_duration:
+    //             dto.test_duration ?? '',
+
+
+    //         test_deadline:
+    //             dto.test_deadline ?? '',
+
+
+    //         test_deadline_formatted:
+    //             dto.test_deadline
+    //                 ? new Date(dto.test_deadline)
+    //                     .toLocaleDateString('en-GB')
+    //                 : '',
+
+
+    //         user_name:
+    //             dto.user_name ?? '',
+
+
+    //         user_password:
+    //             dto.user_password ?? '',
+
+
+    //         test_link:
+    //             dto.test_link ?? '',
+
+
+    //         job_details:
+    //             job,
+    //     };
+
+    //     const templatePath = path.join(
+
+    //         process.cwd(),
+
+    //         'src',
+    //         'mail',
+    //         'templates',
+    //         'recruitment',
+    //         'invite.template.html'
+
+    //     );
+
+    //     const source =
+    //         fs.readFileSync(
+    //             templatePath,
+    //             'utf8'
+    //         );
+
+    //     // Register helpers
+    //     Handlebars.registerHelper(
+    //         'eq',
+    //         (a, b) => a === b
+    //     );
+
+    //     // Compile template
+    //     const template = Handlebars.compile(source);
+
+    //     const html = template(templateData);
+
+    //     try {
+
+    //         await this.mailService.sendMail({
+
+    //             from:
+    //                 `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+
+    //             to:
+    //                 templateData.email,
+
+    //             subject:
+    //                 templateData.subject,
+
+    //             html,
+
+    //         });
+
+
+    //     } catch (error) {
+
+    //         console.error(
+    //             'EMAIL ERROR:',
+    //             error
+    //         );
+
+    //         throw error;
+
+    //     }
+    // }
     private async generateUniqueUsername(
         email: string,
     ): Promise<string> {
