@@ -14,6 +14,11 @@ import { CvbuilderService } from 'src/cvbuilder/cvbuilder.service';
 import { ApplicantStagesService } from 'src/stage/applicant-stages.service';
 import { BulkShortListDto } from 'src/stage/dto/bulk-shortlist.dto';
 import { BulkScreeningDto } from 'src/stage/dto/bulk-screning.dto';
+import { InterviewStageDto } from 'src/stage/dto/bulk-interview.dto';
+import { SelectionStageDto } from 'src/stage/dto/bulk-selection.dto';
+import { BackgroundChecktageDto } from 'src/stage/dto/bulk-background-check.dto';
+import { OfferDto } from 'src/stage/dto/bulk-offer.dto';
+import { EmployedDto } from 'src/stage/dto/employed.dto';
 
 
 @Controller('employer')
@@ -206,9 +211,9 @@ export class EmployerController {
         'Applicants processed successfully'
     };
   }
-    @Post('jobs/:jobId/application-stages/screening')
+  @Post('jobs/:jobId/application-stages/screening')
   @UseGuards(SanctumGuard)
-  async  screeningStage(
+  async screeningStage(
     @CurrentUser() user: Users,
     @Param('jobId', ParseIntPipe)
     jobId: number,
@@ -227,7 +232,114 @@ export class EmployerController {
         'Applicants processed successfully'
     };
   }
- 
+  @Post('jobs/:jobId/application-stages/interview')
+  @UseGuards(SanctumGuard)
+  async interviewStage(
+    @CurrentUser() user: Users,
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Body() dto: InterviewStageDto,
+
+  ) {
+
+    await this.applicantStagesService.interiewStage(
+      jobId,
+      dto,
+      user
+    );
+    return {
+      success: true,
+      message:
+        'Applicants processed successfully'
+    };
+  }
+
+  @Post('jobs/:jobId/application-stages/selection')
+  @UseGuards(SanctumGuard)
+  async selectionStage(
+    @CurrentUser() user: Users,
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Body() dto: SelectionStageDto,
+
+  ) {
+
+    await this.applicantStagesService.selectionStages(
+      jobId,
+      dto,
+      user
+    );
+    return {
+      success: true,
+      message:
+        'Applicants processed successfully'
+    };
+  }
+
+  @Post('jobs/:jobId/application-stages/background-check')
+  @UseGuards(SanctumGuard)
+  async backgroundCheckStage(
+    @CurrentUser() user: Users,
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Body() dto: BackgroundChecktageDto,
+
+  ) {
+
+    await this.applicantStagesService.BackgrounCheckStages(
+      jobId,
+      dto,
+      user
+    );
+    return {
+      success: true,
+      message:
+        'Applicants processed successfully'
+    };
+  }
+  @Post('jobs/:jobId/application-stages/offer')
+  @UseGuards(SanctumGuard)
+  async offerStage(
+    @CurrentUser() user: Users,
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Body() dto: OfferDto,
+
+  ) {
+
+    await this.applicantStagesService.OfferStages(
+      jobId,
+      dto,
+      user
+    );
+    return {
+      success: true,
+      message:
+        'Applicants processed successfully'
+    };
+  }
+    @Post('jobs/:jobId/application-stages/employed')
+  @UseGuards(SanctumGuard)
+  async employedStage(
+    @CurrentUser() user: Users,
+    @Param('jobId', ParseIntPipe)
+    jobId: number,
+    @Body() dto: EmployedDto,
+
+  ) {
+
+    await this.applicantStagesService.EmployedStages(
+      jobId,
+      dto,
+      user
+    );
+    return {
+      success: true,
+      message:
+        'Applicants processed successfully'
+    };
+  }
+
 }
 
 

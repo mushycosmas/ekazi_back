@@ -166,12 +166,50 @@ for the position
 </b>.
 
 </p>
+ {{else if (eq stage_name "Offer")}}
+
+ 
+ <p>
+Congratulations! We are pleased to offer you the position of <strong>{{position_name}}</strong>
+ with <strong>{{client_name}}</strong>.
+</p>
+
+<p>
+Your offer letter is now available on the <strong>eKazi Recruitment Portal</strong>.
+ Please log in to your account to review, download, and accept or decline your offer
+  before the specified deadline.
+</p>
+
+<p style="text-align:center; margin:25px 0;">
+    <a href="https://ekazi.co.tz/login"
+       style="background:#0d6efd;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;">
+        Log in to eKazi
+    </a>
+</p>
+
+<p>
+We look forward to welcoming you to our team. Congratulations once again!
+</p>{{else if (eq stage_name "Employed")}}
+
+<p>
+Congratulations! We are delighted to confirm that you have officially joined <strong>{{client_name}}</strong> as <strong>{{position_name}}</strong>.
+</p>
+
+<p>
+We wish you every success in your new role and hope you have a rewarding and fulfilling career with the organization.
+</p>
+
+<p>
+Welcome to the team, and thank you for choosing <strong>{{client_name}}</strong>.
+</p>
+
 
 {{else if (eq stage_name "Screening")}}
 
 <p>
 I hope all is well with you.
 </p>
+
 <p>
 
 You have been invited to attend an online aptitude test

@@ -121,6 +121,14 @@ import { Task } from 'src/tasks/entities/tasks.entity';
 import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
 import { ApplicantListing } from 'src/entities/applicants/applicant-listings.entity';
 import { JobTestResult } from 'src/jobs/entities/job-test-results.entity';
+import { ClientStaff } from 'src/client/entities/client-staff.entity';
+import { InterviewAction } from 'src/jobs/entities/interview/interview-action.entity';
+import {  InterviewParticipantEmail } from 'src/jobs/entities/interview/interview-participant-email.entity';
+import { InterviewPanelComment} from 'src/jobs/entities/interview/interview-panel-comment.entity';
+import { InterviewStageRound } from 'src/jobs/entities/interview/interview-stage-round.entity';
+import { InterviewAttendenceTracker } from 'src/jobs/entities/interview/interview-attendance-trackers.entity';
+import { InterviewType } from 'src/jobs/entities/interview/interview-type.entity';
+import { InterviewPanel } from 'src/jobs/entities/interview/interview-panel.entity';
  
 
 
@@ -244,6 +252,14 @@ const allEntities = [
   TaskAssignment,
   ApplicantListing,
   JobTestResult,
+  ClientStaff,
+  InterviewAction,
+  InterviewPanelComment,
+  InterviewStageRound,
+  InterviewAttendenceTracker,
+  InterviewType,
+  InterviewPanel,
+  InterviewParticipantEmail,
   
 ];
 

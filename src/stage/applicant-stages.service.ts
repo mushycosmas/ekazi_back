@@ -23,6 +23,16 @@ import * as path from 'path';
 import { ApplicantListing } from 'src/entities/applicants/applicant-listings.entity';
 import { JobTestResult } from 'src/jobs/entities/job-test-results.entity';
 import { BulkScreeningDto } from './dto/bulk-screning.dto';
+import { InterviewStage } from './stages/interview.stage';
+import { InterviewStageDto } from './dto/bulk-interview.dto';
+import { SelectionStage } from './stages/selection.stage';
+import { SelectionStageDto } from './dto/bulk-selection.dto';
+import { BackgroundCheckStage } from './stages/backbground-check.stage';
+import { BackgroundChecktageDto } from './dto/bulk-background-check.dto';
+import { OfferStage } from './stages/offer.stage';
+import { OfferDto } from './dto/bulk-offer.dto';
+import { EmployedDto } from './dto/employed.dto';
+import { EmployedStage } from './stages/employed.stage';
 
 
 @Injectable()
@@ -34,6 +44,11 @@ export class ApplicantStagesService {
     constructor(
 
         private readonly dataSource: DataSource,
+        private readonly interviewStage: InterviewStage,
+        private readonly selectionStageHandler: SelectionStage,
+        private readonly backgrounCheckStageHandler: BackgroundCheckStage,
+        private readonly offerStageHandler: OfferStage,
+        private readonly employedStageHandler: EmployedStage,
 
 
         @InjectRepository(Jobs)
@@ -62,6 +77,9 @@ export class ApplicantStagesService {
 
 
 
+
+
+
         private readonly mailService: MailService
 
     ) { }
@@ -82,7 +100,6 @@ export class ApplicantStagesService {
     async interview(jobId: number) {
         return this.getApplicantsByStage(jobId, 'Interview');
     }
-
     async selected(jobId: number) {
         return this.getApplicantsByStage(jobId, 'Selection');
     }
@@ -432,30 +449,6 @@ export class ApplicantStagesService {
 
                 break;
 
-            case 'Screening':
-
-                await this.screeningStage(jobId, dto, user);
-
-                break;
-
-            case 'Interview':
-
-                await this.interViewStage(dto);
-
-                break;
-
-            case 'Selection':
-
-                await this.selectionStage(dto);
-
-                break;
-
-            case 'Background Check':
-
-                await this.backgroundStage(dto);
-
-                break;
-
             default:
 
                 throw new Error(
@@ -661,10 +654,6 @@ export class ApplicantStagesService {
                     ApplicantListing,
                     listing,
                 );
-
-
-
-
                 // ============================
                 // Applicant
                 // ============================
@@ -678,8 +667,6 @@ export class ApplicantStagesService {
                             'user'
                         ]
                     });
-
-
                 if (applicant) {
                     await this.sendShortListEmail({
 
@@ -694,15 +681,8 @@ export class ApplicantStagesService {
                     });
                 }
 
-
-
             }
-
-
-
             await queryRunner.commitTransaction();
-
-
             return {
 
                 success: true,
@@ -919,49 +899,6 @@ export class ApplicantStagesService {
                     );
 
                 }
-                // let listing =
-                //     await this.applicantListingRepository.findOne({
-                //         where: {
-                //             job_id: jobId,
-                //             applicant_id: applicantId,
-                //             stage_id: dto.stage_id,
-                //         },
-                //     });
-
-                // if (!listing) {
-
-                //     listing =
-                //         this.applicantListingRepository.create({
-
-                //             job_id: jobId,
-
-                //             applicant_id: applicantId,
-
-                //             // Save ApplicantApplication ID
-                //             application_id: application?.id ?? null,
-
-                //             stage_id: dto.stage_id,
-
-                //             status: stage.stage_name,
-
-                //             hide: 1,
-                //         });
-
-                // } else {
-
-                //     listing.application_id =
-                //         application?.id ?? null;
-
-                //     listing.stage_id =
-                //         dto.stage_id;
-
-                //     listing.status =
-                //         stage.stage_name;
-
-                //     listing.hide = 1;
-                // }
-
-                // await queryRunner.manager.save(listing);
 
                 // ============================
                 // Job Test Result
@@ -1095,29 +1032,116 @@ export class ApplicantStagesService {
     }
 
 
-    private async interViewStage(
-        dto: BulkShortListDto
+    async interiewStage(
+        jobId: number,
+        dto: InterviewStageDto,
+        user: Users,
     ) {
 
-        // Interview logic
+        const interviewDto: InterviewStageDto = {
+            stage_id: dto.stage_id,
+            applicant_id: dto.applicant_id,
+            interview_type: dto.interview_type,
+            interviewer: dto.interviewer,
+            interviewer_participant: dto.interviewer_participant,
 
+            region_id: dto.region_id,
+            address: dto.address,
+            invite_date: dto.invite_date,
+            message_body: dto.message_body,
+            duration_test: dto.duration_test,
+            online_link: dto.online_link,
+        };
+
+        return this.interviewStage.execute(
+            jobId,
+            interviewDto,
+            user,
+        );
+    }
+
+    async selectionStages(
+        jobId: number,
+        dto: SelectionStageDto,
+        user: Users,
+    ) {
+
+        const selectionDto: SelectionStageDto = {
+            stage_id: dto.stage_id,
+            applicant_id: dto.applicant_id,
+            message_body: dto.message_body,
+
+        };
+
+        return this.selectionStageHandler.execute(
+            jobId,
+            selectionDto,
+            user,
+        );
+    }
+
+    async BackgrounCheckStages(
+        jobId: number,
+        dto: BackgroundChecktageDto,
+        user: Users,
+    ) {
+
+        const backgroundDto: BackgroundChecktageDto = {
+            stage_id: dto.stage_id,
+            applicant_id: dto.applicant_id,
+            message_body: dto.message_body,
+
+        };
+
+        return this.backgrounCheckStageHandler.execute(
+            jobId,
+            backgroundDto,
+            user,
+        );
+    }
+
+    async OfferStages(
+        jobId: number,
+        dto: OfferDto,
+        user: Users,
+    ) {
+
+        const OfferDto: OfferDto = {
+            stage_id: dto.stage_id,
+            applicant_id: dto.applicant_id,
+            message_body: dto.message_body,
+
+        };
+
+        return this.offerStageHandler.execute(
+            jobId,
+            OfferDto,
+            user,
+        );
+    }
+    async EmployedStages(
+        jobId: number,
+        dto: EmployedDto,
+        user: Users,
+    ) {
+
+        const employedDto: EmployedDto = {
+            stage_id: dto.stage_id,
+            applicant_id: dto.applicant_id,
+            message_body: dto.message_body,
+
+        };
+
+        return this.employedStageHandler.execute(
+            jobId,
+            employedDto,
+            user,
+        );
     }
 
 
-    private async backgroundStage(
-        dto: BulkShortListDto
-    ) {
 
-        // Background Check logic
 
-    }
-    private async selectionStage(
-        dto: BulkShortListDto
-    ) {
-
-        // selectionStage Check logic
-
-    }
 
 
     private async sendShortListEmail(data: any) {

@@ -20,6 +20,8 @@ import { ClientEmail } from './entities/client-email.entity';
 import { ClientDescription } from './entities/client-descriptions.entity';
 import { ClientType } from './entities/client-types.entity';
 import { CompanySize } from 'src/entities/company-size.entity';
+import { ClientStaff } from './entities/client-staff.entity';
+import { InterviewParticipantEmail } from 'src/jobs/entities/interview/interview-participant-email.entity';
 
 @Entity('clients')
 export class Clients {
@@ -158,5 +160,17 @@ export class Clients {
     @ManyToOne(() => CompanySize, (size) => size.clients)
     @JoinColumn({ name: 'company_size_id' })
     companySize: CompanySize;
+
+    @OneToMany(
+        () => ClientStaff,
+        staff => staff.client
+    )
+    staff: ClientStaff[];
+
+    @OneToMany(
+        () => InterviewParticipantEmail,
+        participant => participant.client,
+    )
+    interviewParticipantEmails: InterviewParticipantEmail[];
 
 }

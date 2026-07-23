@@ -22,6 +22,7 @@ import { JobStage } from 'src/jobs/entities/job-stage.entity';
 import { Task } from 'src/tasks/entities/tasks.entity';
 import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
 import { ApplicantApplication } from './applicants/applicant-applicantions.entity';
+import { ClientStaff } from 'src/client/entities/client-staff.entity';
 
 const VerifiedTransformer: ValueTransformer = {
   to: (value: number | boolean): number => {
@@ -106,11 +107,11 @@ export class Users {
   @Column({ type: 'datetime', nullable: true })
   updated_at: Date | null;
 
- @Column({
-  type: 'timestamp',
-  nullable: true,
-})
-verify_key_expires_at: Date | null;
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+  })
+  verify_key_expires_at: Date | null;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   password_changed_at: Date;
@@ -169,6 +170,12 @@ verify_key_expires_at: Date | null;
   @OneToMany(
     () => ApplicantApplication,
     (application) => application.applicant
-)
-applications: ApplicantApplication[];
+  )
+  applications: ApplicantApplication[];
+
+  @OneToMany(
+    () => ClientStaff,
+    clientStaff => clientStaff.user
+  )
+  clientStaff: ClientStaff[];
 }
