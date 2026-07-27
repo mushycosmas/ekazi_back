@@ -1029,26 +1029,39 @@ export class ApplicantStagesService {
                 message: 'Applicants moved to Screening stage successfully.',
             };
 
-        } catch (error) {
+        }catch (error) {
 
-            await queryRunner.rollbackTransaction();
+    await queryRunner.rollbackTransaction();
 
-            console.error('Transaction failed:', error);
+    console.error(
+        'Screening Stage Failed:',
+        error,
+    );
 
 
-            throw new InternalServerErrorException({
+    throw new InternalServerErrorException({
 
-                success: false,
+        success: false,
 
-                message:
-                    'Unable to complete this operation. Please try again later.',
+        message:
+            'Unable to complete screening process.',
 
-                error_code:
-                    'OPERATION_FAILED',
+        error_code:
+            'OPERATION_FAILED',
 
-            });
+        // frontend can display this
+        error_detail:
+            error.message ?? 'Unknown error',
 
-        } finally {
+        // only for development
+        stack:
+            process.env.NODE_ENV === 'development'
+                ? error.stack
+                : undefined,
+
+    });
+
+} finally {
 
             await queryRunner.release();
 
