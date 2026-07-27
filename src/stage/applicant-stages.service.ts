@@ -830,9 +830,7 @@ export class ApplicantStagesService {
                 // ----------------------------
                 // Applicant Application
                 // ----------------------------
-                // ----------------------------
-                // Applicant Application
-                // ----------------------------
+
 
                 const application =
                     await this.applicantApplicationRepository.findOne({
@@ -884,24 +882,39 @@ export class ApplicantStagesService {
                         queryRunner.manager.create(
                             ApplicantListing,
                             {
+                                stage_id: dto.stage_id,
+
                                 job_id: jobId,
-                                applicant_id:
-                                    applicantId,
+
+                                applicant_id: applicantId,
+
                                 application_id:
                                     application?.id ?? null,
+
                                 job_stage_id:
+                                    jobStage.id,
+
+                                status_id:
                                     dto.stage_id,
+
                                 status:
                                     stage.stage_name,
+
                                 hide: 1,
-                                creator_id:
+
+                                created_by:
                                     user.id,
 
-                                updator_id:
+                                updated_by:
                                     user.id,
-
                             },
                         );
+
+
+                    await queryRunner.manager.save(
+                        ApplicantListing,
+                        listing,
+                    );
 
 
                     await queryRunner.manager.save(
@@ -1029,45 +1042,45 @@ export class ApplicantStagesService {
                 message: 'Applicants moved to Screening stage successfully.',
             };
 
-        }catch (error) {
+        } catch (error) {
 
-    await queryRunner.rollbackTransaction();
+            await queryRunner.rollbackTransaction();
 
-    console.error(
-        'Screening Stage Error:',
-        error,
-    );
+            console.error(
+                'Screening Stage Error:',
+                error,
+            );
 
 
-    throw new InternalServerErrorException({
+            throw new InternalServerErrorException({
 
-        success: false,
+                success: false,
 
-        message:
-            'Unable to complete screening process.',
+                message:
+                    'Unable to complete screening process.',
 
-        error_code:
-            'OPERATION_FAILED',
+                error_code:
+                    'OPERATION_FAILED',
 
-        // Exact database/system error
-        error_detail:
-            error.message ?? 'Unknown error',
+                // Exact database/system error
+                error_detail:
+                    error.message ?? 'Unknown error',
 
-        // Show file + line number
-        error_location:
-            error.stack
-                ? error.stack.split('\n')[1]?.trim()
-                : null,
+                // Show file + line number
+                error_location:
+                    error.stack
+                        ? error.stack.split('\n')[1]?.trim()
+                        : null,
 
-        // Full stack only development
-        stack:
-            process.env.NODE_ENV === 'development'
-                ? error.stack
-                : undefined,
+                // Full stack only development
+                stack:
+                    process.env.NODE_ENV === 'development'
+                        ? error.stack
+                        : undefined,
 
-    });
+            });
 
-} finally {
+        } finally {
 
             await queryRunner.release();
 
