@@ -889,7 +889,7 @@ export class ApplicantStagesService {
                                     applicantId,
                                 application_id:
                                     application?.id ?? null,
-                                stage_id:
+                                job_stage_id:
                                     dto.stage_id,
                                 status:
                                     stage.stage_name,
