@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Logger } from '@nestjs/common';
@@ -726,9 +726,11 @@ export class ApplicantStagesService {
 
 
         if (!stage) {
-            throw new NotFoundException(
-                'Stage not found'
-            );
+            throw new NotFoundException({
+                success: false,
+                message: 'The selected stage was not found. Please refresh and try again.',
+                error_code: 'STAGE_NOT_FOUND',
+            });
         }
         const queryRunner = this.dataSource.createQueryRunner();
 
@@ -744,7 +746,11 @@ export class ApplicantStagesService {
             });
 
             if (!stage) {
-                throw new NotFoundException('Stage not found');
+                throw new NotFoundException({
+                    success: false,
+                    message: 'The selected stage was not found. Please refresh and try again.',
+                    error_code: 'STAGE_NOT_FOUND',
+                });
             }
 
             // ============================
@@ -760,7 +766,12 @@ export class ApplicantStagesService {
             });
 
             if (!job) {
-                throw new NotFoundException('Job not found');
+                throw new NotFoundException({
+                    success: false,
+                    message: 'The selected Job was not found. Please refresh and try again.',
+                    error_code: 'STAGE_NOT_FOUND',
+                });
+
             }
 
             // ============================
@@ -1022,7 +1033,20 @@ export class ApplicantStagesService {
 
             await queryRunner.rollbackTransaction();
 
-            throw error;
+            console.error('Transaction failed:', error);
+
+
+            throw new InternalServerErrorException({
+
+                success: false,
+
+                message:
+                    'Unable to complete this operation. Please try again later.',
+
+                error_code:
+                    'OPERATION_FAILED',
+
+            });
 
         } finally {
 

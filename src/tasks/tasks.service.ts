@@ -103,29 +103,36 @@ export class TasksService {
         // =========================
         // Save Attachments
         // =========================
-        if (files && files.length > 0) {
-            const attachments =
-                files.map(file =>
-                    this.attachmentRepository.create({
-                        task_id: task.id,
-                        // Original file name
-                        filename:
-                            file.originalname,
-                        // Server location
-                        file_path:
-                            file.path,
-                        // Public URL
-                        file_url:
-                            `${process.env.APP_URL}/${file.path.replace(/\\/g, '/')}`,
+   if (files && files.length > 0) {
 
-                    })
+    const attachments = files.map(file => {
 
-                );
-            await this.attachmentRepository.save(
-                attachments
-            );
+        const filePath =
+            `uploads/task/${file.filename}`;
 
-        }
+
+        return this.attachmentRepository.create({
+
+            task_id: task.id,
+
+            filename:
+                file.originalname,
+
+            file_path:
+                filePath,
+
+            file_url:
+                `${process.env.APP_URL}/${filePath}`,
+
+        });
+
+    });
+
+
+    await this.attachmentRepository.save(
+        attachments
+    );
+}
 
 
 

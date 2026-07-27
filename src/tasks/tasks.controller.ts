@@ -34,7 +34,7 @@ export class TasksController {
     FilesInterceptor(
       'attachments',
       10,
-      multerConfig('tasks'),
+      multerConfig('task'),
     ),
   )
   createTask(
