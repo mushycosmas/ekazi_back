@@ -1034,7 +1034,7 @@ export class ApplicantStagesService {
     await queryRunner.rollbackTransaction();
 
     console.error(
-        'Screening Stage Failed:',
+        'Screening Stage Error:',
         error,
     );
 
@@ -1049,11 +1049,17 @@ export class ApplicantStagesService {
         error_code:
             'OPERATION_FAILED',
 
-        // frontend can display this
+        // Exact database/system error
         error_detail:
             error.message ?? 'Unknown error',
 
-        // only for development
+        // Show file + line number
+        error_location:
+            error.stack
+                ? error.stack.split('\n')[1]?.trim()
+                : null,
+
+        // Full stack only development
         stack:
             process.env.NODE_ENV === 'development'
                 ? error.stack
