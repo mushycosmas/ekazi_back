@@ -11,6 +11,7 @@ import {
 
 import { Users } from 'src/entities/users.entity';
 import { TaskAssignment } from './task-assignments.entity';
+import { TaskAttachment } from './task-attachments.entity';
 
 export enum TaskPriority {
     LOW = 'Low',
@@ -80,4 +81,13 @@ export class Task {
 
     @OneToMany(() => TaskAssignment, (a) => a.task)
     assignments: TaskAssignment[];
+
+    @OneToMany(
+        () => TaskAttachment,
+        attachment => attachment.task,
+        {
+            cascade: true,
+        },
+    )
+    attachments: TaskAttachment[];
 }

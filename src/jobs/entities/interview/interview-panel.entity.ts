@@ -15,7 +15,7 @@ import { Jobs } from '../job.entity';
 import { ClientStaff } from 'src/client/entities/client-staff.entity';
 
 
-@Entity('interview_panel')
+@Entity('interview_panels')
 export class InterviewPanel {
 
     @PrimaryGeneratedColumn()

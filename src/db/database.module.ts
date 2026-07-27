@@ -129,6 +129,7 @@ import { InterviewStageRound } from 'src/jobs/entities/interview/interview-stage
 import { InterviewAttendenceTracker } from 'src/jobs/entities/interview/interview-attendance-trackers.entity';
 import { InterviewType } from 'src/jobs/entities/interview/interview-type.entity';
 import { InterviewPanel } from 'src/jobs/entities/interview/interview-panel.entity';
+import { TaskAttachment } from 'src/tasks/entities/task-attachments.entity';
  
 
 
@@ -250,6 +251,7 @@ const allEntities = [
   Stage,
   Task,
   TaskAssignment,
+  TaskAttachment,
   ApplicantListing,
   JobTestResult,
   ClientStaff,

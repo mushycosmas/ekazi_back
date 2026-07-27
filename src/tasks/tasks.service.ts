@@ -86,11 +86,31 @@ export class TasksService {
         const page = Number(query.page || 1);
         const limit = Number(query.limit || 20);
 
-        const qb = this.taskRepository
-            .createQueryBuilder('task')
-            // .leftJoinAndSelect('task.creator', 'creator')
-            .where('task.created_by = :userId', { userId })
-            .orderBy('task.id', 'DESC');
+        // const qb = this.taskRepository
+        //     .createQueryBuilder('task')
+        //     // .leftJoinAndSelect('task.creator', 'creator')
+        //     .where('task.created_by = :userId', { userId })
+        //     .orderBy('task.id', 'DESC');
+     const qb = this.taskRepository
+    .createQueryBuilder('task')
+    .leftJoinAndSelect('task.assignments', 'assignment')
+    .leftJoinAndSelect('assignment.user', 'assignedUser')
+
+    .select([
+        'task',
+
+        'assignment.id',
+        'assignment.task_id',
+        'assignment.user_id',
+        'assignment.assigned_at',
+
+        'assignedUser.id',
+        'assignedUser.username',
+        'assignedUser.email',
+    ])
+
+    .where('task.created_by = :userId', { userId })
+    .orderBy('task.id', 'DESC');
         if (query.search) {
             qb.andWhere(
                 '(task.title LIKE :search OR task.description LIKE :search)',

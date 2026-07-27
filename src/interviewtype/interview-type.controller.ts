@@ -34,7 +34,6 @@ export class InterviewTypeController {
     }
 
     @Get()
-    @UseGuards(SanctumGuard)
     findAll(
  
     ) {

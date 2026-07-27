@@ -50,6 +50,8 @@ import { ApplicantStagesModule } from './stage/applicant-stages.module';
 import { JobUniversalTypesModule } from './jobtypes/job-universal-types.module';
 import { LanguageWritesModule } from './Languagewrites/language-writes.module';
 import { LanguageUnderstandsModule } from './languageunderstands/language-understands.module';
+import { ClientStaffModule } from './client/client-staff.module';
+import { InterviewTypeModule } from './interviewtype/interview-type.module';
 
  
 // ... other imports
@@ -68,7 +70,8 @@ import { LanguageUnderstandsModule } from './languageunderstands/language-unders
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
-    JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule,
+    JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule, ClientStaffModule,
+    InterviewTypeModule
 
     // ... other modules
   ],
