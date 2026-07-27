@@ -1,5 +1,6 @@
 import {
     Injectable,
+    InternalServerErrorException,
     NotFoundException,
 } from '@nestjs/common';
 
@@ -85,9 +86,11 @@ export class InterviewStage {
 
             if (!stage) {
 
-                throw new NotFoundException(
-                    'Stage not found'
-                );
+                throw new NotFoundException({
+                    success: false,
+                    message: 'The selected recruitment stage was not found.',
+                    error_code: 'STAGE_NOT_FOUND',
+                });
 
             }
             // ============================
@@ -109,9 +112,11 @@ export class InterviewStage {
 
             if (!job) {
 
-                throw new NotFoundException(
-                    'Job not found'
-                );
+                throw new NotFoundException({
+                    success: false,
+                    message: 'The selected job was not found. Please check the job and try again.',
+                    error_code: 'JOB_NOT_FOUND',
+                });
 
             }
 
@@ -545,8 +550,16 @@ export class InterviewStage {
             };
         }
         catch (error) {
+
             await queryRunner.rollbackTransaction();
-            throw error;
+
+            console.error('Interview Stage Error:', error);
+
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Unable to complete this operation. Please try again.',
+                error_code: 'INTERVIEW_STAGE_FAILED',
+            });
         }
         finally {
 
@@ -804,7 +817,18 @@ export class InterviewStage {
                 error,
             );
 
-            throw error;
+
+            throw new InternalServerErrorException({
+
+                success: false,
+
+                message:
+                    'Unable to send interview invitation email. Please try again later.',
+
+                error_code:
+                    'INTERVIEW_EMAIL_FAILED',
+
+            });
 
         }
 
@@ -1051,7 +1075,15 @@ export class InterviewStage {
                 error,
             );
 
-            throw error;
+            throw new InternalServerErrorException({
+
+                success: false,
+                message:
+                    'Unable to send interview invitation to the internal interviewer. Please try again later.',
+                error_code:
+                    'INTERNAL_INTERVIEW_EMAIL_FAILED',
+
+            });
 
         }
 
@@ -1293,7 +1325,15 @@ export class InterviewStage {
                 error,
             );
 
-            throw error;
+            throw new InternalServerErrorException({
+                success: false,
+                message:
+                    'Unable to send interview invitation to the external participant. Please try again later.',
+
+                error_code:
+                    'EXTERNAL_INTERVIEW_EMAIL_FAILED',
+
+            });
 
         }
 

@@ -98,50 +98,50 @@ export class EmployerController {
       search,
       stage ? Number(stage) : undefined);
   }
-  @Get('tasks')
-  @UseGuards(SanctumGuard)
-  getTasks(
-    @CurrentUser() user: Users,
-    @Query() query: TaskQueryDto,
-  ) {
-    return this.tasksService.findAll(user.id, query);
-  }
+  // @Get('tasks')
+  // @UseGuards(SanctumGuard)
+  // getTasks(
+  //   @CurrentUser() user: Users,
+  //   @Query() query: TaskQueryDto,
+  // ) {
+  //   return this.tasksService.findAll(user.id, query);
+  // }
 
-  @Post('tasks')
-  @UseGuards(SanctumGuard)
-  create(
-    @CurrentUser() user: Users,
-    @Body() dto: CreateTaskDto,
-  ) {
-    return this.tasksService.create(user, dto);
-  }
-  @Put('tasks/:id')
-  @UseGuards(SanctumGuard)
-  updateTask(
-    @CurrentUser() user: Users,
-    @Param('id') id: number,
-    @Body() dto: UpdateTaskDto,
-  ) {
-    return this.tasksService.update(user.id, Number(id), dto);
-  }
+  // @Post('tasks')
+  // @UseGuards(SanctumGuard)
+  // create(
+  //   @CurrentUser() user: Users,
+  //   @Body() dto: CreateTaskDto,
+  // ) {
+  //   return this.tasksService.create(user, dto);
+  // }
+  // @Put('tasks/:id')
+  // @UseGuards(SanctumGuard)
+  // updateTask(
+  //   @CurrentUser() user: Users,
+  //   @Param('id') id: number,
+  //   @Body() dto: UpdateTaskDto,
+  // ) {
+  //   return this.tasksService.update(user.id, Number(id), dto);
+  // }
 
-  @Delete('tasks/:id')
-  @UseGuards(SanctumGuard)
-  removeTask(
-    @CurrentUser() user: Users,
-    @Param('id') id: number,
-  ) {
-    return this.tasksService.remove(user.id, Number(id));
-  }
+  // @Delete('tasks/:id')
+  // @UseGuards(SanctumGuard)
+  // removeTask(
+  //   @CurrentUser() user: Users,
+  //   @Param('id') id: number,
+  // ) {
+  //   return this.tasksService.remove(user.id, Number(id));
+  // }
 
-  @Post('task-assignments')
-  @UseGuards(SanctumGuard)
-  assignTask(
-    @Body('task_id') taskId: number,
-    @Body('user_id') userId: number,
-  ) {
-    return this.tasksService.assignTask(Number(taskId), Number(userId));
-  }
+  // @Post('task-assignments')
+  // @UseGuards(SanctumGuard)
+  // assignTask(
+  //   @Body('task_id') taskId: number,
+  //   @Body('user_id') userId: number,
+  // ) {
+  //   return this.tasksService.assignTask(Number(taskId), Number(userId));
+  // }
 
 
 

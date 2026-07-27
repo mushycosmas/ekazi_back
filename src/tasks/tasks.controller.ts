@@ -10,6 +10,8 @@ import {
   Req,
   ParseIntPipe,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 
 import { TasksService } from './tasks.service';
@@ -19,15 +21,34 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Users } from 'src/entities/users.entity';
 import { TaskQueryDto } from './dto/task-query.dto';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from 'src/common/upload/multer.config';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly service: TasksService) {}
+  constructor(private readonly service: TasksService) { }
 
   @Post()
   @UseGuards(SanctumGuard)
-  create(@Req() req, @Body() dto: CreateTaskDto) {
-    return this.service.create(req.user, dto);
+  @UseInterceptors(
+    FilesInterceptor(
+      'attachments',
+      10,
+      multerConfig('tasks'),
+    ),
+  )
+  createTask(
+    @Req() req,
+    @Body() dto: CreateTaskDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+
+    return this.service.create(
+      req.user,
+      dto,
+      files,
+    );
+
   }
 
   @Get()
@@ -40,13 +61,13 @@ export class TasksController {
   }
 
   @Get(':id')
- @UseGuards(SanctumGuard)
+  @UseGuards(SanctumGuard)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.service.findOne(id);
   }
 
   @Put(':id')
-    @UseGuards(SanctumGuard)
+  @UseGuards(SanctumGuard)
   updateTask(
     @CurrentUser() user: Users,
     @Param('id', ParseIntPipe) id: number,
@@ -56,14 +77,14 @@ export class TasksController {
   }
 
   @Delete(':id')
-    @UseGuards(SanctumGuard)
+  @UseGuards(SanctumGuard)
   removeTask(
     @CurrentUser() user: Users,
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.service.remove(user.id, id);
   }
-    // Assign task to user
+  // Assign task to user
   @Post(':id/assign')
   @UseGuards(SanctumGuard)
   assignTask(

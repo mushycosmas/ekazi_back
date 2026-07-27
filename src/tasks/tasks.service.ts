@@ -1,12 +1,14 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from './entities/tasks.entity';
-import { Repository } from 'typeorm';
+import { Repository , DataSource} from 'typeorm';
 import { Users } from 'src/entities/users.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskQueryDto } from './dto/task-query.dto';
 import { TaskAssignment } from './entities/task-assignments.entity';
+import { TaskAttachment } from './entities/task-attachments.entity';
+ 
 
 @Injectable()
 export class TasksService {
@@ -16,31 +18,148 @@ export class TasksService {
 
         @InjectRepository(TaskAssignment)
         private readonly assignmentRepo: Repository<TaskAssignment>,
+
+    @InjectRepository(TaskAttachment)
+    private readonly attachmentRepository: Repository<TaskAttachment>,
     ) { }
 
-    async create(user: Users, dto: CreateTaskDto) {
-        console.log('USER:', user); // DEBUG
-        try {
-            const task = this.taskRepository.create({
-                ...dto,
+    // async create(user: Users, dto: CreateTaskDto) {
+    //     console.log('USER:', user); // DEBUG
+    //     try {
+    //         const task = this.taskRepository.create({
+    //             ...dto,
+    //             created_by: user.id,
+    //         });
+
+    //         await this.taskRepository.save(task);
+
+    //         return {
+    //             success: true,
+    //             message: 'Task created successfully',
+    //             data: task,
+    //         };
+    //     } catch (error) {
+    //         throw new InternalServerErrorException({
+    //             success: false,
+    //             message: 'Failed to create task',
+    //             error: error.message,
+    //         });
+    //     }
+    // }
+ async create(
+    user: Users,
+    dto: CreateTaskDto,
+    files: Express.Multer.File[],
+) {
+
+    try {
+
+        // =========================
+        // Create Task
+        // =========================
+
+        const task = await this.taskRepository.save(
+
+            this.taskRepository.create({
+
+                title: dto.title,
+
+                description: dto.description,
+
+                deadline: dto.deadline,
+
+                priority: dto.priority,
+
+                status: dto.status,
+
                 created_by: user.id,
-            });
 
-            await this.taskRepository.save(task);
+            })
 
-            return {
-                success: true,
-                message: 'Task created successfully',
-                data: task,
-            };
-        } catch (error) {
-            throw new InternalServerErrorException({
-                success: false,
-                message: 'Failed to create task',
-                error: error.message,
-            });
+        );
+        // =========================
+        // Save Assignees
+        // =========================
+
+        if (dto.assignees && dto.assignees.length > 0) {
+            const assignments =
+                dto.assignees.map(userId =>
+
+                    this.assignmentRepo.create({
+
+                        task_id: task.id,
+
+                        user_id: Number(userId),
+
+                    })
+
+                );
+
+            await this.assignmentRepo.save(
+                assignments
+            );
+
         }
+        // =========================
+        // Save Attachments
+        // =========================
+        if (files && files.length > 0) {
+            const attachments =
+                files.map(file =>
+                    this.attachmentRepository.create({
+                        task_id: task.id,
+                        // Original file name
+                        filename:
+                            file.originalname,
+                        // Server location
+                        file_path:
+                            file.path,
+                        // Public URL
+                        file_url:
+                            `${process.env.APP_URL}/${file.path.replace(/\\/g, '/')}`,
+
+                    })
+
+                );
+            await this.attachmentRepository.save(
+                attachments
+            );
+
+        }
+
+
+
+        // =========================
+        // Return Response
+        // =========================
+
+        return {
+
+            success: true,
+
+            message: 'Task created successfully',
+
+            data: task,
+
+        };
+
+
+    } catch(error) {
+
+
+        throw new InternalServerErrorException({
+
+            success:false,
+
+            message:'Failed to create task',
+
+            error:error.message,
+
+        });
+
     }
+
+}
 
     // async findAll(userId: number, query: TaskQueryDto) {
     //     const page = Number(query.page || 1);
