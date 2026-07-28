@@ -58,36 +58,28 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
 
-  app.enableCors({
-
-    origin: [
-      'https://recruitment.ekazi.co.tz',
-      'https://ekazi.co.tz',
-      'http://localhost:5173',
-      'http://localhost:3000',
-    ],
-
-
-    methods: [
-      'GET',
-      'HEAD',
-      'PUT',
-      'PATCH',
-      'POST',
-      'DELETE',
-      'OPTIONS',
-    ],
-
-
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-    ],
-
-
-    credentials: true,
-
-  });
+app.enableCors({
+  origin: [
+    'https://recruitment.ekazi.co.tz',
+    'https://ekazi.co.tz',
+    'http://localhost:3000',
+  ],
+  methods: [
+    'GET',
+    'HEAD',
+    'PUT',
+    'PATCH',
+    'POST',
+    'DELETE',
+    'OPTIONS',
+  ],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Accept',
+  ],
+  credentials: true,
+});
 
 
 
