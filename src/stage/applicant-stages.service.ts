@@ -35,6 +35,7 @@ import { EmployedDto } from './dto/employed.dto';
 import { EmployedStage } from './stages/employed.stage';
 import { MoodleUser } from 'src/entities/moodle-user.entity';
 import * as bcrypt from 'bcrypt';
+import { execSync } from 'child_process';
 
 
 @Injectable()
@@ -966,31 +967,30 @@ export class ApplicantStagesService {
                 if (!applicant) {
                     continue;
                 }
-                let username = '';
-                let password = '';
-                try {
+                 let username = '';
+                 let password = '';
+                 let userPasssord='';
+            
                     if (applicant.user?.email) {
-                        const username = await this.generateUniqueUsername(
+                         username = await this.generateUniqueUsername(
                             applicant.user.email,
                         );
 
                         // Laravel uses bcrypt(username)
-                        const password = username;
+                        
+                   
+                        password=username;
+
 
                         await this.createMoodleUser(
                             applicant,
                             username,
-                            password,
+                            password!
                         );
 
                         console.log('✅ Moodle user created:', username);
                     }
-                } catch (error) {
-                    console.error('❌ Failed to create Moodle user');
-                    console.error(error);
-                    console.error(error?.message);
-                    console.error(error?.stack);
-                }
+             
                 // ============================
                 // Save Test Details
                 // ============================
@@ -1754,20 +1754,7 @@ export class ApplicantStagesService {
     }
 
 
-    private generatePassword(): string {
-        const chars =
-            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$';
-
-        let password = '';
-
-        for (let i = 0; i < 10; i++) {
-            password += chars.charAt(
-                Math.floor(Math.random() * chars.length)
-            );
-        }
-
-        return password;
-    }
+ 
     private async createMoodleUser(
         applicant,
         username: string,
@@ -1822,7 +1809,7 @@ export class ApplicantStagesService {
 
         const moodleUser = this.moodleUserRepository.create({
             username,
-            password: await bcrypt.hash(password, 10), // same as Laravel bcrypt()
+            password: this.generateMoodlePassword(password),// same as Laravel bcrypt()
             firstname: applicant.first_name,
             lastname: applicant.last_name,
             email: applicant.user.email,
@@ -1838,5 +1825,21 @@ export class ApplicantStagesService {
             moodleUser
         );
     }
+
+    private generateMoodlePassword(password: string): string {
+    try {
+        const hash = execSync(
+            `php -r "echo password_hash('${password}', PASSWORD_BCRYPT);"`
+        )
+        .toString()
+        .trim();
+
+        return hash;
+
+    } catch (error) {
+        console.error('Moodle password hash generation failed:', error);
+        throw new Error('Unable to generate Moodle password');
+    }
+}
 
 }
