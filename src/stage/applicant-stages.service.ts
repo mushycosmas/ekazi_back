@@ -34,6 +34,7 @@ import { OfferDto } from './dto/bulk-offer.dto';
 import { EmployedDto } from './dto/employed.dto';
 import { EmployedStage } from './stages/employed.stage';
 import { MoodleUser } from 'src/entities/moodle-user.entity';
+import * as bcrypt from 'bcrypt';
 
 
 @Injectable()
@@ -974,7 +975,7 @@ export class ApplicantStagesService {
                             applicant.user.email,
                         );
 
-                    password =this.generatePassword();
+                    password =username;
 
                     await this.createMoodleUser(
                         applicant,
@@ -1788,29 +1789,43 @@ export class ApplicantStagesService {
         }
 
 
-        const moodleUser =
-            this.moodleUserRepository.create({
+        // const moodleUser =
+        //     this.moodleUserRepository.create({
 
-                firstname:
-                    applicant.first_name,
+        //         firstname:
+        //             applicant.first_name,
 
-                lastname:
-                    applicant.last_name,
-                    
-                 middlename: applicant.middle_name,   
+        //         lastname:
+        //             applicant.last_name,
 
-                email:
-                    applicant.user.email,
+        //          middlename: applicant.middle_name,   
 
-                username,
+        //         email:
+        //             applicant.user.email,
 
-                password,
+        //         username,
 
-                confirmed: 1,
+        //         password:
 
-                mnethostid: 1,
+        //         confirmed: 1,
 
-            });
+        //         mnethostid: 1,
+
+        //     });
+      
+
+const moodleUser = this.moodleUserRepository.create({
+    username,
+    password: await bcrypt.hash(password, 10), // same as Laravel bcrypt()
+    firstname: applicant.first_name,
+    lastname: applicant.last_name,
+    email: applicant.user.email,
+    auth: 'manual',
+    confirmed: 1,
+    mnethostid: 1,
+    timecreated: Math.floor(Date.now() / 1000),
+    timemodified: Math.floor(Date.now() / 1000),
+});
 
 
         return await this.moodleUserRepository.save(
