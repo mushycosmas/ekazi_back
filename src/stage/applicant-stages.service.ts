@@ -968,22 +968,28 @@ export class ApplicantStagesService {
                 }
                 let username = '';
                 let password = '';
-                if (applicant.user?.email) {
-
-                    username =
-                        await this.generateUniqueUsername(
+                try {
+                    if (applicant.user?.email) {
+                        const username = await this.generateUniqueUsername(
                             applicant.user.email,
                         );
 
-                    password =username;
+                        // Laravel uses bcrypt(username)
+                        const password = username;
 
-                    await this.createMoodleUser(
-                        applicant,
-                        username,
-                        password,
-                    );
+                        await this.createMoodleUser(
+                            applicant,
+                            username,
+                            password,
+                        );
 
-
+                        console.log('✅ Moodle user created:', username);
+                    }
+                } catch (error) {
+                    console.error('❌ Failed to create Moodle user');
+                    console.error(error);
+                    console.error(error?.message);
+                    console.error(error?.stack);
                 }
                 // ============================
                 // Save Test Details
@@ -1812,20 +1818,20 @@ export class ApplicantStagesService {
         //         mnethostid: 1,
 
         //     });
-      
 
-const moodleUser = this.moodleUserRepository.create({
-    username,
-    password: await bcrypt.hash(password, 10), // same as Laravel bcrypt()
-    firstname: applicant.first_name,
-    lastname: applicant.last_name,
-    email: applicant.user.email,
-    auth: 'manual',
-    confirmed: 1,
-    mnethostid: 1,
-    timecreated: Math.floor(Date.now() / 1000),
-    timemodified: Math.floor(Date.now() / 1000),
-});
+
+        const moodleUser = this.moodleUserRepository.create({
+            username,
+            password: await bcrypt.hash(password, 10), // same as Laravel bcrypt()
+            firstname: applicant.first_name,
+            lastname: applicant.last_name,
+            email: applicant.user.email,
+            auth: 'manual',
+            confirmed: 1,
+            mnethostid: 1,
+            timecreated: Math.floor(Date.now() / 1000),
+            timemodified: Math.floor(Date.now() / 1000),
+        });
 
 
         return await this.moodleUserRepository.save(
