@@ -30,6 +30,7 @@ import { SelectionStage } from './stages/selection.stage';
 import { BackgroundCheckStage } from './stages/backbground-check.stage';
 import { OfferStage } from './stages/offer.stage';
 import { EmployedStage } from './stages/employed.stage';
+import { MoodleUser } from 'src/entities/moodle-user.entity';
 
 
 @Module({
@@ -56,7 +57,14 @@ import { EmployedStage } from './stages/employed.stage';
             
 
 
-        ])
+        ]),
+            // Moodle database repository
+        TypeOrmModule.forFeature(
+            [
+                MoodleUser
+            ],
+            'second_db'
+        ),
         
     ],
 

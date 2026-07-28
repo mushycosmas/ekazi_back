@@ -33,6 +33,7 @@ import { OfferStage } from './stages/offer.stage';
 import { OfferDto } from './dto/bulk-offer.dto';
 import { EmployedDto } from './dto/employed.dto';
 import { EmployedStage } from './stages/employed.stage';
+import { MoodleUser } from 'src/entities/moodle-user.entity';
 
 
 @Injectable()
@@ -51,21 +52,22 @@ export class ApplicantStagesService {
         private readonly employedStageHandler: EmployedStage,
 
 
+
+        @InjectRepository(MoodleUser, 'second_db')
+        private readonly moodleUserRepository: Repository<MoodleUser>,
+
         @InjectRepository(Jobs)
         private readonly jobRepository: Repository<Jobs>,
         @InjectRepository(Stage)
         private readonly stageRepository: Repository<Stage>,
         @InjectRepository(JobStage)
         private readonly jobStageRepository: Repository<JobStage>,
-
-
         @InjectRepository(ApplicantApplication)
         private readonly applicantApplicationRepository: Repository<ApplicantApplication>,
         @InjectRepository(Applicants)
         private readonly applicantsRepository: Repository<Applicants>,
         @InjectRepository(Users)
         private readonly usersRepository: Repository<Users>,
-
         @InjectRepository(ApplicantListing)
         private readonly applicantListingRepository: Repository<ApplicantListing>,
 
@@ -972,8 +974,13 @@ export class ApplicantStagesService {
                             applicant.user.email,
                         );
 
-                    password =
-                        this.generatePassword();
+                    password =this.generatePassword();
+
+                    await this.createMoodleUser(
+                        applicant,
+                        username,
+                        password,
+                    );
 
 
                 }
@@ -1753,6 +1760,62 @@ export class ApplicantStagesService {
         }
 
         return password;
+    }
+    private async createMoodleUser(
+        applicant,
+        username: string,
+        password: string,
+    ) {
+
+        const existingUser =
+            await this.moodleUserRepository.findOne({
+                where: {
+                    email: applicant.user.email,
+                },
+            });
+
+
+        if (existingUser) {
+
+            existingUser.username = username;
+
+            existingUser.password = password;
+
+            return await this.moodleUserRepository.save(
+                existingUser
+            );
+
+        }
+
+
+        const moodleUser =
+            this.moodleUserRepository.create({
+
+                firstname:
+                    applicant.first_name,
+
+                lastname:
+                    applicant.last_name,
+                    
+                 middlename: applicant.middle_name,   
+
+                email:
+                    applicant.user.email,
+
+                username,
+
+                password,
+
+                confirmed: 1,
+
+                mnethostid: 1,
+
+            });
+
+
+        return await this.moodleUserRepository.save(
+            moodleUser
+        );
     }
 
 }

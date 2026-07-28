@@ -130,6 +130,7 @@ import { InterviewAttendenceTracker } from 'src/jobs/entities/interview/intervie
 import { InterviewType } from 'src/jobs/entities/interview/interview-type.entity';
 import { InterviewPanel } from 'src/jobs/entities/interview/interview-panel.entity';
 import { TaskAttachment } from 'src/tasks/entities/task-attachments.entity';
+import { MoodleUser } from 'src/entities/moodle-user.entity';
  
 
 
@@ -264,6 +265,9 @@ const allEntities = [
   InterviewParticipantEmail,
   
 ];
+const secondDatabaseEntities=[
+  MoodleUser
+];
 
 @Module({
   
@@ -287,10 +291,31 @@ const allEntities = [
         // connectTimeout: 30000,
         // acquireTimeout: 30000,
       }),
-    }),
 
-    // Register all entities for injection
-    TypeOrmModule.forFeature(allEntities),
+    }),
+      // Second Database
+  // ===========================================
+  TypeOrmModule.forRootAsync({
+    name: 'second_db',
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (config: ConfigService) => ({
+      type: 'mysql',
+      host: config.get('DB_HOST_2'),
+      port: Number(config.get('DB_PORT_2')),
+      username: config.get('DB_USERNAME_2'),
+      password: config.get('DB_PASSWORD_2'),
+      database: config.get('DB_DATABASE_2'),
+
+      // Register only entities that belong to database 2
+      entities: secondDatabaseEntities,
+
+      synchronize: false,
+      logging: config.get('NODE_ENV') !== 'production',
+    }),
+  }),
+
+
   ],
   exports: [TypeOrmModule],
 })
