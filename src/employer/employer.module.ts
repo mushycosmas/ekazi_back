@@ -33,6 +33,9 @@ import { JobOtherRequirementsModule } from 'src/jobs/modules/job-other-requireme
 import { JobSettingsModule } from 'src/jobs/modules/job-settings.module';
 import { CvbuilderModule } from 'src/cvbuilder/cvbuilder.module';
 import { ApplicantStagesModule } from 'src/stage/applicant-stages.module';
+import { ApplicantService } from 'src/applicants/applicant.service';
+import { ApplicantModule } from 'src/applicants/applicant.module';
+import { JobMatchModule } from 'src/jobs/modules/job-match.module';
 
 @Module({
   imports: [
@@ -50,6 +53,7 @@ import { ApplicantStagesModule } from 'src/stage/applicant-stages.module';
       Task,
       TaskAssignment,
       
+      
     ]),
      TasksModule, 
      JobsModule,
@@ -62,6 +66,8 @@ import { ApplicantStagesModule } from 'src/stage/applicant-stages.module';
      JobSettingsModule,
      CvbuilderModule,
      ApplicantStagesModule,
+     ApplicantModule,
+     JobMatchModule,
   ],
  
   controllers: [

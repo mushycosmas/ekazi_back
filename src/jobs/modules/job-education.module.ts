@@ -8,9 +8,10 @@ import { JobReportTosModule } from './job-report-tos.module';
 import { JobRequirementsModule } from './job-requirements.module';
 import { JobOtherRequirementsModule } from './job-other-requirements.module';
 import { JobSettingsModule } from './job-settings.module';
+import { JobMatchModule } from './job-match.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([JobEducation]), JobLanguagesModule, JobReportTosModule, JobRequirementsModule, JobOtherRequirementsModule, JobSettingsModule],
+    imports: [TypeOrmModule.forFeature([JobEducation]), JobLanguagesModule, JobReportTosModule, JobRequirementsModule, JobOtherRequirementsModule, JobSettingsModule, JobMatchModule],
     controllers: [JobEducationController],
     providers: [JobEducationService],
     exports: [JobEducationService], // optional (use if other modules need it)

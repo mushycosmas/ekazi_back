@@ -30,6 +30,7 @@ import { JobAlerts } from 'src/jobs/entities/job-alerts.entity';
 import { JobCarts } from 'src/jobs/entities/job-carts.entity';
 import { JobMatchNotifications } from 'src/jobs/entities/job-match-notifications.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
+import { ApplicantFeaturedPlanSubscription } from './applicant-featured-plan-subscription.entity';
 
 @Entity('applicants')
 export class Applicants {
@@ -167,6 +168,12 @@ export class Applicants {
 
   @OneToMany(() => JobStage, (jobStage) => jobStage.applicant)
   jobStages: JobStage[];
+
+  @OneToMany(
+    () => ApplicantFeaturedPlanSubscription,
+    subscription => subscription.applicant
+)
+featuredPlanSubscriptions: ApplicantFeaturedPlanSubscription[];
 
 
 }

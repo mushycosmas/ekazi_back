@@ -788,7 +788,6 @@ export class ApplicantStagesService {
                     stage_id: dto.stage_id,
                 },
             );
-
             // ============================
             // Invite Location
             // ============================
@@ -830,12 +829,9 @@ export class ApplicantStagesService {
                             },
                         );
                 }
-
                 // ----------------------------
                 // Applicant Application
                 // ----------------------------
-
-
                 const application =
                     await this.applicantApplicationRepository.findOne({
                         where: {
@@ -843,8 +839,6 @@ export class ApplicantStagesService {
                             applicant_id: applicantId,
                         },
                     });
-
-
                 if (application) {
 
                     await queryRunner.manager.update(
@@ -857,7 +851,6 @@ export class ApplicantStagesService {
                     );
 
                 }
-
                 // ----------------------------
                 // Applicant Listing
                 // ----------------------------
@@ -967,30 +960,30 @@ export class ApplicantStagesService {
                 if (!applicant) {
                     continue;
                 }
-                 let username = '';
-                 let password = '';
-                 let userPasssord='';
-            
-                    if (applicant.user?.email) {
-                         username = await this.generateUniqueUsername(
-                            applicant.user.email,
-                        );
+                let username = '';
+                let password = '';
+                let userPasssord = '';
 
-                        // Laravel uses bcrypt(username)
-                        
-                   
-                        password=username;
+                if (applicant.user?.email) {
+                    username = await this.generateUniqueUsername(
+                        applicant.user.email,
+                    );
+
+                    // Laravel uses bcrypt(username)
 
 
-                        await this.createMoodleUser(
-                            applicant,
-                            username,
-                            password!
-                        );
+                    password = username;
 
-                        console.log('✅ Moodle user created:', username);
-                    }
-             
+
+                    await this.createMoodleUser(
+                        applicant,
+                        username,
+                        password!
+                    );
+
+                    console.log('✅ Moodle user created:', username);
+                }
+
                 // ============================
                 // Save Test Details
                 // ============================
@@ -1043,6 +1036,14 @@ export class ApplicantStagesService {
                     username,
 
                     password,
+
+                });
+                await this.sendClientScreeningEmail({
+                    applicant,
+                    job,
+                    username,
+                    password,
+                    dto,
 
                 });
 
@@ -1343,29 +1344,14 @@ export class ApplicantStagesService {
 
         const templateData = {
 
-            subject:
-                `Invitation to aptitude: ${job.position?.position_name} Application`,
-
-            email:
-                applicant.user?.email ?? '',
-
-            first_name:
-                applicant.first_name ?? '',
-
-            last_name:
-                applicant.last_name ?? '',
-
-            position_name:
-                job.position?.position_name ?? '',
-
-            client_name:
-                job.client?.client_name ?? '',
-
-            phone:
-                job.client?.phones?.[0]?.phone_number ?? '',
-
-            stage_name:
-                stage.stage_name ?? '',
+            subject: `Invitation to aptitude: ${job.position?.position_name} Application`,
+            email: applicant.user?.email ?? '',
+            first_name: applicant.first_name ?? '',
+            last_name: applicant.last_name ?? '',
+            position_name: job.position?.position_name ?? '',
+            client_name: job.client?.client_name ?? '',
+            phone: job.client?.phones?.[0]?.phone_number ?? '',
+            stage_name: stage.stage_name ?? '',
 
             // ============================
             // Interview/Test Location
@@ -1408,13 +1394,10 @@ export class ApplicantStagesService {
                             },
                         )
                     : '',
-
             test_duration:
                 dto.test_duration ?? '',
-
             test_deadline:
                 dto.test_deadline ?? '',
-
             test_deadline_formatted:
                 dto.test_deadline
                     ? new Date(dto.test_deadline)
@@ -1431,10 +1414,8 @@ export class ApplicantStagesService {
             // ============================
             // Generated Credentials
             // ============================
-
             user_name:
                 username,
-
             user_password:
                 password,
 
@@ -1462,29 +1443,153 @@ export class ApplicantStagesService {
                 process.env.MAIL_FROM_ADDRESS,
 
         };
-
-
-
         // =====================================
         // Email Template
         // =====================================
 
         const templatePath = path.join(
-
             process.cwd(),
-
             'src',
-
             'mail',
-
             'templates',
-
             'recruitment',
-
             'invite.template.html',
 
         );
+        const source =
+            fs.readFileSync(
+                templatePath,
+                'utf8',
+            );
+        Handlebars.registerHelper(
 
+            'eq',
+
+            (a, b) => a === b,
+
+        );
+        Handlebars.registerHelper(
+            'formatDate',
+            (value) => {
+                if (!value) return '';
+                return new Date(value)
+                    .toLocaleDateString('en-GB');
+
+            },
+
+        );
+        const template =
+            Handlebars.compile(
+                source,
+            );
+        const html =
+            template(
+                templateData,
+            );
+
+        try {
+            await this.mailService.sendMail({
+
+                from:
+                    `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+                to: templateData.email,
+                subject:
+                    templateData.subject,
+                html,
+            });
+            this.logger.log(
+                `Screening email sent to ${templateData.email}`,
+            );
+
+        }
+        catch (error) {
+
+            this.logger.error(
+                `Failed to send screening email to ${templateData.email}`,
+                error.stack,
+
+            );
+            throw error;
+
+        }
+
+    }
+    private async sendClientScreeningEmail({
+        applicant,
+        job,
+        username,
+        password,
+        dto,
+    }: {
+        applicant: any;
+        job: any;
+        username: string;
+        password: string;
+        dto: any;
+    }) {
+
+        const clientEmail =
+            job.client?.email ??
+            job.client?.emails?.[0]?.email ??
+            '';
+
+        const templateData = {
+
+            subject:
+                `Test Credentials Sent – ${applicant.first_name} ${applicant.last_name} for ${job.position?.position_name}`,
+
+            client_email: clientEmail,
+
+            client_name:
+                job.client?.client_name ?? '',
+
+            first_name:
+                applicant.first_name ?? '',
+
+            last_name:
+                applicant.last_name ?? '',
+
+            applicant_email:
+                applicant.user?.email ?? '',
+
+            position_name:
+                job.position?.position_name ?? '',
+
+
+            username,
+
+            password,
+
+
+            test_date:
+                dto.test_date ?? '',
+
+            test_duration:
+                dto.test_duration ?? '',
+
+
+            test_link:
+                dto.test_link ??
+                process.env.TEST_URL ??
+                '',
+
+
+            company_name:
+                process.env.APP_NAME ?? 'eKazi',
+
+        };
+
+
+        const templatePath = path.join(
+
+            process.cwd(),
+            'src',
+            'mail',
+            'templates',
+            'recruitment',
+            'client-aptitude-notification.template.html',
+
+        );
 
 
         const source =
@@ -1494,236 +1599,28 @@ export class ApplicantStagesService {
             );
 
 
-
-        Handlebars.registerHelper(
-
-            'eq',
-
-            (a, b) => a === b,
-
-        );
-
-
-
-        Handlebars.registerHelper(
-
-            'formatDate',
-
-            (value) => {
-
-                if (!value) return '';
-
-                return new Date(value)
-                    .toLocaleDateString('en-GB');
-
-            },
-
-        );
-
-
-
         const template =
-            Handlebars.compile(
-                source,
-            );
-
+            Handlebars.compile(source);
 
 
         const html =
-            template(
-                templateData,
-            );
+            template(templateData);
+        await this.mailService.sendMail({
+            from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+            to: templateData.client_email,
+            cc: [
+                'halidiselemani94@gmail.com',
+                'anita@exactmanpower.co.tz',
+            ],
+            subject: templateData.subject,
+            html,
 
-
-
-        try {
-
-
-            await this.mailService.sendMail({
-
-                from:
-
-                    `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
-
-
-                to:
-
-                    templateData.email,
-
-
-                subject:
-
-                    templateData.subject,
-
-
-                html,
-
-            });
-
-
-
-            this.logger.log(
-
-                `Screening email sent to ${templateData.email}`,
-
-            );
-
-
-
-        }
-        catch (error) {
-
-
-            this.logger.error(
-
-                `Failed to send screening email to ${templateData.email}`,
-
-                error.stack,
-
-            );
-
-
-            throw error;
-
-        }
-
+        });
+        this.logger.log(
+            `Client aptitude notification sent to ${clientEmail}`,
+        );
     }
-    // private async sendScreeningEmail(data: any) {
 
-    //     const {
-    //         applicant,
-    //         job,
-    //         stage,
-    //         inviteLocation,
-    //         dto,
-    //     } = data;
-
-    //     const templateData = {
-
-    //         subject:
-    //             `Invitation to aptitude: ${job.position?.position_name} Application`,
-
-    //         email:
-    //             applicant.user.email,
-
-    //         first_name:
-    //             applicant.first_name,
-
-    //         last_name:
-    //             applicant.last_name,
-
-    //         position_name:
-    //             job.position?.position_name ?? '',
-
-    //         client_name:
-    //             job.client?.client_name ?? '',
-
-    //         phone:
-    //             job.client?.phones?.[0]?.phone_number ?? '',
-
-    //         stage_name:
-    //             stage.stage_name,
-
-
-    //         test_date:
-    //             dto.test_date ?? '',
-
-    //         test_date_formatted:
-    //             dto.test_date
-    //                 ? new Date(dto.test_date)
-    //                     .toLocaleDateString('en-GB')
-    //                 : '',
-
-
-    //         test_duration:
-    //             dto.test_duration ?? '',
-
-
-    //         test_deadline:
-    //             dto.test_deadline ?? '',
-
-
-    //         test_deadline_formatted:
-    //             dto.test_deadline
-    //                 ? new Date(dto.test_deadline)
-    //                     .toLocaleDateString('en-GB')
-    //                 : '',
-
-
-    //         user_name:
-    //             dto.user_name ?? '',
-
-
-    //         user_password:
-    //             dto.user_password ?? '',
-
-
-    //         test_link:
-    //             dto.test_link ?? '',
-
-
-    //         job_details:
-    //             job,
-    //     };
-
-    //     const templatePath = path.join(
-
-    //         process.cwd(),
-
-    //         'src',
-    //         'mail',
-    //         'templates',
-    //         'recruitment',
-    //         'invite.template.html'
-
-    //     );
-
-    //     const source =
-    //         fs.readFileSync(
-    //             templatePath,
-    //             'utf8'
-    //         );
-
-    //     // Register helpers
-    //     Handlebars.registerHelper(
-    //         'eq',
-    //         (a, b) => a === b
-    //     );
-
-    //     // Compile template
-    //     const template = Handlebars.compile(source);
-
-    //     const html = template(templateData);
-
-    //     try {
-
-    //         await this.mailService.sendMail({
-
-    //             from:
-    //                 `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
-
-    //             to:
-    //                 templateData.email,
-
-    //             subject:
-    //                 templateData.subject,
-
-    //             html,
-
-    //         });
-
-
-    //     } catch (error) {
-
-    //         console.error(
-    //             'EMAIL ERROR:',
-    //             error
-    //         );
-
-    //         throw error;
-
-    //     }
-    // }
     private async generateUniqueUsername(
         email: string,
     ): Promise<string> {
@@ -1753,8 +1650,6 @@ export class ApplicantStagesService {
         }
     }
 
-
- 
     private async createMoodleUser(
         applicant,
         username: string,
@@ -1781,32 +1676,6 @@ export class ApplicantStagesService {
 
         }
 
-
-        // const moodleUser =
-        //     this.moodleUserRepository.create({
-
-        //         firstname:
-        //             applicant.first_name,
-
-        //         lastname:
-        //             applicant.last_name,
-
-        //          middlename: applicant.middle_name,   
-
-        //         email:
-        //             applicant.user.email,
-
-        //         username,
-
-        //         password:
-
-        //         confirmed: 1,
-
-        //         mnethostid: 1,
-
-        //     });
-
-
         const moodleUser = this.moodleUserRepository.create({
             username,
             password: this.generateMoodlePassword(password),// same as Laravel bcrypt()
@@ -1827,19 +1696,19 @@ export class ApplicantStagesService {
     }
 
     private generateMoodlePassword(password: string): string {
-    try {
-        const hash = execSync(
-            `php -r "echo password_hash('${password}', PASSWORD_BCRYPT);"`
-        )
-        .toString()
-        .trim();
+        try {
+            const hash = execSync(
+                `php -r "echo password_hash('${password}', PASSWORD_BCRYPT);"`
+            )
+                .toString()
+                .trim();
 
-        return hash;
+            return hash;
 
-    } catch (error) {
-        console.error('Moodle password hash generation failed:', error);
-        throw new Error('Unable to generate Moodle password');
+        } catch (error) {
+            console.error('Moodle password hash generation failed:', error);
+            throw new Error('Unable to generate Moodle password');
+        }
     }
-}
 
 }

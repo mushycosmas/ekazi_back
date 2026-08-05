@@ -52,6 +52,8 @@ import { LanguageWritesModule } from './Languagewrites/language-writes.module';
 import { LanguageUnderstandsModule } from './languageunderstands/language-understands.module';
 import { ClientStaffModule } from './client/client-staff.module';
 import { InterviewTypeModule } from './interviewtype/interview-type.module';
+import { ApplicantModule } from './applicants/applicant.module';
+import { JobMatchModule } from './jobs/modules/job-match.module';
 
  
 // ... other imports
@@ -71,7 +73,7 @@ import { InterviewTypeModule } from './interviewtype/interview-type.module';
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
     JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule, ClientStaffModule,
-    InterviewTypeModule
+    InterviewTypeModule ,ApplicantModule,JobMatchModule,
 
     // ... other modules
   ],

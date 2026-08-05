@@ -19,6 +19,8 @@ import { SelectionStageDto } from 'src/stage/dto/bulk-selection.dto';
 import { BackgroundChecktageDto } from 'src/stage/dto/bulk-background-check.dto';
 import { OfferDto } from 'src/stage/dto/bulk-offer.dto';
 import { EmployedDto } from 'src/stage/dto/employed.dto';
+import { ApplicantService } from 'src/applicants/applicant.service';
+import { JobMatchService } from 'src/jobs/services/job-match.service';
 
 
 @Controller('employer')
@@ -26,8 +28,9 @@ export class EmployerController {
   constructor(
     private readonly employerService: EmployerService,
     private readonly tasksService: TasksService,
-    private readonly cvbuilderService: CvbuilderService,
-    private readonly applicantStagesService: ApplicantStagesService
+    private readonly jobMatchService: JobMatchService,
+    private readonly applicantStagesService: ApplicantStagesService,
+    private readonly applicantService: ApplicantService
   ) { }
 
   @UseGuards(SanctumGuard)
@@ -98,58 +101,28 @@ export class EmployerController {
       search,
       stage ? Number(stage) : undefined);
   }
-  // @Get('tasks')
-  // @UseGuards(SanctumGuard)
-  // getTasks(
-  //   @CurrentUser() user: Users,
-  //   @Query() query: TaskQueryDto,
-  // ) {
-  //   return this.tasksService.findAll(user.id, query);
-  // }
+  
+    @Get('jobs/:jobId/match-applicants')
+    @UseGuards(SanctumGuard)
+    async findApplicantsByJob(
+        @Param('jobId', ParseIntPipe) jobId: number,
+        @Query('page') page = 1,
+        @Query('limit') limit = 20,
+        @Query('search') search?: string,
+    ) {
 
-  // @Post('tasks')
-  // @UseGuards(SanctumGuard)
-  // create(
-  //   @CurrentUser() user: Users,
-  //   @Body() dto: CreateTaskDto,
-  // ) {
-  //   return this.tasksService.create(user, dto);
-  // }
-  // @Put('tasks/:id')
-  // @UseGuards(SanctumGuard)
-  // updateTask(
-  //   @CurrentUser() user: Users,
-  //   @Param('id') id: number,
-  //   @Body() dto: UpdateTaskDto,
-  // ) {
-  //   return this.tasksService.update(user.id, Number(id), dto);
-  // }
+        return this.jobMatchService.findApplicantsByJob(
+            jobId,
+            Number(page),
+            Number(limit),
+            search,
+        );
+    }
 
-  // @Delete('tasks/:id')
-  // @UseGuards(SanctumGuard)
-  // removeTask(
-  //   @CurrentUser() user: Users,
-  //   @Param('id') id: number,
-  // ) {
-  //   return this.tasksService.remove(user.id, Number(id));
-  // }
-
-  // @Post('task-assignments')
-  // @UseGuards(SanctumGuard)
-  // assignTask(
-  //   @Body('task_id') taskId: number,
-  //   @Body('user_id') userId: number,
-  // ) {
-  //   return this.tasksService.assignTask(Number(taskId), Number(userId));
-  // }
-
-
-
-  // Endpoint to get applicant CV
-  @Get('applicant/:id')
+  @Get('applicants/:id')
   @UseGuards(SanctumGuard)
-  async getApplicantCv(@Param('id') id: string) {
-    const applicant = await this.cvbuilderService.getApplicantCv(+id);
+  async getApplicant(@Param('id') id: string) {
+    const applicant = await this.applicantService.getApplicant(+id);
     if (!applicant) {
       throw new NotFoundException(
         {
@@ -162,7 +135,29 @@ export class EmployerController {
     return applicant;
   }
 
-
+  @Get('applicants')
+  @UseGuards(SanctumGuard)
+  async getClientApplicants(
+    @CurrentUser() user: Users,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('search') search?: string,
+    @Query('position') position?: string,
+    @Query('education_level_id') education_level_id?: number,
+    @Query('industry_id') industry_id?: number,
+    @Query('position_level_id') position_level_id?: number,
+  ) {
+    return this.applicantService.getClientApplicants(
+      user,
+      Number(page),
+      Number(limit),
+      search,
+      position,
+      education_level_id ? Number(education_level_id) : undefined,
+      industry_id ? Number(industry_id) : undefined,
+      position_level_id ? Number(position_level_id) : undefined,
+    );
+  }
 
   @Get('jobs/:jobId/application-stages/:stageName')
   @UseGuards(SanctumGuard)
@@ -318,7 +313,7 @@ export class EmployerController {
         'Applicants processed successfully'
     };
   }
-    @Post('jobs/:jobId/application-stages/employed')
+  @Post('jobs/:jobId/application-stages/employed')
   @UseGuards(SanctumGuard)
   async employedStage(
     @CurrentUser() user: Users,
