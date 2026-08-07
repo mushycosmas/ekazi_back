@@ -199,9 +199,9 @@ export class EmployerJobsService {
                 success: true,
                 message: 'My jobs fetched successfully',
                 data: formatted,
-                current_page: page,
-                per_page: limit,
-                total_pages: Math.ceil(total / limit),
+                page: page,
+                limit: limit,
+                totalPages: Math.ceil(total / limit),
                 total,
                 stats: {
                     total_jobs: Number(stats.total_jobs || 0),

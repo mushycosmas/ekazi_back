@@ -133,6 +133,7 @@ import { TaskAttachment } from 'src/tasks/entities/task-attachments.entity';
 import { MoodleUser } from 'src/entities/moodle-user.entity';
 import { ApplicantFeaturedPlan } from 'src/entities/applicants/applicant-featured-plan.entity';
 import { ApplicantFeaturedPlanSubscription } from 'src/entities/applicants/applicant-featured-plan-subscription.entity';
+import { UserPermission } from 'src/entities/user-permission.entity';
  
 
 
@@ -234,6 +235,7 @@ const allEntities = [
   JobAbility,
   ApplicantApplication,
   JobStage,
+  UserPermission,
   
 
   // Other

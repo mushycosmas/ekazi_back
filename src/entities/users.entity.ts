@@ -23,6 +23,7 @@ import { Task } from 'src/tasks/entities/tasks.entity';
 import { TaskAssignment } from 'src/tasks/entities/task-assignments.entity';
 import { ApplicantApplication } from './applicants/applicant-applicantions.entity';
 import { ClientStaff } from 'src/client/entities/client-staff.entity';
+import { UserPermission } from './user-permission.entity';
 
 const VerifiedTransformer: ValueTransformer = {
   to: (value: number | boolean): number => {
@@ -129,10 +130,7 @@ export class Users {
   @OneToMany(() => Applicants, (applicant) => applicant.user)
   applicants: Applicants[];
 
-  // FIXED: Many-to-One relationship with Role
-  @ManyToOne(() => Role, (role) => role.users)
-  @JoinColumn({ name: 'role_id' })
-  role: Role;
+  
 
   @OneToMany(() => JobEvaluationAptitudes, (aptitude) => aptitude.user,)
   evaluationAptitudes: JobEvaluationAptitudes[];
@@ -178,4 +176,22 @@ export class Users {
     clientStaff => clientStaff.user
   )
   clientStaff: ClientStaff[];
+
+
+  @ManyToOne(
+    () => Role,
+    role => role.users,
+    {
+        nullable: true,
+    }
+)
+@JoinColumn({ name: 'role_id' })
+role: Role;
+
+
+@OneToMany(
+    () => UserPermission,
+    userPermission => userPermission.user,
+)
+userPermissions: UserPermission[];
 }

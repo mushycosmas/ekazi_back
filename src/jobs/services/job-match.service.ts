@@ -272,18 +272,18 @@ export class JobMatchService {
 
                 .andWhere(`${percentageExpr} >= :minMatch`)
                 .setParameter('minMatch', MIN_MATCH);
-                  if (search?.trim()) {
-                    qb.andWhere(
-                        `(
+            if (search?.trim()) {
+                qb.andWhere(
+                    `(
                             applicant.first_name LIKE :search
                             OR applicant.middle_name LIKE :search
                             OR applicant.last_name LIKE :search
                         )`,
-                        {
-                            search: `%${search.trim()}%`,
-                        },
-                    );
-                }
+                    {
+                        search: `%${search.trim()}%`,
+                    },
+                );
+            }
 
             return qb;
         };
@@ -369,26 +369,75 @@ export class JobMatchService {
 
                 match_percentage: percentage,
 
-                match_details: {
-                    position: { matched: scores.position > 0, score: scores.position },
-                    position_level: { matched: scores.position_level > 0, score: scores.position_level },
-                    industry: { matched: scores.industry > 0, score: scores.industry },
-                    education: { matched: scores.education > 0, score: scores.education },
-                    majors: { matched: scores.majors > 0, score: scores.majors },
-                    knowledge: { matched: scores.knowledge > 0, score: scores.knowledge },
-                    courses: { matched: scores.courses > 0, score: scores.courses },
-                    personalities: { matched: scores.personalities > 0, score: scores.personalities },
-                    cultures: { matched: scores.cultures > 0, score: scores.cultures },
-                    languages: { matched: scores.languages > 0, score: scores.languages },
-                    tools: { matched: scores.tools > 0, score: scores.tools },
-                    software: { matched: scores.software > 0, score: scores.software },
-                    experience: {
+                match_details: [
+                    {
+                        name: 'position',
+                        matched: scores.position > 0,
+                        score: scores.position,
+                    },
+                    {
+                        name: 'position_level',
+                        matched: scores.position_level > 0,
+                        score: scores.position_level,
+                    },
+                    {
+                        name: 'industry',
+                        matched: scores.industry > 0,
+                        score: scores.industry,
+                    },
+                    {
+                        name: 'education',
+                        matched: scores.education > 0,
+                        score: scores.education,
+                    },
+                    {
+                        name: 'majors',
+                        matched: scores.majors > 0,
+                        score: scores.majors,
+                    },
+                    {
+                        name: 'knowledge',
+                        matched: scores.knowledge > 0,
+                        score: scores.knowledge,
+                    },
+                    {
+                        name: 'courses',
+                        matched: scores.courses > 0,
+                        score: scores.courses,
+                    },
+                    {
+                        name: 'personalities',
+                        matched: scores.personalities > 0,
+                        score: scores.personalities,
+                    },
+                    {
+                        name: 'cultures',
+                        matched: scores.cultures > 0,
+                        score: scores.cultures,
+                    },
+                    {
+                        name: 'languages',
+                        matched: scores.languages > 0,
+                        score: scores.languages,
+                    },
+                    {
+                        name: 'tools',
+                        matched: scores.tools > 0,
+                        score: scores.tools,
+                    },
+                    {
+                        name: 'software',
+                        matched: scores.software > 0,
+                        score: scores.software,
+                    },
+                    {
+                        name: 'experience',
                         matched: scores.experience === 1,
                         score: scores.experience,
                         applicant_years: experienceYears,
-                        required_years: jobYearsExperience
+                        required_years: jobYearsExperience,
                     }
-                },
+                ],
 
                 created_at: applicant.created_at
             };
@@ -405,13 +454,11 @@ export class JobMatchService {
             },
 
             data,
+            page,
+            limit,
+            total,
+            totalPages
 
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages
-            }
 
         };
     }

@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,ManyToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,ManyToMany, OneToMany } from 'typeorm';
 import { Users } from './users.entity';
 import { Role } from './role.entity';
+import { UserPermission } from './user-permission.entity';
 
 @Entity('permissions')
 export class Permission {
@@ -22,4 +23,10 @@ export class Permission {
   // 🔥 inverse side (NO JoinTable here)
   @ManyToMany(() => Role, (role) => role.permissions)
   roles: Role[];
+
+  @OneToMany(
+    () => UserPermission,
+    userPermission => userPermission.permission,
+)
+userPermissions: UserPermission[];
 }
