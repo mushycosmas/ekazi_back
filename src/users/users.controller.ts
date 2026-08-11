@@ -22,16 +22,16 @@ export class UsersController {
     private readonly usersService: UsersService,
   ) {}
 
-  @Get()
-  @ApiOperation({
-    summary: 'Get all users for the authenticated client',
-  })
-  async findByClient(
-    @CurrentUser() user: Users,
-    @Query() query: Omit<GetUsersByClientDto, 'clientId'>,
-  ) {
-    return this.usersService.findByClient(user, query);
-  }
+  // @Get()
+  // @ApiOperation({
+  //   summary: 'Get all users for the authenticated client',
+  // })
+  // async findByClient(
+  //   @CurrentUser() user: Users,
+  //   @Query() query: Omit<GetUsersByClientDto, 'clientId'>,
+  // ) {
+  //   return this.usersService.findByClient(user, query);
+  // }
 
 @Get(':userId')
 async findOneByClient(

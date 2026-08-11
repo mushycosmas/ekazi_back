@@ -21,6 +21,9 @@ import { OfferDto } from 'src/stage/dto/bulk-offer.dto';
 import { EmployedDto } from 'src/stage/dto/employed.dto';
 import { ApplicantService } from 'src/applicants/applicant.service';
 import { JobMatchService } from 'src/jobs/services/job-match.service';
+import { UsersService } from 'src/users/users.service';
+import { ApiOperation } from '@nestjs/swagger';
+import { GetUsersByClientDto } from 'src/users/dto/get-user-by-client.dto';
 
 
 @Controller('employer')
@@ -30,9 +33,24 @@ export class EmployerController {
     private readonly tasksService: TasksService,
     private readonly jobMatchService: JobMatchService,
     private readonly applicantStagesService: ApplicantStagesService,
-    private readonly applicantService: ApplicantService
+    private readonly applicantService: ApplicantService,
+    private readonly usersService: UsersService,
   ) { }
 
+
+  
+  
+    @Get('users')
+    @UseGuards(SanctumGuard)
+    @ApiOperation({
+      summary: 'Get all users for the authenticated client',
+    })
+    async findByClient(
+      @CurrentUser() user: Users,
+      @Query() query: Omit<GetUsersByClientDto, 'clientId'>,
+    ) {
+      return this.usersService.findByClient(user, query);
+    }
   @UseGuards(SanctumGuard)
   @Get('account')
   employerAccount(@CurrentUser() user: Users) {

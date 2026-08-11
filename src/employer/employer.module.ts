@@ -36,6 +36,7 @@ import { ApplicantStagesModule } from 'src/stage/applicant-stages.module';
 import { ApplicantService } from 'src/applicants/applicant.service';
 import { ApplicantModule } from 'src/applicants/applicant.module';
 import { JobMatchModule } from 'src/jobs/modules/job-match.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { JobMatchModule } from 'src/jobs/modules/job-match.module';
      ApplicantStagesModule,
      ApplicantModule,
      JobMatchModule,
+     UsersModule,
   ],
  
   controllers: [
