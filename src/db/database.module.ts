@@ -134,6 +134,7 @@ import { MoodleUser } from 'src/entities/moodle-user.entity';
 import { ApplicantFeaturedPlan } from 'src/entities/applicants/applicant-featured-plan.entity';
 import { ApplicantFeaturedPlanSubscription } from 'src/entities/applicants/applicant-featured-plan-subscription.entity';
 import { UserPermission } from 'src/entities/user-permission.entity';
+import { ClientStaffPosition } from 'src/client/entities/client-staff-position.entity';
  
 
 
@@ -269,6 +270,7 @@ const allEntities = [
   InterviewParticipantEmail,
   ApplicantFeaturedPlan,
   ApplicantFeaturedPlanSubscription,
+  ClientStaffPosition,
   
 ];
 const secondDatabaseEntities=[

@@ -72,6 +72,10 @@ async findByClient(
       'user.role',
       'role',
     )
+    //   .leftJoin(
+    //   'user.role',
+    //   'role',
+    // )
 
     .leftJoin(
       'role.permissions',

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ClientStaffService } from './client-staff.service';
 import { CreateClientStaffDto } from './dto/create-client-staff.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -8,18 +8,16 @@ import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 
 @Controller('client-staffs')
 export class ClientStaffController {
-       constructor(
+    constructor(
 
         private readonly service: ClientStaffService,
 
-    ) {}
+    ) { }
 
     @Post()
-
+    @UseGuards(SanctumGuard)
     create(
-
         @Body() dto: CreateClientStaffDto,
-
         @CurrentUser() user: Users,
 
     ) {
@@ -27,35 +25,39 @@ export class ClientStaffController {
         return this.service.create(dto, user);
 
     }
- @Get()
-  @UseGuards(SanctumGuard)
-findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
-    @Query('search') search?: string,
-    @Query('client_id') clientId?: number,
-) {
-    return this.service.findAll(
-        Number(page),
-        Number(limit),
-        search,
-        clientId ? Number(clientId) : undefined,
-    );
-}
- @Get(':id')
-   @UseGuards(SanctumGuard)
-async findOne(@Param('id') id: number) {
-    const data = await this.service.findOne(+id);
+    @Get()
+    @UseGuards(SanctumGuard)
+    async findAll(
+        @CurrentUser() user: Users,
+        @Query('page') page = 1,
+        @Query('limit') limit = 20,
+        @Query('search') search?: string,
+    ) {
+        if (!user.client_id) {
+            throw new NotFoundException('Client not found');
+        }
 
-    return {
-        success: true,
-        message: 'Client staff retrieved successfully',
-        data,
-    };
-}
+        return this.service.findAll(
+            Number(page),
+            Number(limit),
+            search,
+            user.client_id,
+        );
+    }
+    @Get(':id')
+    @UseGuards(SanctumGuard)
+    async findOne(@Param('id') id: number) {
+        const data = await this.service.findOne(+id);
+
+        return {
+            success: true,
+            message: 'Client staff retrieved successfully',
+            data,
+        };
+    }
 
     @Put(':id')
-
+  @UseGuards(SanctumGuard)
     update(
 
         @Param('id', ParseIntPipe) id: number,

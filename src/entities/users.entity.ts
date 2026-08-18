@@ -7,7 +7,9 @@ import {
   JoinTable,
   ManyToOne,
   JoinColumn, // Add this import
-  ValueTransformer
+  ValueTransformer,
+  CreateDateColumn,
+  UpdateDateColumn
 } from 'typeorm';
 import { Applicants } from './applicants/applicants.entity';
 import { Role } from './role.entity';
@@ -102,11 +104,20 @@ export class Users {
   @Column({ type: 'varchar', length: 100, nullable: true })
   temp_email: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
-  created_at: Date | null;
+  // @Column({ type: 'datetime', nullable: true })
+  // created_at: Date | null;
 
-  @Column({ type: 'datetime', nullable: true })
-  updated_at: Date | null;
+  // @Column({ type: 'datetime', nullable: true })
+  // updated_at: Date | null;
+    @CreateDateColumn({
+      type: 'timestamp',
+    })
+    created_at: Date;
+  
+    @UpdateDateColumn({
+      type: 'timestamp',
+    })
+    updated_at: Date;
 
   @Column({
     type: 'timestamp',

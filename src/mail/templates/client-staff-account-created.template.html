@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Your eKazi Staff Account</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333333;
+        }
+
+        .wrapper {
+            width: 100%;
+            padding: 30px 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* HEADER */
+
+        .header {
+            padding-bottom: 20px;
+        }
+
+        .brand {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 700;
+            color: #222222;
+        }
+
+        /* CONTENT */
+
+        .content {
+            padding-top: 10px;
+        }
+
+        .greeting {
+            margin: 0 0 18px;
+            font-size: 16px;
+            color: #222222;
+        }
+
+        .intro {
+            margin: 0 0 14px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #444444;
+        }
+
+        .company {
+            font-weight: 600;
+            color: #222222;
+        }
+
+        /* STAFF INFORMATION */
+
+        .staff-info {
+            margin-top: 28px;
+        }
+
+        .section-title {
+            margin: 0 0 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #222222;
+        }
+
+        .info-row {
+            margin-bottom: 9px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .info-label {
+            display: inline-block;
+            width: 90px;
+            color: #777777;
+        }
+
+        .info-value {
+            color: #333333;
+            font-weight: 600;
+        }
+
+        /* LOGIN CREDENTIALS */
+
+        .credentials {
+            margin-top: 28px;
+        }
+
+        .credentials-title {
+            margin: 0 0 6px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #222222;
+        }
+
+        .credentials-sub {
+            margin: 0 0 18px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #666666;
+        }
+
+        .credential {
+            margin-bottom: 14px;
+        }
+
+        .credential-label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #777777;
+        }
+
+        .credential-value {
+            display: block;
+            font-family: Consolas, Menlo, Monaco, monospace;
+            font-size: 14px;
+            color: #222222;
+            word-break: break-word;
+        }
+
+        .password {
+            font-weight: 700;
+        }
+
+        /* SECURITY */
+
+        .notice {
+            margin-top: 25px;
+        }
+
+        .notice-title {
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #222222;
+        }
+
+        .notice p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #555555;
+        }
+
+        /* LOGIN BUTTON */
+
+        .button-container {
+            margin: 28px 0;
+        }
+
+        .button {
+            display: inline-block;
+            background: #007bff;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 11px 24px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 3px;
+        }
+
+        /* CLOSING */
+
+        .closing {
+            margin-top: 18px;
+            font-size: 13.5px;
+            line-height: 1.7;
+            color: #444444;
+        }
+
+        .signoff {
+            margin-top: 24px;
+            color: #333333;
+        }
+
+        /* FOOTER */
+
+        .footer {
+            margin-top: 32px;
+            padding-top: 18px;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #888888;
+        }
+
+        .footer p {
+            margin: 4px 0;
+        }
+
+        @media only screen and (max-width: 600px) {
+
+            .wrapper {
+                padding: 25px 18px;
+            }
+
+            .info-label {
+                width: 80px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="wrapper">
+
+    <div class="container">
+
+        <!-- HEADER -->
+
+        <div class="header">
+
+            <p class="brand">
+                eKazi
+            </p>
+
+        </div>
+
+
+        <!-- CONTENT -->
+
+        <div class="content">
+
+            <!-- GREETING -->
+
+            <p class="greeting">
+                Dear {{full_name}},
+            </p>
+
+
+            <!-- INTRODUCTION -->
+
+            <p class="intro">
+
+                Your staff account has been successfully created
+                on the <strong>eKazi</strong> platform under
+                <span class="company">{{client_name}}</span>.
+
+            </p>
+
+
+            <p class="intro">
+
+                You can now use your account to access the platform
+                and perform the activities assigned to your position.
+
+            </p>
+
+
+            <!-- STAFF INFORMATION -->
+
+            <div class="staff-info">
+
+                <p class="section-title">
+                    Staff Information
+                </p>
+
+
+                <div class="info-row">
+
+                    <span class="info-label">
+                        Name
+                    </span>
+
+                    <span class="info-value">
+                        {{full_name}}
+                    </span>
+
+                </div>
+
+
+                <div class="info-row">
+
+                    <span class="info-label">
+                        Position
+                    </span>
+
+                    <span class="info-value">
+                        {{position_name}}
+                    </span>
+
+                </div>
+
+
+                <div class="info-row">
+
+                    <span class="info-label">
+                        Phone
+                    </span>
+
+                    <span class="info-value">
+                        {{phone_number}}
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- LOGIN CREDENTIALS -->
+
+            <div class="credentials">
+
+                <p class="credentials-title">
+                    Login Credentials
+                </p>
+
+                <p class="credentials-sub">
+                    Use the following credentials to access your eKazi account.
+                </p>
+
+
+                <div class="credential">
+
+                    <span class="credential-label">
+                        Username
+                    </span>
+
+                    <span class="credential-value">
+                        {{username}}
+                    </span>
+
+                </div>
+
+
+                <div class="credential">
+
+                    <span class="credential-label">
+                        Email
+                    </span>
+
+                    <span class="credential-value">
+                        {{email}}
+                    </span>
+
+                </div>
+
+
+                <div class="credential">
+
+                    <span class="credential-label">
+                        Temporary Password
+                    </span>
+
+                    <span class="credential-value password">
+                        {{password}}
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- SECURITY NOTICE -->
+
+            <div class="notice">
+
+                <div class="notice-title">
+                    Important Security Information
+                </div>
+
+                <p>
+
+                    Please change your password immediately after
+                    your first successful login. Keep your username
+                    and password confidential and do not share them
+                    with anyone.
+
+                </p>
+
+            </div>
+
+
+            <!-- LOGIN BUTTON -->
+
+            <div class="button-container">
+
+                <a
+                    href="{{login_url}}"
+                    class="button"
+                >
+                    Log in to eKazi
+                </a>
+
+            </div>
+
+
+            <!-- CLOSING -->
+
+            <p class="closing">
+
+                If you did not expect this account to be created,
+                please contact your organization's administrator
+                immediately.
+
+            </p>
+
+
+            <p class="closing signoff">
+
+                Kind regards,<br>
+
+                <strong>
+                    The eKazi Team
+                </strong>
+
+            </p>
+
+
+            <!-- FOOTER -->
+
+            <div class="footer">
+
+                <p>
+                    This email was sent from eKazi.
+                    Please do not reply directly to this email.
+                </p>
+
+                <p>
+                    This message contains confidential account
+                    information intended only for the recipient.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

@@ -38,6 +38,7 @@ import * as bcrypt from 'bcrypt';
 import { execSync } from 'child_process';
 
 
+
 @Injectable()
 export class ApplicantStagesService {
 
@@ -78,7 +79,6 @@ export class ApplicantStagesService {
 
         @InjectRepository(Regions)
         private readonly regionRepository: Repository<Regions>,
-
 
 
 
