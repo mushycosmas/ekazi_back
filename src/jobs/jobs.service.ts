@@ -720,11 +720,13 @@ export class JobsService {
         if (job.published === '1') {
 
             job.published = '0';
+            job.featured = true;
             job.status = 'unpublished';
 
         } else {
 
             job.published = '1';
+            job.featured= true;
             job.status = 'published';
 
         }

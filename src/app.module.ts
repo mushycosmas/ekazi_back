@@ -56,6 +56,8 @@ import { ApplicantModule } from './applicants/applicant.module';
 import { JobMatchModule } from './jobs/modules/job-match.module';
 import { UsersModule } from './users/users.module';
 import { ClientStaffPositionsModule } from './client-staff-positions/client-staff-positions.module';
+import { PermissionModule } from './permission/permission.module';
+import { AdminModule } from './admin/admin.module';
 
  
 // ... other imports
@@ -75,7 +77,10 @@ import { ClientStaffPositionsModule } from './client-staff-positions/client-staf
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
     JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule, ClientStaffModule,
-    InterviewTypeModule ,ApplicantModule,JobMatchModule,UsersModule,ClientStaffModule,ClientStaffPositionsModule,
+    InterviewTypeModule ,ApplicantModule,JobMatchModule,UsersModule,ClientStaffModule,ClientStaffPositionsModule,PermissionModule,
+
+    //admin  moudel here
+    AdminModule,
 
     // ... other modules
   ],
