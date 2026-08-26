@@ -58,6 +58,10 @@ import { UsersModule } from './users/users.module';
 import { ClientStaffPositionsModule } from './client-staff-positions/client-staff-positions.module';
 import { PermissionModule } from './permission/permission.module';
 import { AdminModule } from './admin/admin.module';
+import { PaymentModule } from './payment/payment.module';
+import { SubscriptionPlanFeaturesModule } from './subscriptions/subscription-plan-features.module';
+import { SubscriptionPlansModule } from './subscriptions/subscription-plans.module';
+ 
 
  
 // ... other imports
@@ -77,8 +81,9 @@ import { AdminModule } from './admin/admin.module';
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
     JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule, ClientStaffModule,
-    InterviewTypeModule ,ApplicantModule,JobMatchModule,UsersModule,ClientStaffModule,ClientStaffPositionsModule,PermissionModule,
-
+    InterviewTypeModule ,ApplicantModule,JobMatchModule,UsersModule,ClientStaffModule,ClientStaffPositionsModule,PermissionModule,PaymentModule,SubscriptionPlanFeaturesModule,
+    SubscriptionPlansModule,
+    
     //admin  moudel here
     AdminModule,
 

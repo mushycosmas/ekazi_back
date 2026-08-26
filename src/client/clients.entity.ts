@@ -37,6 +37,15 @@ export class Clients {
     @Column({ nullable: true, length: 100 })
     tin: string;
 
+    @Column({ nullable: true, length: 100 })
+    first_name: string;
+
+    @Column({ nullable: true, length: 100 })
+    middle_name: string;
+
+    @Column({ nullable: true, length: 100 })
+    last_name: string;
+
     @Column({ nullable: true })
     type_id: number;
 

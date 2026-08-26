@@ -135,6 +135,11 @@ import { ApplicantFeaturedPlan } from 'src/entities/applicants/applicant-feature
 import { ApplicantFeaturedPlanSubscription } from 'src/entities/applicants/applicant-featured-plan-subscription.entity';
 import { UserPermission } from 'src/entities/user-permission.entity';
 import { ClientStaffPosition } from 'src/client/entities/client-staff-position.entity';
+import { Subscription } from 'src/payment/entities/subscription.entity';
+import { SubscriptionPayment } from 'src/payment/entities/subscription-payment.entity';
+import { SubscriptionPlan } from 'src/payment/entities/subscription-plan.entity';
+import { SubscriptionFeature } from 'src/payment/entities/subscription-feature.entity';
+import { PlanFeature } from 'src/payment/entities/plan-feature.entity';
  
 
 
@@ -271,6 +276,11 @@ const allEntities = [
   ApplicantFeaturedPlan,
   ApplicantFeaturedPlanSubscription,
   ClientStaffPosition,
+  Subscription,
+  SubscriptionPayment,
+  SubscriptionPlan,
+  SubscriptionFeature,
+  PlanFeature,
   
 ];
 const secondDatabaseEntities=[
