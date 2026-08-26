@@ -264,14 +264,33 @@ export class PaymentService {
     // ============================================================
     // INITIATE PAYMENT
     // ============================================================
+ async initiatePayment(
+    dto: InitiatePaymentDto,
+    user: Users,
+) {
 
-    async initiatePayment(
+    try {
 
-        dto: InitiatePaymentDto,
+        this.logger.log(
+            `========== PAYMENT INITIATION START ==========`,
+        );
 
-        user: Users,
+        this.logger.log(
+            `User ID: ${user?.id}`,
+        );
 
-    ) {
+        this.logger.log(
+            `Plan ID: ${dto?.plan_id}`,
+        );
+
+        this.logger.log(
+            `Provider: ${dto?.provider || 'snippe'}`,
+        );
+
+        this.logger.log(
+            `Phone: ${dto?.phone}`,
+        );
+
 
         // ========================================================
         // FIND PLAN
@@ -281,10 +300,7 @@ export class PaymentService {
             await this.subscriptionPlanRepository.findOne({
 
                 where: {
-
-                    id:
-                        dto.plan_id,
-
+                    id: dto.plan_id,
                 },
 
             });
@@ -292,11 +308,25 @@ export class PaymentService {
 
         if (!plan) {
 
+            this.logger.error(
+                `PAYMENT ERROR: Subscription plan not found. Plan ID: ${dto.plan_id}`,
+            );
+
             throw new NotFoundException(
                 'Subscription plan not found',
             );
 
         }
+
+
+        this.logger.log(
+            `Plan found: ${JSON.stringify({
+                id: plan.id,
+                role: plan.role,
+                price: plan.price,
+                duration_days: plan.duration_days,
+            })}`,
+        );
 
 
         // ========================================================
@@ -309,20 +339,43 @@ export class PaymentService {
                 : PaymentRole.EMPLOYER;
 
 
+        this.logger.log(
+            `Payment role: ${role}`,
+        );
+
+
         // ========================================================
         // RESOLVE CUSTOMER
         // ========================================================
 
-        const customer =
-            await this.resolveCustomer(
+        let customer;
 
-                user,
+        try {
 
-                role,
+            customer =
+                await this.resolveCustomer(
+                    user,
+                    role,
+                    dto.phone,
+                );
 
-                dto.phone,
+        } catch (error) {
 
+            this.logger.error(
+                `PAYMENT ERROR: Customer resolution failed`,
             );
+
+            this.logger.error(
+                error?.message || error,
+            );
+
+            this.logger.error(
+                error?.stack || '',
+            );
+
+            throw error;
+
+        }
 
 
         this.logger.log(
@@ -343,31 +396,53 @@ export class PaymentService {
         // CHECK ACTIVE SUBSCRIPTION
         // ========================================================
 
-        const currentSubscription =
-            await this.subscriptionRepository.findOne({
+        let currentSubscription;
 
-                where: {
+        try {
 
-                    user_id:
-                        user.id,
+            currentSubscription =
+                await this.subscriptionRepository.findOne({
 
-                    is_active:
-                        true,
+                    where: {
 
-                },
+                        user_id:
+                            user.id,
 
-                relations: [
-                    'plan',
-                ],
+                        is_active:
+                            true,
 
-                order: {
+                    },
 
-                    end_date:
-                        'DESC',
+                    relations: [
+                        'plan',
+                    ],
 
-                },
+                    order: {
 
-            });
+                        end_date:
+                            'DESC',
+
+                    },
+
+                });
+
+        } catch (error) {
+
+            this.logger.error(
+                `PAYMENT ERROR: Failed to load current subscription`,
+            );
+
+            this.logger.error(
+                error?.message || error,
+            );
+
+            this.logger.error(
+                error?.stack || '',
+            );
+
+            throw error;
+
+        }
 
 
         // ========================================================
@@ -376,6 +451,22 @@ export class PaymentService {
 
         let amount =
             Number(plan.price);
+
+
+        if (
+            !Number.isFinite(amount) ||
+            amount <= 0
+        ) {
+
+            this.logger.error(
+                `PAYMENT ERROR: Invalid payment amount: ${amount}`,
+            );
+
+            throw new BadRequestException(
+                'Invalid subscription plan amount',
+            );
+
+        }
 
 
         // ========================================================
@@ -478,6 +569,11 @@ export class PaymentService {
         }
 
 
+        this.logger.log(
+            `Final payment amount: ${amount} TZS`,
+        );
+
+
         // ========================================================
         // PREVENT DUPLICATE PENDING PAYMENT
         // ========================================================
@@ -523,6 +619,10 @@ export class PaymentService {
                 createdAt > fiveMinutesAgo
             ) {
 
+                this.logger.warn(
+                    `PAYMENT BLOCKED: Existing pending payment ${existingPayment.transaction_id}`,
+                );
+
                 return {
 
                     success:
@@ -546,10 +646,10 @@ export class PaymentService {
             }
 
 
-            /*
-             * Old pending payment is no longer considered active.
-             * Mark it failed before creating a new payment.
-             */
+            this.logger.warn(
+                `Old pending payment found. Marking failed: ${existingPayment.transaction_id}`,
+            );
+
 
             await this.subscriptionPaymentRepository.update(
 
@@ -579,6 +679,11 @@ export class PaymentService {
                 .toUpperCase()}`;
 
 
+        this.logger.log(
+            `Internal payment reference: ${reference}`,
+        );
+
+
         // ========================================================
         // CREATE PAYMENT
         // ========================================================
@@ -598,7 +703,7 @@ export class PaymentService {
                     reference,
 
                 provider:
-                    dto.provider?? 'snippe',
+                    dto.provider || 'snippe',
 
                 role,
 
@@ -637,6 +742,11 @@ export class PaymentService {
         );
 
 
+        this.logger.log(
+            `Payment saved as PENDING. Database ID: ${payment.id}`,
+        );
+
+
         // ========================================================
         // CALLBACK
         // ========================================================
@@ -644,6 +754,11 @@ export class PaymentService {
         const callbackUrl =
             process.env.PAYMENT_CALLBACK_URL ||
             'https://backend.ekazi.co.tz/api/payment/callback/snippe';
+
+
+        this.logger.log(
+            `Payment callback URL: ${callbackUrl}`,
+        );
 
 
         // ========================================================
@@ -655,40 +770,73 @@ export class PaymentService {
 
 
         this.logger.log(
-            `Using payment provider: ${dto.provider}`,
+            `Using payment provider: ${dto.provider || 'snippe'}`,
         );
 
 
         // ========================================================
-        // INITIATE
+        // INITIATE SNIPPE PAYMENT
         // ========================================================
 
-        const providerResponse =
-            await provider.initiate({
+        let providerResponse;
 
-                reference,
+        try {
 
-                amount,
+            this.logger.log(
+                `Calling payment provider...`,
+            );
 
-                phone:
-                    dto.phone,
 
-                currency:
-                    'TZS',
+            providerResponse =
+                await provider.initiate({
 
-                callbackUrl,
+                    reference,
 
-                customer,
+                    amount,
 
-            });
+                    phone:
+                        dto.phone,
 
-        // ========================================================
-        // PROVIDER FAILED
-        // ========================================================
+                    currency:
+                        'TZS',
 
-        if (
-            !providerResponse.success
-        ) {
+                    callbackUrl,
+
+                    customer,
+
+                });
+
+
+            this.logger.log(
+                `Provider response received: ${JSON.stringify(
+                    providerResponse,
+                )}`,
+            );
+
+        } catch (error) {
+
+            this.logger.error(
+                `PAYMENT ERROR: Provider initiation exception`,
+            );
+
+            this.logger.error(
+                `Message: ${error?.message || error}`,
+            );
+
+            this.logger.error(
+                `Stack: ${error?.stack || 'No stack trace'}`,
+            );
+
+            this.logger.error(
+                `Response: ${JSON.stringify(
+                    error?.response?.data || null,
+                )}`,
+            );
+
+
+            // ----------------------------------------------------
+            // Mark payment failed
+            // ----------------------------------------------------
 
             await this.subscriptionPaymentRepository.update(
 
@@ -698,8 +846,82 @@ export class PaymentService {
                 },
 
                 {
+
                     status:
                         PaymentStatus.FAILED,
+
+                    failure_reason:
+                        error?.response?.data?.message ||
+                        error?.message ||
+                        'Payment provider exception',
+
+                },
+
+            );
+
+
+            throw new InternalServerErrorException({
+
+                success:
+                    false,
+
+                message:
+                    'Payment provider error',
+
+                data: {
+
+                    reference,
+
+                    error:
+                        error?.response?.data ||
+                        error?.message,
+
+                },
+
+            });
+
+        }
+
+
+        // ========================================================
+        // PROVIDER FAILED
+        // ========================================================
+
+        if (
+            !providerResponse?.success
+        ) {
+
+            this.logger.error(
+                `PAYMENT ERROR: Provider returned failure`,
+            );
+
+            this.logger.error(
+                `Provider message: ${providerResponse?.message}`,
+            );
+
+            this.logger.error(
+                `Provider raw response: ${JSON.stringify(
+                    providerResponse?.raw,
+                )}`,
+            );
+
+
+            await this.subscriptionPaymentRepository.update(
+
+                {
+                    id:
+                        payment.id,
+                },
+
+                {
+
+                    status:
+                        PaymentStatus.FAILED,
+
+                    failure_reason:
+                        providerResponse?.message ||
+                        'Payment initiation failed',
+
                 },
 
             );
@@ -711,49 +933,97 @@ export class PaymentService {
                     false,
 
                 message:
-                    providerResponse.message ||
+                    providerResponse?.message ||
                     'Payment initiation failed',
 
                 data:
-                    providerResponse.raw,
+                    providerResponse?.raw,
 
             });
 
         }
+
+
         // ========================================================
-        // SAVE SNIPPE PROVIDER TRANSACTION ID
+        // SAVE SNIPPE TRANSACTION ID
         // ========================================================
 
-        if (!providerResponse.transactionId) {
+        if (
+            !providerResponse.transactionId
+        ) {
+
+            this.logger.error(
+                `PAYMENT ERROR: Snippe did not return transaction ID`,
+            );
+
+            this.logger.error(
+                `Provider response: ${JSON.stringify(
+                    providerResponse,
+                )}`,
+            );
+
 
             await this.subscriptionPaymentRepository.update(
+
                 {
-                    id: payment.id,
+                    id:
+                        payment.id,
                 },
+
                 {
+
                     status:
                         PaymentStatus.FAILED,
 
                     failure_reason:
                         'Snippe did not return a transaction reference',
+
                 },
+
             );
+
 
             throw new BadRequestException(
                 'Snippe did not return a transaction reference',
             );
+
         }
+
 
         payment.provider_transaction_id =
             providerResponse.transactionId;
+
 
         await this.subscriptionPaymentRepository.save(
             payment,
         );
 
+
+        this.logger.log(
+            `Snippe transaction ID saved: ${providerResponse.transactionId}`,
+        );
+
+
         // ========================================================
-        // RESPONSE
+        // SUCCESS
         // ========================================================
+
+        this.logger.log(
+            `========== PAYMENT INITIATION SUCCESS ==========`,
+        );
+
+        this.logger.log(
+            `Internal reference: ${reference}`,
+        );
+
+        this.logger.log(
+            `Snippe reference: ${providerResponse.transactionId}`,
+        );
+
+        this.logger.log(
+            `Amount: ${amount} TZS`,
+        );
+
 
         return {
 
@@ -773,7 +1043,7 @@ export class PaymentService {
                     'TZS',
 
                 provider:
-                    dto.provider,
+                    dto.provider || 'snippe',
 
                 customer: {
 
@@ -798,7 +1068,67 @@ export class PaymentService {
 
         };
 
+    } catch (error) {
+
+        // ========================================================
+        // GLOBAL PAYMENT ERROR
+        // ========================================================
+
+        this.logger.error(
+            `========== PAYMENT INITIATION ERROR ==========`,
+        );
+
+        this.logger.error(
+            `Message: ${error?.message || error}`,
+        );
+
+        this.logger.error(
+            `Stack: ${error?.stack || 'No stack trace'}`,
+        );
+
+        this.logger.error(
+            `Response: ${JSON.stringify(
+                error?.response?.data || null,
+            )}`,
+        );
+
+
+        // Do not convert Nest HTTP exceptions
+        // into generic 500 errors.
+
+        if (
+            error instanceof BadRequestException ||
+            error instanceof NotFoundException ||
+            error instanceof ConflictException ||
+            error instanceof InternalServerErrorException
+        ) {
+
+            throw error;
+
+        }
+
+
+        throw new InternalServerErrorException({
+
+            success:
+                false,
+
+            message:
+                'Payment initiation failed',
+
+            data: {
+
+                error:
+                    error?.message ||
+                    'Unknown payment error',
+
+            },
+
+        });
+
     }
+
+}
 
 
     // ============================================================
