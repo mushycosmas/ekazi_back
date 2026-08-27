@@ -507,7 +507,7 @@ export class ClientStaffService {
                     // User
                     'user.id',
                     'user.username',
-                    //  'user.email',
+                    'user.email',
                     'user.client_id',
                     //'user.hide',
                     // 'user.verified',
