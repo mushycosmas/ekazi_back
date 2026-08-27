@@ -61,6 +61,8 @@ import { AdminModule } from './admin/admin.module';
 import { PaymentModule } from './payment/payment.module';
 import { SubscriptionPlanFeaturesModule } from './subscriptions/subscription-plan-features.module';
 import { SubscriptionPlansModule } from './subscriptions/subscription-plans.module';
+import { TermConditionTypesModule } from './admin/term-condition-types/term-condition-types.module';
+import { TermConditionModule } from './admin/term-condition/term-condition.module';
  
 
  
@@ -82,7 +84,7 @@ import { SubscriptionPlansModule } from './subscriptions/subscription-plans.modu
     LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
     JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule, ClientStaffModule,
     InterviewTypeModule ,ApplicantModule,JobMatchModule,UsersModule,ClientStaffModule,ClientStaffPositionsModule,PermissionModule,PaymentModule,SubscriptionPlanFeaturesModule,
-    SubscriptionPlansModule,
+    SubscriptionPlansModule, TermConditionTypesModule,TermConditionModule,
     
     //admin  moudel here
     AdminModule,

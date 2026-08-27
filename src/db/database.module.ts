@@ -140,6 +140,8 @@ import { SubscriptionPayment } from 'src/payment/entities/subscription-payment.e
 import { SubscriptionPlan } from 'src/payment/entities/subscription-plan.entity';
 import { SubscriptionFeature } from 'src/payment/entities/subscription-feature.entity';
 import { PlanFeature } from 'src/payment/entities/plan-feature.entity';
+import { TermConditionType } from 'src/entities/term-condition-type.entity';
+import { TermCondition } from 'src/entities/term-condition.entity';
  
 
 
@@ -281,6 +283,8 @@ const allEntities = [
   SubscriptionPlan,
   SubscriptionFeature,
   PlanFeature,
+  TermConditionType,
+  TermCondition,
   
 ];
 const secondDatabaseEntities=[
