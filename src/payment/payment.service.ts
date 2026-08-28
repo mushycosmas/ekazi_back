@@ -22,7 +22,6 @@ import {
 
 import { Users } from 'src/entities/users.entity';
 
-
 import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { Clients } from 'src/client/clients.entity';
 
@@ -598,7 +597,7 @@ export class PaymentService {
                     reference,
 
                 provider:
-                    dto.provider?? 'snippe',
+                    dto.provider ?? 'snippe',
 
                 role,
 
@@ -643,19 +642,19 @@ export class PaymentService {
 
         const callbackUrl =
             process.env.PAYMENT_CALLBACK_URL ||
-            'https://backend.ekazi.co.tz/api/payment/callback/snippe';
+            'https://backend.ekazi.co.tz/api/payment/webhook/snippe';
 
 
         // ========================================================
-        // PROVIDER
+        // PROVIDER - FIXED: Pass provider name
         // ========================================================
 
         const provider =
-            this.paymentProviderFactory.getProvider();
+            this.paymentProviderFactory.getProvider(dto.provider);
 
 
         this.logger.log(
-            `Using payment provider: ${dto.provider}`,
+            `Using payment provider: ${dto.provider || 'snippe'}`,
         );
 
 
@@ -773,7 +772,7 @@ export class PaymentService {
                     'TZS',
 
                 provider:
-                    dto.provider,
+                    dto.provider || 'snippe',
 
                 customer: {
 
@@ -867,8 +866,9 @@ export class PaymentService {
         }
 
 
+        // FIXED: Pass provider name
         const provider =
-            this.paymentProviderFactory.getProvider();
+            this.paymentProviderFactory.getProvider('snippe');
 
 
         const verification =
@@ -928,10 +928,6 @@ export class PaymentService {
 
     }
 
-
-    // ============================================================
-    // SNIPPE WEBHOOK
-    // ============================================================
 
     // ============================================================
     // SNIPPE WEBHOOK
@@ -1166,11 +1162,11 @@ export class PaymentService {
             }
 
             // --------------------------------------------------------
-            // VERIFY PAYMENT WITH SNIPPE
+            // VERIFY PAYMENT WITH SNIPPE - FIXED: Pass provider name
             // --------------------------------------------------------
 
             const provider =
-                this.paymentProviderFactory.getProvider();
+                this.paymentProviderFactory.getProvider('snippe');
 
             const verification =
                 await provider.verify({
@@ -1409,9 +1405,9 @@ export class PaymentService {
                         cv_download_remaining:
                             plan.cv_download_limit ??
                             -1,
-                            cv_builder_remaining:plan.cv_builder_limit??
+
+                        cv_builder_remaining: plan.cv_builder_limit ??
                             -1,
-                          
 
                         is_active:
                             true,
