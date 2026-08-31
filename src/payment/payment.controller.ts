@@ -8,6 +8,8 @@ import {
     Query,
     Req,
     UseGuards,
+    Param,
+    BadRequestException,
 } from '@nestjs/common';
 
 import {
@@ -35,6 +37,22 @@ import { Users } from 'src/entities/users.entity';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 import { Public } from 'src/auth/decorators/public.decorator';
 import { SubscriptionPaymentsQueryDto } from './dto/subscription-payments-query.dto';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/role.enum';
+
+// ============================================================
+// DTOs for new endpoints (Fixed decorator usage)
+// ============================================================
+
+export class ListPaymentsQueryDto {
+    limit?: number;
+    offset?: number;
+}
+
+export class SearchPaymentsQueryDto {
+    reference: string;
+}
 
 @Controller('payment')
 export class PaymentController {
@@ -64,6 +82,7 @@ export class PaymentController {
 
         return this.paymentService.initiatePayment(dto, user);
     }
+
     // ============================================================
     // CURRENT SUBSCRIPTION (Protected)
     // ============================================================
@@ -83,26 +102,152 @@ export class PaymentController {
 
         return this.paymentService.currentSubscription(user);
     }
-  
+
+    // ============================================================
+    // SUBSCRIPTION PAYMENTS (Protected)
+    // ============================================================
+
     @Get('subscription-payments')
-     @UseGuards(SanctumGuard)
+    @UseGuards(SanctumGuard)
     async getSubscriptionPayments(
         @Req() req,
         @Query() query: SubscriptionPaymentsQueryDto,
     ) {
-
         return this.paymentService.getSubscriptionPayments(
             req.user,
             query,
         );
-
     }
+
+    // ============================================================
+    // 🔥 NEW: LIST SNIPPE PAYMENTS (Admin Only)
+    // ============================================================
+
+    @Get('snippe/list')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async listSnippePayments(
+        @Query() query: ListPaymentsQueryDto,
+    ) {
+        try {
+            // Validate and sanitize parameters
+            const limit = Math.min(Number(query.limit) || 20, 100);
+            const offset = Number(query.offset) || 0;
+
+            if (limit < 1) {
+                throw new BadRequestException('Limit must be at least 1');
+            }
+
+            if (offset < 0) {
+                throw new BadRequestException('Offset must be 0 or greater');
+            }
+
+            return await this.paymentService.listSnippePayments(limit, offset);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🔥 NEW: GET SNIPPE BALANCE (Admin Only)
+    // ============================================================
+
+    @Get('snippe/balance')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async getSnippeBalance() {
+        return this.paymentService.getSnippeBalance();
+    }
+
+    // ============================================================
+    // 🔥 NEW: SEARCH SNIPPE PAYMENTS (Admin Only)
+    // ============================================================
+
+    @Get('snippe/search')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async searchSnippePayments(
+        @Query() query: SearchPaymentsQueryDto,
+    ) {
+        try {
+            if (!query.reference || query.reference.trim().length === 0) {
+                throw new BadRequestException('Payment reference is required for search');
+            }
+
+            return await this.paymentService.searchSnippePayments(query.reference.trim());
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🔥 NEW: TRIGGER USSD PUSH (Admin Only)
+    // ============================================================
+
+    @Post('snippe/ussd-push/:reference')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async triggerUssdPush(
+        @Param('reference') reference: string,
+    ) {
+        try {
+            if (!reference || reference.trim().length === 0) {
+                throw new BadRequestException('Payment reference is required');
+            }
+
+            return await this.paymentService.triggerUssdPush(reference.trim());
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🔥 NEW: GET PAYMENT STATUS BY REFERENCE (Admin Only)
+    // ============================================================
+
+    @Get('snippe/payment/:reference')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async getPaymentStatus(
+        @Param('reference') reference: string,
+    ) {
+        try {
+            if (!reference || reference.trim().length === 0) {
+                throw new BadRequestException('Payment reference is required');
+            }
+
+            // Use the existing verify method from provider
+            const provider = this.paymentService['paymentProviderFactory'].getProvider('snippe');
+            const result = await provider.verify({ reference: reference.trim() });
+
+            if (!result.success) {
+                throw new BadRequestException('Failed to retrieve payment status');
+            }
+
+            // Fix: Handle different response structures
+            const responseData = result.data || result;
+            
+            return {
+                success: true,
+                data: responseData,
+                message: 'Payment status retrieved successfully'
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
     // ============================================================
     // SELCOM CALLBACK (Public)
     // ============================================================
 
     @Post('callback/selcom')
-    @Public() // Now this will work
+    @Public()
     @HttpCode(200)
     async selcomCallback(
         @Body() payload: any,

@@ -1471,9 +1471,73 @@ export class PaymentService {
 
     }
 
- // ============================================================
-// ALL SUBSCRIPTION PAYMENTS FOR CURRENT USER
+ // Add to PaymentService
+
 // ============================================================
+// LIST ALL PAYMENTS (with pagination)
+// ============================================================
+async listSnippePayments(
+    limit: number = 20,
+    offset: number = 0
+) {
+    const provider = this.paymentProviderFactory.getProvider('snippe');
+    
+    const response = await provider.listPayments({
+        limit,
+        offset
+    });
+    
+    return response;
+}
+
+// ============================================================
+// GET ACCOUNT BALANCE
+// ============================================================
+async getSnippeBalance() {
+    const provider = this.paymentProviderFactory.getProvider('snippe');
+    
+    const balance = await provider.getBalance();
+    
+    return {
+        success: true,
+        data: balance,
+        message: 'Account balance retrieved successfully'
+    };
+}
+
+// ============================================================
+// SEARCH PAYMENTS
+// ============================================================
+async searchSnippePayments(reference: string) {
+    const provider = this.paymentProviderFactory.getProvider('snippe');
+    
+    const results = await provider.searchPayments({
+        reference
+    });
+    
+    return {
+        success: true,
+        data: results,
+        message: 'Payment search completed'
+    };
+}
+
+// ============================================================
+// TRIGGER USSD PUSH
+// ============================================================
+async triggerUssdPush(reference: string) {
+    const provider = this.paymentProviderFactory.getProvider('snippe');
+    
+    const result = await provider.triggerUssdPush({
+        reference
+    });
+    
+    return {
+        success: true,
+        data: result,
+        message: 'USSD push triggered successfully'
+    };
+}
 
  // ============================================================
 // ALL SUBSCRIPTION PAYMENTS
