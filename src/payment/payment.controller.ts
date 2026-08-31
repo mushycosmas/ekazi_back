@@ -28,6 +28,7 @@ import {
 import {
     ConfigService,
 } from '@nestjs/config';
+import { Type } from 'class-transformer';
 
 import {
     InitiatePaymentDto,
@@ -40,14 +41,39 @@ import { SubscriptionPaymentsQueryDto } from './dto/subscription-payments-query.
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Role } from 'src/auth/role.enum';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsInt, Min, Max } from 'class-validator';
 
 // ============================================================
 // DTOs for new endpoints (Fixed decorator usage)
 // ============================================================
 
 export class ListPaymentsQueryDto {
-    limit?: number;
-    offset?: number;
+    @ApiPropertyOptional({
+        description: 'Results per page (max 100)',
+        default: 20,
+        minimum: 1,
+        maximum: 100,
+        example: 20,
+    })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Max(100)
+    @Type(() => Number)
+    limit?: number = 20;
+
+    @ApiPropertyOptional({
+        description: 'Pagination offset',
+        default: 0,
+        minimum: 0,
+        example: 0,
+    })
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    @Type(() => Number)
+    offset?: number = 0;
 }
 
 export class SearchPaymentsQueryDto {
