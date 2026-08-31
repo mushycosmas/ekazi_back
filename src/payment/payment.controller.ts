@@ -149,7 +149,7 @@ export class PaymentController {
     // 🔥 NEW: LIST SNIPPE PAYMENTS (Admin Only)
     // ============================================================
 
-    @Get('snippe/list')
+    @Get('snippe-list')
     @UseGuards(SanctumGuard, RolesGuard)
     // @Roles(Role.ADMIN)
     @HttpCode(200)
@@ -179,7 +179,7 @@ export class PaymentController {
     // 🔥 NEW: GET SNIPPE BALANCE (Admin Only)
     // ============================================================
 
-    @Get('snippe/balance')
+    @Get('snippe-balance')
     @UseGuards(SanctumGuard, RolesGuard)
     // @Roles(Role.ADMIN)
     @HttpCode(200)
@@ -191,7 +191,7 @@ export class PaymentController {
     // 🔥 NEW: SEARCH SNIPPE PAYMENTS (Admin Only)
     // ============================================================
 
-    @Get('snippe/search')
+    @Get('snippe-search')
     @UseGuards(SanctumGuard, RolesGuard)
     // @Roles(Role.ADMIN)
     @HttpCode(200)
@@ -235,7 +235,7 @@ export class PaymentController {
     // 🔥 NEW: GET PAYMENT STATUS BY REFERENCE (Admin Only)
     // ============================================================
 
-    @Get('snippe/payment/:reference')
+    @Get('snippe-payment/:reference')
     @UseGuards(SanctumGuard, RolesGuard)
     // @Roles(Role.ADMIN)
     @HttpCode(200)
