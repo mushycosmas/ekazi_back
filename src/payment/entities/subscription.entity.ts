@@ -80,11 +80,7 @@ export class Subscription {
     |--------------------------------------------------------------------------
     */
 
-    @Column({
-        type: 'enum',
-        enum: SubscriptionTarget,
-    })
-    role: SubscriptionTarget;
+     
 
 
     /*

@@ -5,6 +5,7 @@ import {
     Headers,
     HttpCode,
     Post,
+    Query,
     Req,
     UseGuards,
 } from '@nestjs/common';
@@ -32,7 +33,8 @@ import {
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Users } from 'src/entities/users.entity';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
-import { Public } from 'src/auth/decorators/public.decorator'; // Import this
+import { Public } from 'src/auth/decorators/public.decorator';
+import { SubscriptionPaymentsQueryDto } from './dto/subscription-payments-query.dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -40,7 +42,7 @@ export class PaymentController {
     constructor(
         private readonly paymentService: PaymentService,
         private readonly configService: ConfigService,
-    ) {}
+    ) { }
 
     // ============================================================
     // INITIATE PAYMENT (Protected)
@@ -62,7 +64,39 @@ export class PaymentController {
 
         return this.paymentService.initiatePayment(dto, user);
     }
+    // ============================================================
+    // CURRENT SUBSCRIPTION (Protected)
+    // ============================================================
 
+    @Get('current-subscriptions')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async getCurrentSubscription(
+        @CurrentUser() user: Users,
+    ) {
+        if (!user) {
+            return {
+                success: false,
+                message: 'Authenticated user not found',
+            };
+        }
+
+        return this.paymentService.currentSubscription(user);
+    }
+  
+    @Get('subscription-payments')
+     @UseGuards(SanctumGuard)
+    async getSubscriptionPayments(
+        @Req() req,
+        @Query() query: SubscriptionPaymentsQueryDto,
+    ) {
+
+        return this.paymentService.getSubscriptionPayments(
+            req.user,
+            query,
+        );
+
+    }
     // ============================================================
     // SELCOM CALLBACK (Public)
     // ============================================================
@@ -81,7 +115,7 @@ export class PaymentController {
     // ============================================================
 
     @Post('webhook/snippe')
-    @Public() 
+    @Public()
     @HttpCode(200)
     async snippeWebhook(
         @Req() req: Request & { rawBody?: Buffer },

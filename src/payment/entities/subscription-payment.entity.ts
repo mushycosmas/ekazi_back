@@ -107,6 +107,13 @@ export class SubscriptionPayment {
     })
     role: PaymentRole;
 
+    @Column({
+        type: 'varchar',
+        length: 50,
+        nullable: true,
+    })
+    payment_type: string | null;
+
 
     @Column({
         type: 'json',
@@ -154,5 +161,13 @@ export class SubscriptionPayment {
     })
     updated_at: Date;
 
-    
+    @ManyToOne(
+    () => SubscriptionPlan,
+)
+@JoinColumn({
+    name: 'subscription_plan_id',
+})
+subscriptionPlan: SubscriptionPlan;
+
+
 }

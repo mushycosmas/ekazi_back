@@ -27,6 +27,7 @@ import { Clients } from 'src/client/clients.entity';
 
 import { Subscription } from './entities/subscription.entity';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
+import { SubscriptionPaymentsQueryDto } from './dto/subscription-payments-query.dto';
 
 import {
     SubscriptionPayment,
@@ -745,6 +746,13 @@ export class PaymentService {
 
         payment.provider_transaction_id =
             providerResponse.transactionId;
+        // Get payment type returned by Snippe
+        payment.payment_type =
+            providerResponse.raw?.payment_type ||
+            providerResponse.raw?.data?.payment_type ||
+            providerResponse.raw?.payment_method ||
+            providerResponse.raw?.data?.payment_method ||
+            null;
 
         await this.subscriptionPaymentRepository.save(
             payment,
@@ -1411,6 +1419,7 @@ export class PaymentService {
 
                         is_active:
                             true,
+                        subscription_payment_id: payment.id,
 
                     },
 
@@ -1462,104 +1471,315 @@ export class PaymentService {
 
     }
 
+ // ============================================================
+// ALL SUBSCRIPTION PAYMENTS FOR CURRENT USER
+// ============================================================
+
+ // ============================================================
+// ALL SUBSCRIPTION PAYMENTS
+// SEARCH + PAGINATION
+// ============================================================
+
+async getSubscriptionPayments(
+    user: Users,
+    query: SubscriptionPaymentsQueryDto,
+) {
+
+    try {
+
+        const page =
+            Number(query.page) || 1;
+
+        const limit =
+            Number(query.limit) || 20;
+
+        const skip =
+            (page - 1) * limit;
+
+        const search =
+            query.search?.trim() || '';
+
+
+        // ========================================================
+        // QUERY BUILDER
+        // ========================================================
+
+        const queryBuilder =
+            this.subscriptionPaymentRepository
+                .createQueryBuilder('payment')
+
+                .leftJoinAndSelect(
+                    'payment.subscriptionPlan',
+                    'plan',
+                )
+
+                .where(
+                    'payment.user_id = :userId',
+                    {
+                        userId: user.id,
+                    },
+                )
+
+                // Client / Employer only
+                .andWhere(
+                    'payment.role = :role',
+                    {
+                        role: PaymentRole.EMPLOYER,
+                    },
+                );
+
+
+        // ========================================================
+        // SEARCH
+        // ========================================================
+
+        if (search) {
+
+            queryBuilder.andWhere(
+                `(
+                    payment.transaction_id LIKE :search
+                    OR payment.provider_transaction_id LIKE :search
+                    OR payment.payment_type LIKE :search
+                    OR payment.status LIKE :search
+                    OR payment.provider LIKE :search
+                    OR plan.name LIKE :search
+                )`,
+                {
+                    search: `%${search}%`,
+                },
+            );
+
+        }
+
+
+        // ========================================================
+        // PAGINATION
+        // ========================================================
+
+        queryBuilder
+            .orderBy(
+                'payment.created_at',
+                'DESC',
+            )
+
+            .skip(skip)
+
+            .take(limit);
+
+
+        // ========================================================
+        // EXECUTE
+        // ========================================================
+
+        const [
+            payments,
+            total,
+        ] =
+            await queryBuilder.getManyAndCount();
+
+
+        // ========================================================
+        // RESPONSE
+        // ========================================================
+
+        return {
+
+            success: true,
+
+            message:
+                'Subscription payments retrieved successfully',
+
+            data: payments.map(
+                (payment) => ({
+
+                    id:
+                        payment.id,
+
+                    subscription_plan_id:
+                        payment.subscription_plan_id,
+
+                    plan:
+                        payment.subscriptionPlan,
+
+                    amount:
+                        Number(payment.amount),
+
+                    transaction_id:
+                        payment.transaction_id,
+
+                    provider_transaction_id:
+                        payment.provider_transaction_id,
+
+                    provider:
+                        payment.provider,
+
+                    payment_type:
+                        payment.payment_type,
+
+                    status:
+                        payment.status,
+
+                    paid_at:
+                        payment.paid_at,
+
+                    failure_reason:
+                        payment.failure_reason,
+
+                    role:
+                        payment.role,
+
+                    created_at:
+                        payment.created_at,
+
+                    updated_at:
+                        payment.updated_at,
+
+                }),
+            ),
+
+           
+
+                page,
+
+                limit,
+
+                total,
+
+                totalPages:
+                    Math.ceil(
+                        total / limit,
+                    ),
+ 
+ 
+
+        };
+
+    } catch (error) {
+
+        this.logger.error(
+            'Error fetching subscription payments',
+            error,
+        );
+
+        throw new InternalServerErrorException(
+            'Failed to fetch subscription payments',
+        );
+
+    }
+
+}
 
     // ============================================================
-    // CURRENT SUBSCRIPTION
+    // CURRENT SUBSCRIPTION (With Full Payment Data)
     // ============================================================
 
     async currentSubscription(
         user: Users,
     ) {
-
-        const subscription =
-            await this.subscriptionRepository.findOne({
-
+        try {
+            const subscription = await this.subscriptionRepository.findOne({
                 where: {
-
-                    user_id:
-                        user.id,
-
-                    is_active:
-                        true,
-
+                    user_id: user.id,
+                    is_active: true,
                 },
-
                 relations: [
                     'plan',
                 ],
-
                 order: {
-
-                    end_date:
-                        'DESC',
-
+                    end_date: 'DESC',
                 },
-
             });
 
+            if (!subscription) {
+                return {
+                    success: false,
+                    message: 'No active subscription',
+                    data: null,
+                };
+            }
 
-        if (!subscription) {
+            if (new Date(subscription.end_date) < new Date()) {
+                subscription.is_active = false;
+                await this.subscriptionRepository.save(subscription);
+
+                return {
+                    success: false,
+                    message: 'Subscription has expired',
+                    data: null,
+                };
+            }
+
+            // ========================================================
+            // FETCH PAYMENT DATA
+            // ========================================================
+
+            // FIX: Use 'any' or define a proper interface for paymentData
+            let paymentData: any = null;
+
+            if (subscription.subscription_payment_id) {
+                const payment = await this.subscriptionPaymentRepository.findOne({
+                    where: {
+                        id: subscription.subscription_payment_id,
+                    },
+                });
+
+                if (payment) {
+                    paymentData = {
+                        id: payment.id,
+                        amount: Number(payment.amount),
+                        transaction_id: payment.transaction_id,
+                        provider_transaction_id: payment.provider_transaction_id,
+                        provider: payment.provider,
+                        status: payment.status,
+                        role: payment.role,
+                        paid_at: payment.paid_at,
+                        failure_reason: payment.failure_reason,
+                        meta: payment.meta,
+                        created_at: payment.created_at,
+                        updated_at: payment.updated_at,
+                    };
+                }
+            }
+
+            // ========================================================
+            // CALCULATE REMAINING DAYS
+            // ========================================================
+
+            const now = new Date();
+            const endDate = new Date(subscription.end_date);
+            const remainingDays = Math.max(0, Math.ceil(
+                (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+            ));
+
+            // ========================================================
+            // RETURN WITH PAYMENT DATA
+            // ========================================================
 
             return {
-
-                success:
-                    false,
-
-                message:
-                    'No active subscription',
-
-                data:
-                    null,
-
+                success: true,
+                message: 'Current subscription retrieved successfully',
+                data: {
+                    id: subscription.id,
+                    user_id: subscription.user_id,
+                    subscription_plan_id: subscription.subscription_plan_id,
+                    plan: subscription.plan,
+                    start_date: subscription.start_date,
+                    end_date: subscription.end_date,
+                    remaining_days: remainingDays,
+                    job_post_remaining: subscription.job_post_remaining,
+                    cv_download_remaining: subscription.cv_download_remaining,
+                    cv_builder_remaining: subscription.cv_builder_remaining,
+                    is_active: subscription.is_active,
+                    subscription_payment_id: subscription.subscription_payment_id,
+                    payment: paymentData, // Now this will work
+                    created_at: subscription.created_at,
+                    updated_at: subscription.updated_at,
+                },
             };
-
+        } catch (error) {
+            this.logger.error('Error fetching current subscription:', error);
+            throw new InternalServerErrorException('Failed to fetch current subscription');
         }
-
-
-        if (
-            new Date(
-                subscription.end_date,
-            ) < new Date()
-        ) {
-
-            subscription.is_active =
-                false;
-
-
-            await this.subscriptionRepository.save(
-                subscription,
-            );
-
-
-            return {
-
-                success:
-                    false,
-
-                message:
-                    'Subscription has expired',
-
-                data:
-                    null,
-
-            };
-
-        }
-
-
-        return {
-
-            success:
-                true,
-
-            message:
-                'Current subscription retrieved successfully',
-
-            data:
-                subscription,
-
-        };
-
     }
 
 }
