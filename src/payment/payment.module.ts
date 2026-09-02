@@ -101,6 +101,8 @@ import { Clients } from 'src/client/clients.entity';
     exports: [
 
         PaymentService,
+        PaymentProviderFactory,
+    
 
     ],
 

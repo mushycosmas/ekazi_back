@@ -1845,5 +1845,6 @@ async getSubscriptionPayments(
             throw new InternalServerErrorException('Failed to fetch current subscription');
         }
     }
+    
 
 }
