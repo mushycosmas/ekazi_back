@@ -1,4 +1,4 @@
-import { HttpException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Clients } from 'src/client/clients.entity';
@@ -522,149 +522,130 @@ export class AdminClientsService {
             });
         }
     }
-    async CompanyProfilesDetail(
-        page: number = 1,
-        limit: number = 10,
-        search?: string,
-    ) {
-        try {
-            page = Math.max(1, Number(page) || 1);
-            limit = Math.min(100, Math.max(1, Number(limit) || 10));
+ async CompanyProfilesDetail(clientId: number) {
+    try {
+        clientId = Number(clientId);
 
-            const skip = (page - 1) * limit;
-
-            const query = this.clientRepository
-                .createQueryBuilder('client')
-                .leftJoinAndSelect('client.addresses', 'addresses')
-                .leftJoinAndSelect('addresses.region', 'region')
-                .leftJoinAndSelect('region.country', 'addressCountry')
-                .leftJoinAndSelect('client.emails', 'emails')
-                .leftJoinAndSelect('client.phones', 'phones')
-                .leftJoinAndSelect('client.industry', 'industry')
-                .leftJoinAndSelect('client.country', 'country')
-                .leftJoinAndSelect('client.descriptions', 'descriptions')
-                .leftJoinAndSelect('client.type', 'type')
-                .leftJoinAndSelect('client.companySize', 'companySize');
-
-            // Search
-            if (search?.trim()) {
-                const keyword = `%${search.trim()}%`;
-
-                query.andWhere(
-                    `(
-                    client.client_name LIKE :keyword
-                    OR client.tin LIKE :keyword
-                    OR client.business LIKE :keyword
-                    OR emails.client_email LIKE :keyword
-                    OR phones.phone_number LIKE :keyword
-                )`,
-                    { keyword },
-                );
-            }
-
-            query
-                .orderBy('client.id', 'DESC')
-                .skip(skip)
-                .take(limit);
-
-            const [clients, total] = await query.getManyAndCount();
-
-            const totalPages = Math.ceil(total / limit);
-
-            return {
-                success: true,
-                message: 'Successfully retrieved company profiles',
-
-                data: clients.map((client) => ({
-                    id: client.id,
-                    featured: client.featured,
-                    is_verified: client.is_verified,
-
-                    name: client.client_name,
-                    tin: client.tin,
-                    business: client.business,
-
-                    industry: {
-                        id: client.industry?.id ?? null,
-                        name: client.industry?.industry_name ?? null,
-                    },
-
-                    type: {
-                        id: client.type?.id ?? null,
-                        type: client.type?.type_name ?? null,
-                    },
-
-                    company_size: {
-                        id: client.companySize?.id ?? null,
-                        name: client.companySize?.name ?? null,
-                    },
-
-                    description: client.descriptions?.[0]
-                        ? {
-                            id: client.descriptions[0].id,
-                            text: client.descriptions[0].description,
-                            website: client.descriptions[0].website,
-                            attachment: client.descriptions[0].attachment,
-                        }
-                        : null,
-
-                    founded_year: client.founded_year,
-
-                    logo: client.logo ?? null,
-
-                    email: client.emails?.[0]?.client_email ?? null,
-
-                    phone: client.phones?.[0]?.phone_number ?? null,
-
-                    fax: client.phones?.[0]?.fax ?? null,
-
-                    country: {
-                        id: client.country?.id ?? null,
-                        name: client.country?.name ?? null,
-                    },
-
-                    address: {
-                        region_id:
-                            client.addresses?.[0]?.region_id ?? null,
-
-                        region_name:
-                            client.addresses?.[0]?.region?.region_name ?? null,
-
-                        sub_location:
-                            client.addresses?.[0]?.sub_location ?? null,
-
-                        website:
-                            client.addresses?.[0]?.website ?? null,
-
-                        location_notes:
-                            client.addresses?.[0]?.location_notes ?? null,
-
-                        extra_communication:
-                            client.addresses?.[0]?.extra_communication ?? null,
-                    },
-                })),
-
-                pagination: {
-                    total,
-                    page,
-                    limit,
-                    total_pages: totalPages,
-                    has_next_page: page < totalPages,
-                    has_previous_page: page > 1,
-                },
-            };
-
-        } catch (error) {
-
-            if (error instanceof HttpException) {
-                throw error;
-            }
-
-            throw new InternalServerErrorException({
+        if (!clientId || clientId <= 0) {
+            throw new BadRequestException({
                 success: false,
-                message: 'Failed to fetch company profiles',
-                error: error.message,
+                message: 'Invalid client ID',
             });
         }
+
+        const client = await this.clientRepository
+            .createQueryBuilder('client')
+
+            .leftJoinAndSelect('client.addresses', 'addresses')
+            .leftJoinAndSelect('addresses.region', 'region')
+            .leftJoinAndSelect('region.country', 'addressCountry')
+
+            .leftJoinAndSelect('client.emails', 'emails')
+            .leftJoinAndSelect('client.phones', 'phones')
+
+            .leftJoinAndSelect('client.industry', 'industry')
+            .leftJoinAndSelect('client.country', 'country')
+            .leftJoinAndSelect('client.descriptions', 'descriptions')
+            .leftJoinAndSelect('client.type', 'type')
+            .leftJoinAndSelect('client.companySize', 'companySize')
+
+            .where('client.id = :clientId', { clientId })
+
+            .getOne();
+
+        if (!client) {
+            throw new NotFoundException({
+                success: false,
+                message: `Company profile with ID ${clientId} not found`,
+            });
+        }
+
+        return {
+            success: true,
+            message: 'Successfully retrieved company profile',
+
+            data: {
+                id: client.id,
+
+                featured: client.featured,
+                is_verified: client.is_verified,
+
+                name: client.client_name,
+                tin: client.tin,
+                business: client.business,
+
+                industry: {
+                    id: client.industry?.id ?? null,
+                    name: client.industry?.industry_name ?? null,
+                },
+
+                type: {
+                    id: client.type?.id ?? null,
+                    type: client.type?.type_name ?? null,
+                },
+
+                company_size: {
+                    id: client.companySize?.id ?? null,
+                    name: client.companySize?.name ?? null,
+                },
+
+                description: client.descriptions?.[0]
+                    ? {
+                        id: client.descriptions[0].id,
+                        text: client.descriptions[0].description,
+                        website: client.descriptions[0].website,
+                        attachment: client.descriptions[0].attachment,
+                    }
+                    : null,
+
+                founded_year: client.founded_year,
+
+                logo: client.logo ?? null,
+
+                email: client.emails?.[0]?.client_email ?? null,
+
+                phone: client.phones?.[0]?.phone_number ?? null,
+
+                fax: client.phones?.[0]?.fax ?? null,
+
+                country: {
+                    id: client.country?.id ?? null,
+                    name: client.country?.name ?? null,
+                },
+
+                address: {
+                    region_id:
+                        client.addresses?.[0]?.region_id ?? null,
+
+                    region_name:
+                        client.addresses?.[0]?.region?.region_name ?? null,
+
+                    sub_location:
+                        client.addresses?.[0]?.sub_location ?? null,
+
+                    website:
+                        client.addresses?.[0]?.website ?? null,
+
+                    location_notes:
+                        client.addresses?.[0]?.location_notes ?? null,
+
+                    extra_communication:
+                        client.addresses?.[0]?.extra_communication ?? null,
+                },
+            },
+        };
+
+    } catch (error) {
+
+        if (error instanceof HttpException) {
+            throw error;
+        }
+
+        throw new InternalServerErrorException({
+            success: false,
+            message: 'Failed to fetch company profile',
+            error: error.message,
+        });
     }
+}
 }

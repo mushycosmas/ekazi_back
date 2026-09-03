@@ -1,6 +1,8 @@
 import {
     Controller,
     Get,
+    Param,
+    ParseIntPipe,
     Query,
     UseGuards,
 } from '@nestjs/common';
@@ -48,5 +50,17 @@ export class AdminCompanyController {
             search,
             featured,
         );
+    }
+    @Get('employers/:clientId')
+    async EmployerProfilesDetail(
+        @Param('clientId', ParseIntPipe) clientId: number,
+    ) {
+        return this.adminCompanyService.CompanyProfilesDetail(clientId);
+    }
+    @Get('recruiters/:clientId')
+    async CompanyProfilesDetail(
+        @Param('clientId', ParseIntPipe) clientId: number,
+    ) {
+        return this.adminCompanyService.CompanyProfilesDetail(clientId);
     }
 }
