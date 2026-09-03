@@ -20,14 +20,16 @@ export class AdminCompanyController {
     async getAllrecruiter(
         @Query('page') page: number = 1,
 
-        @Query('limit') limit: number = 10,
+        @Query('limit') limit: number = 20,
 
         @Query('search') search?: string,
+        @Query('featured') featured?: string,
     ) {
         return this.adminCompanyService.totalRecruiters(
             page,
             limit,
             search,
+            featured,
         );
     }
     @Get('employers')
@@ -35,14 +37,16 @@ export class AdminCompanyController {
     async getAllEmployer(
         @Query('page') page: number = 1,
 
-        @Query('limit') limit: number = 10,
+        @Query('limit') limit: number = 20,
 
         @Query('search') search?: string,
+        @Query('featured') featured?: string,
     ) {
         return this.adminCompanyService.totalEmpoyers(
             page,
             limit,
             search,
+            featured,
         );
     }
 }

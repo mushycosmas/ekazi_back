@@ -53,6 +53,7 @@ export class AdminClientsService {
         page: number = 1,
         limit: number = 20,
         search?: string,
+        featured?: string,
     ) {
         try {
             page = Math.max(1, Number(page) || 1);
@@ -84,6 +85,20 @@ export class AdminClientsService {
                     'client.phones',
                     'phones',
                 );
+            // Featured filter
+            if (featured !== undefined) {
+                query.andWhere(
+                    'client.featured = :featured',
+                    {
+                        featured:
+                            featured === 'true' ||
+                                featured === '1'
+                                ? true
+                                : false,
+                    },
+                );
+            }
+
 
             // Search
             if (search?.trim()) {
@@ -267,6 +282,7 @@ export class AdminClientsService {
         page: number = 1,
         limit: number = 20,
         search?: string,
+        featured?: string,
     ) {
         try {
             page = Math.max(1, Number(page) || 1);
@@ -274,30 +290,62 @@ export class AdminClientsService {
 
             const skip = (page - 1) * limit;
 
+            // const query = this.clientRepository
+            //     .createQueryBuilder('client')
+
+            //     .leftJoinAndSelect(
+            //         'client.addresses',
+            //         'addresses',
+            //     )
+
+            //     .leftJoinAndSelect(
+            //         'client.type',
+            //         'type',
+            //     )
+
+            //     // Search email
+            //     .leftJoin(
+            //         'client.emails',
+            //         'emails',
+            //     )
+
+            //     // Search phone
+            //     .leftJoin(
+            //         'client.phones',
+            //         'phones',
+            //     );
             const query = this.clientRepository
                 .createQueryBuilder('client')
-
                 .leftJoinAndSelect(
                     'client.addresses',
                     'addresses',
                 )
-
                 .leftJoinAndSelect(
                     'client.type',
                     'type',
                 )
-
-                // Search email
                 .leftJoin(
                     'client.emails',
                     'emails',
                 )
-
-                // Search phone
                 .leftJoin(
                     'client.phones',
                     'phones',
                 );
+
+            // Featured filter
+            if (featured !== undefined) {
+                query.andWhere(
+                    'client.featured = :featured',
+                    {
+                        featured:
+                            featured === 'true' ||
+                                featured === '1'
+                                ? true
+                                : false,
+                    },
+                );
+            }
 
             // Search
             if (search?.trim()) {
