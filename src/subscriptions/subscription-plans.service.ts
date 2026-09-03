@@ -172,16 +172,33 @@ export class SubscriptionPlansService {
                 savedPlan.id,
             );
 
+        // } catch (error) {
+
+        //     await queryRunner.rollbackTransaction();
+
+        //     throw error;
+
+        // } finally {
+
+        //     await queryRunner.release();
+        // }
         } catch (error) {
 
-            await queryRunner.rollbackTransaction();
+    await queryRunner.rollbackTransaction();
 
-            throw error;
+    console.error('========================================');
+    console.error('CREATE SUBSCRIPTION PLAN ERROR');
+    console.error('Message:', error?.message);
+    console.error('Stack:', error?.stack);
+    console.error('Full error:', error);
+    console.error('========================================');
 
-        } finally {
+    throw error;
 
-            await queryRunner.release();
-        }
+} finally {
+
+    await queryRunner.release();
+}
     }
 
 
