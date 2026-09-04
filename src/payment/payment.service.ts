@@ -1736,115 +1736,249 @@ async getSubscriptionPayments(
     // ============================================================
     // CURRENT SUBSCRIPTION (With Full Payment Data)
     // ============================================================
+async currentSubscription(user: Users) {
+    try {
+        const subscription = await this.subscriptionRepository.findOne({
+            where: {
+                user_id: user.id,
+                is_active: true,
+            },
+            relations: ['plan'],
+            order: {
+                end_date: 'DESC',
+            },
+        });
 
-    async currentSubscription(
-        user: Users,
-    ) {
-        try {
-            const subscription = await this.subscriptionRepository.findOne({
-                where: {
-                    user_id: user.id,
-                    is_active: true,
-                },
-                relations: [
-                    'plan',
-                ],
-                order: {
-                    end_date: 'DESC',
-                },
-            });
+        if (!subscription) {
+            return {
+                success: false,
+                message: 'No active subscription',
+                data: [],
+            };
+        }
 
-            if (!subscription) {
-                return {
-                    success: false,
-                    message: 'No active subscription',
-                    data: null,
-                };
-            }
+        // Check expiration
+        if (new Date(subscription.end_date) < new Date()) {
+            subscription.is_active = false;
+            await this.subscriptionRepository.save(subscription);
 
-            if (new Date(subscription.end_date) < new Date()) {
-                subscription.is_active = false;
-                await this.subscriptionRepository.save(subscription);
+            return {
+                success: false,
+                message: 'Subscription has expired',
+                data: [],
+            };
+        }
 
-                return {
-                    success: false,
-                    message: 'Subscription has expired',
-                    data: null,
-                };
-            }
+        // ========================================================
+        // FETCH PAYMENT DATA
+        // ========================================================
 
-            // ========================================================
-            // FETCH PAYMENT DATA
-            // ========================================================
+        let paymentData: any = null;
 
-            // FIX: Use 'any' or define a proper interface for paymentData
-            let paymentData: any = null;
-
-            if (subscription.subscription_payment_id) {
-                const payment = await this.subscriptionPaymentRepository.findOne({
+        if (subscription.subscription_payment_id) {
+            const payment =
+                await this.subscriptionPaymentRepository.findOne({
                     where: {
                         id: subscription.subscription_payment_id,
                     },
                 });
 
-                if (payment) {
-                    paymentData = {
-                        id: payment.id,
-                        amount: Number(payment.amount),
-                        transaction_id: payment.transaction_id,
-                        provider_transaction_id: payment.provider_transaction_id,
-                        provider: payment.provider,
-                        status: payment.status,
-                        role: payment.role,
-                        paid_at: payment.paid_at,
-                        failure_reason: payment.failure_reason,
-                        meta: payment.meta,
-                        created_at: payment.created_at,
-                        updated_at: payment.updated_at,
-                    };
-                }
+            if (payment) {
+                paymentData = {
+                    id: payment.id,
+                    amount: Number(payment.amount),
+                    transaction_id: payment.transaction_id,
+                    provider_transaction_id:
+                        payment.provider_transaction_id,
+                    provider: payment.provider,
+                    status: payment.status,
+                    role: payment.role,
+                    paid_at: payment.paid_at,
+                    failure_reason: payment.failure_reason,
+                    meta: payment.meta,
+                    created_at: payment.created_at,
+                    updated_at: payment.updated_at,
+                };
             }
+        }
 
-            // ========================================================
-            // CALCULATE REMAINING DAYS
-            // ========================================================
+        // ========================================================
+        // CALCULATE REMAINING DAYS
+        // ========================================================
 
-            const now = new Date();
-            const endDate = new Date(subscription.end_date);
-            const remainingDays = Math.max(0, Math.ceil(
-                (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-            ));
+        const now = new Date();
+        const endDate = new Date(subscription.end_date);
 
-            // ========================================================
-            // RETURN WITH PAYMENT DATA
-            // ========================================================
+        const remainingDays = Math.max(
+            0,
+            Math.ceil(
+                (endDate.getTime() - now.getTime()) /
+                (1000 * 60 * 60 * 24),
+            ),
+        );
 
-            return {
-                success: true,
-                message: 'Current subscription retrieved successfully',
-                data: {
+        // ========================================================
+        // RETURN ARRAY
+        // ========================================================
+
+        return {
+            success: true,
+            message: 'Current subscription retrieved successfully',
+
+            data: [
+                {
                     id: subscription.id,
                     user_id: subscription.user_id,
-                    subscription_plan_id: subscription.subscription_plan_id,
+                    subscription_plan_id:
+                        subscription.subscription_plan_id,
+
                     plan: subscription.plan,
+
                     start_date: subscription.start_date,
                     end_date: subscription.end_date,
+
                     remaining_days: remainingDays,
-                    job_post_remaining: subscription.job_post_remaining,
-                    cv_download_remaining: subscription.cv_download_remaining,
-                    cv_builder_remaining: subscription.cv_builder_remaining,
+
+                    job_post_remaining:
+                        subscription.job_post_remaining,
+
+                    cv_download_remaining:
+                        subscription.cv_download_remaining,
+
+                    cv_builder_remaining:
+                        subscription.cv_builder_remaining,
+
                     is_active: subscription.is_active,
-                    subscription_payment_id: subscription.subscription_payment_id,
-                    payment: paymentData, // Now this will work
+
+                    subscription_payment_id:
+                        subscription.subscription_payment_id,
+
+                    payment: paymentData,
+
                     created_at: subscription.created_at,
                     updated_at: subscription.updated_at,
                 },
-            };
-        } catch (error) {
-            this.logger.error('Error fetching current subscription:', error);
-            throw new InternalServerErrorException('Failed to fetch current subscription');
-        }
+            ],
+        };
+    } catch (error) {
+        this.logger.error(
+            'Error fetching current subscription:',
+            error,
+        );
+
+        throw new InternalServerErrorException(
+            'Failed to fetch current subscription',
+        );
     }
+}
+    // async currentSubscription(
+    //     user: Users,
+    // ) {
+    //     try {
+    //         const subscription = await this.subscriptionRepository.findOne({
+    //             where: {
+    //                 user_id: user.id,
+    //                 is_active: true,
+    //             },
+    //             relations: [
+    //                 'plan',
+    //             ],
+    //             order: {
+    //                 end_date: 'DESC',
+    //             },
+    //         });
+
+    //         if (!subscription) {
+    //             return {
+    //                 success: false,
+    //                 message: 'No active subscription',
+    //                 data: null,
+    //             };
+    //         }
+
+    //         if (new Date(subscription.end_date) < new Date()) {
+    //             subscription.is_active = false;
+    //             await this.subscriptionRepository.save(subscription);
+
+    //             return {
+    //                 success: false,
+    //                 message: 'Subscription has expired',
+    //                 data: null,
+    //             };
+    //         }
+
+    //         // ========================================================
+    //         // FETCH PAYMENT DATA
+    //         // ========================================================
+
+    //         // FIX: Use 'any' or define a proper interface for paymentData
+    //         let paymentData: any = null;
+
+    //         if (subscription.subscription_payment_id) {
+    //             const payment = await this.subscriptionPaymentRepository.findOne({
+    //                 where: {
+    //                     id: subscription.subscription_payment_id,
+    //                 },
+    //             });
+
+    //             if (payment) {
+    //                 paymentData = {
+    //                     id: payment.id,
+    //                     amount: Number(payment.amount),
+    //                     transaction_id: payment.transaction_id,
+    //                     provider_transaction_id: payment.provider_transaction_id,
+    //                     provider: payment.provider,
+    //                     status: payment.status,
+    //                     role: payment.role,
+    //                     paid_at: payment.paid_at,
+    //                     failure_reason: payment.failure_reason,
+    //                     meta: payment.meta,
+    //                     created_at: payment.created_at,
+    //                     updated_at: payment.updated_at,
+    //                 };
+    //             }
+    //         }
+
+    //         // ========================================================
+    //         // CALCULATE REMAINING DAYS
+    //         // ========================================================
+
+    //         const now = new Date();
+    //         const endDate = new Date(subscription.end_date);
+    //         const remainingDays = Math.max(0, Math.ceil(
+    //             (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    //         ));
+
+    //         // ========================================================
+    //         // RETURN WITH PAYMENT DATA
+    //         // ========================================================
+
+    //         return {
+    //             success: true,
+    //             message: 'Current subscription retrieved successfully',
+    //             data: {
+    //                 id: subscription.id,
+    //                 user_id: subscription.user_id,
+    //                 subscription_plan_id: subscription.subscription_plan_id,
+    //                 plan: subscription.plan,
+    //                 start_date: subscription.start_date,
+    //                 end_date: subscription.end_date,
+    //                 remaining_days: remainingDays,
+    //                 job_post_remaining: subscription.job_post_remaining,
+    //                 cv_download_remaining: subscription.cv_download_remaining,
+    //                 cv_builder_remaining: subscription.cv_builder_remaining,
+    //                 is_active: subscription.is_active,
+    //                 subscription_payment_id: subscription.subscription_payment_id,
+    //                 payment: paymentData, // Now this will work
+    //                 created_at: subscription.created_at,
+    //                 updated_at: subscription.updated_at,
+    //             },
+    //         };
+    //     } catch (error) {
+    //         this.logger.error('Error fetching current subscription:', error);
+    //         throw new InternalServerErrorException('Failed to fetch current subscription');
+    //     }
+    // }
     
 
 }
