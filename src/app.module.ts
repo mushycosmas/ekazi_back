@@ -66,6 +66,7 @@ import { TermConditionModule } from './admin/term-condition/term-condition.modul
 import { AdminSubscriptionModule } from './admin/subscription/admin-subscription.module';
 import { AdminClientsModule } from './admin/Clients/admin-clients.module';
 import { AdminJobsModule } from './admin/job/admin-jobs.module';
+import { AdminApplicantsModule } from './admin/Applicants/admin-applicants.module';
  
 
  
@@ -90,7 +91,7 @@ import { AdminJobsModule } from './admin/job/admin-jobs.module';
     SubscriptionPlansModule, TermConditionTypesModule,TermConditionModule,AdminSubscriptionModule,AdminClientsModule,
     
     //admin  moudel here
-    AdminModule,AdminJobsModule,
+    AdminModule,AdminJobsModule,AdminApplicantsModule,
 
     // ... other modules
   ],
