@@ -1,4 +1,4 @@
-import { flatten, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { flatten, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes, createHash, createHmac } from 'crypto';
@@ -417,83 +417,83 @@ export class AuthService {
             message: 'Password changed successfully',
         };
     }
-   
 
-async forgotPassword(email: string) {
-    try {
-        console.log('[FORGOT PASSWORD] Request received:', {
-            email,
-            time: new Date().toISOString(),
-        });
 
-        const user = await this.usersRepository.findOne({
-            where: { email },
-        });
+    async forgotPassword(email: string) {
+        try {
+            console.log('[FORGOT PASSWORD] Request received:', {
+                email,
+                time: new Date().toISOString(),
+            });
 
-        // Prevent email enumeration
-        if (!user) {
-            console.log('[FORGOT PASSWORD] User not found:', email);
+            const user = await this.usersRepository.findOne({
+                where: { email },
+            });
+
+            // Prevent email enumeration
+            if (!user) {
+                console.log('[FORGOT PASSWORD] User not found:', email);
+
+                return {
+                    success: true,
+                    message:
+                        'If the email exists, a password reset code has been sent.',
+                };
+            }
+
+            console.log('[FORGOT PASSWORD] User found:', {
+                id: user.id,
+                email: user.email,
+            });
+
+            // Generate plain token
+            const plainToken = randomBytes(32).toString('hex');
+
+            // Hash before saving
+            const hashedToken = createHash('sha256')
+                .update(plainToken)
+                .digest('hex');
+
+            console.log('[FORGOT PASSWORD] Generated token');
+
+            // Remove old tokens
+            await this.passwordResetRepository.delete({ email });
+
+            console.log('[FORGOT PASSWORD] Old reset tokens cleared');
+
+            // Save hashed token
+            await this.passwordResetRepository.save({
+                email,
+                token: hashedToken,
+                expires_at: new Date(Date.now() + 15 * 60 * 1000),
+            });
+
+            console.log('[FORGOT PASSWORD] Token saved');
+
+            // Send plain token to email
+            await this.mailService.sendPasswordReset(email, plainToken);
+
+            console.log('[FORGOT PASSWORD] Email sent successfully');
 
             return {
                 success: true,
                 message:
-                    'If the email exists, a password reset code has been sent.',
+                    'A password reset link has been sent to your email.',
+            };
+        } catch (error) {
+            console.error('[FORGOT PASSWORD ERROR]', {
+                message: error.message,
+                stack: error.stack,
+                email,
+            });
+
+            return {
+                success: false,
+                message: 'Failed to process forgot password request',
+                error: error.message,
             };
         }
-
-        console.log('[FORGOT PASSWORD] User found:', {
-            id: user.id,
-            email: user.email,
-        });
-
-        // Generate plain token
-        const plainToken = randomBytes(32).toString('hex');
-
-        // Hash before saving
-        const hashedToken = createHash('sha256')
-            .update(plainToken)
-            .digest('hex');
-
-        console.log('[FORGOT PASSWORD] Generated token');
-
-        // Remove old tokens
-        await this.passwordResetRepository.delete({ email });
-
-        console.log('[FORGOT PASSWORD] Old reset tokens cleared');
-
-        // Save hashed token
-        await this.passwordResetRepository.save({
-            email,
-            token: hashedToken,
-            expires_at: new Date(Date.now() + 15 * 60 * 1000),
-        });
-
-        console.log('[FORGOT PASSWORD] Token saved');
-
-        // Send plain token to email
-        await this.mailService.sendPasswordReset(email, plainToken);
-
-        console.log('[FORGOT PASSWORD] Email sent successfully');
-
-        return {
-            success: true,
-            message:
-                'A password reset link has been sent to your email.',
-        };
-    } catch (error) {
-        console.error('[FORGOT PASSWORD ERROR]', {
-            message: error.message,
-            stack: error.stack,
-            email,
-        });
-
-        return {
-            success: false,
-            message: 'Failed to process forgot password request',
-            error: error.message,
-        };
     }
-}
 
     async resetPassword(dto: ResetPasswordDto) {
         const { email, token, newPassword } = dto;
@@ -834,42 +834,132 @@ async forgotPassword(email: string) {
             data: user,
         };
     }
+    
     async myaccount(user: Users) {
         try {
             const account = await this.usersRepository.findOne({
-                where: { id: user.id },
+                where: {
+                    id: user.id,
+                },
                 relations: [
                     'role',
                     'role.permissions',
+
+                    // User permissions
+                    'userPermissions',
+                    'userPermissions.permission',
+
+                    // Client staff + position
+                    'clientStaff',
+                    'clientStaff.position',
                 ],
             });
 
             if (!account) {
-                throw new InternalServerErrorException({
+                throw new NotFoundException({
                     success: false,
                     message: 'User account not found',
                 });
             }
 
+            // ========================================================
+            // ROLE PERMISSIONS
+            // ========================================================
+
+            const rolePermissions =
+                account.role?.permissions?.map(permission => ({
+                    id: permission.id,
+                    name: permission.name,
+                })) || [];
+
+            // ========================================================
+            // USER PERMISSIONS
+            // ========================================================
+
+            const userPermissions =
+                account.userPermissions?.map(userPermission => ({
+                    id: userPermission.id,
+                    permission_id: userPermission.permission_id,
+
+                    permission: userPermission.permission
+                        ? {
+                            id: userPermission.permission.id,
+                            name: userPermission.permission.name,
+                        }
+                        : null,
+                })) || [];
+
+            // ========================================================
+            // CLIENT STAFF
+            // ========================================================
+
+            const clientStaff =
+                account.clientStaff?.map(staff => ({
+                    id: staff.id,
+
+                    client_id: staff.client_id,
+                    user_id: staff.user_id,
+
+                    prefix_id: staff.prefix_id,
+
+                    first_name: staff.first_name,
+                    middle_name: staff.middle_name,
+                    last_name: staff.last_name,
+
+                    phone_number: staff.phone_number,
+
+                    client_staff_position_id:
+                        staff.client_staff_position_id,
+
+                    position: staff.position
+                        ? {
+                            id: staff.position.id,
+                            position_name:
+                                staff.position.position_name,
+                        }
+                        : null,
+
+                    created_at: staff.created_at,
+                    updated_at: staff.updated_at,
+                })) || [];
+
+            // ========================================================
+            // RESPONSE
+            // ========================================================
+
             return {
                 success: true,
                 message: 'Successfully retrieved user account',
+
                 data: {
                     id: account.id,
                     username: account.username,
                     email: account.email,
                     verified: account.verified,
+
                     role_id: account.role_id,
 
-                    role: account.role?.name,
+                    role: account.role
+                        ? {
+                            id: account.role.id,
+                            name: account.role.name,
+                        }
+                        : null,
 
-                    permissions: account.role?.permissions?.map((p) => ({
-                        id: p.id,
-                        name: p.name,
-                    })) || [],
+                    role_permissions: rolePermissions,
+
+                    user_permissions: userPermissions,
+
+                    client_staff: clientStaff,
                 },
             };
+
         } catch (error) {
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
             throw new InternalServerErrorException({
                 success: false,
                 message: 'Failed to fetch employer account',
