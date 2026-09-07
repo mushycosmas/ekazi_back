@@ -643,7 +643,7 @@ export class PaymentService {
 
         const callbackUrl =
             process.env.PAYMENT_CALLBACK_URL ||
-            'https://backend.ekazi.co.tz/api/payment/webhook/snippe';
+            'https://backend.ekazi.co.tz/api/payment/callback/selcom';
 
 
         // ========================================================
