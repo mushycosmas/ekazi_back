@@ -876,7 +876,7 @@ export class PaymentService {
 
         // FIXED: Pass provider name
         const provider =
-            this.paymentProviderFactory.getProvider('snippe');
+            this.paymentProviderFactory.getProvider('selcom');
 
 
         const verification =
