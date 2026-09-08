@@ -598,7 +598,7 @@ export class PaymentService {
                     reference,
 
                 provider:
-                    dto.provider ?? 'snippe',
+                    dto.provider ?? 'selcom',
 
                 role,
 
