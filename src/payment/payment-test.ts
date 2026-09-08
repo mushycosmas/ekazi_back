@@ -43,7 +43,6 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Role } from 'src/auth/role.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsInt, Min, Max } from 'class-validator';
-import { SelcomOrderDto, SelcomStatusDto, SelcomWalletPaymentDto } from './dto/selcom-order.dto';
 
 // ============================================================
 // DTOs for new endpoints (Fixed decorator usage)
@@ -146,78 +145,128 @@ export class PaymentController {
         );
     }
 
-  // ============================================================
-// SELCOM CREATE ORDER MINIMAL
-// ============================================================
+    // ============================================================
+    // 🔥 NEW: LIST SNIPPE PAYMENTS (Admin Only)
+    // ============================================================
 
-@Post('selcom/create-order-minimal')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomCreateOrder(
-    @Body() dto: SelcomOrderDto,
-) {
-    return this.paymentService.selcomCreateOrder(dto);
-}
+    @Get('snippe-list')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async listSnippePayments(
+        @Query() query: ListPaymentsQueryDto,
+    ) {
+        try {
+            // Validate and sanitize parameters
+            const limit = Math.min(Number(query.limit) || 20, 100);
+            const offset = Number(query.offset) || 0;
 
+            if (limit < 1) {
+                throw new BadRequestException('Limit must be at least 1');
+            }
 
-// ============================================================
-// SELCOM WALLET PAYMENT
-// ============================================================
+            if (offset < 0) {
+                throw new BadRequestException('Offset must be 0 or greater');
+            }
 
-@Post('selcom/wallet-payment')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomWalletPayment(
-    @Body() dto: SelcomWalletPaymentDto,
-) {
-    return this.paymentService.selcomWalletPayment(dto);
-}
+            return await this.paymentService.listSnippePayments(limit, offset);
+        } catch (error) {
+            throw error;
+        }
+    }
 
+    // ============================================================
+    // 🔥 NEW: GET SNIPPE BALANCE (Admin Only)
+    // ============================================================
 
-// ============================================================
-// SELCOM SELCOMPESA PAYMENT
-// ============================================================
+    @Get('snippe-balance')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async getSnippeBalance() {
+        return this.paymentService.getSnippeBalance();
+    }
 
-@Post('selcom/selcompesa-payment')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomSelcomPesaPayment(
-    @Body() dto: SelcomWalletPaymentDto,
-) {
-    return this.paymentService.selcomSelcomPesaPayment(dto);
-}
+    // ============================================================
+    // 🔥 NEW: SEARCH SNIPPE PAYMENTS (Admin Only)
+    // ============================================================
 
+    @Get('snippe-search')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async searchSnippePayments(
+        @Query() query: SearchPaymentsQueryDto,
+    ) {
+        try {
+            if (!query.reference || query.reference.trim().length === 0) {
+                throw new BadRequestException('Payment reference is required for search');
+            }
 
-// ============================================================
-// SELCOM ORDER STATUS
-// ============================================================
+            return await this.paymentService.searchSnippePayments(query.reference.trim());
+        } catch (error) {
+            throw error;
+        }
+    }
 
-@Post('selcom/order-status')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomOrderStatus(
-    @Body() dto: SelcomStatusDto,
-) {
-    return this.paymentService.selcomOrderStatus(
-        dto.order_id,
-    );
-}
+    // ============================================================
+    // 🔥 NEW: TRIGGER USSD PUSH (Admin Only)
+    // ============================================================
 
+    @Post('snippe/ussd-push/:reference')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async triggerUssdPush(
+        @Param('reference') reference: string,
+    ) {
+        try {
+            if (!reference || reference.trim().length === 0) {
+                throw new BadRequestException('Payment reference is required');
+            }
 
-// ============================================================
-// SELCOM CANCEL ORDER
-// ============================================================
+            return await this.paymentService.triggerUssdPush(reference.trim());
+        } catch (error) {
+            throw error;
+        }
+    }
 
-@Post('selcom/cancel-order')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomCancelOrder(
-    @Body() dto: SelcomStatusDto,
-) {
-    return this.paymentService.selcomCancelOrder(
-        dto.order_id,
-    );
-}
+    // ============================================================
+    // 🔥 NEW: GET PAYMENT STATUS BY REFERENCE (Admin Only)
+    // ============================================================
+
+    @Get('snippe-payment/:reference')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    @HttpCode(200)
+    async getPaymentStatus(
+        @Param('reference') reference: string,
+    ) {
+        try {
+            if (!reference || reference.trim().length === 0) {
+                throw new BadRequestException('Payment reference is required');
+            }
+
+            // Use the existing verify method from provider
+            const provider = this.paymentService['paymentProviderFactory'].getProvider('snippe');
+            const result = await provider.verify({ reference: reference.trim() });
+
+            if (!result.success) {
+                throw new BadRequestException('Failed to retrieve payment status');
+            }
+
+            // Fix: Handle different response structures
+            const responseData = result.data || result;
+            
+            return {
+                success: true,
+                data: responseData,
+                message: 'Payment status retrieved successfully'
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 
     // ============================================================
     // SELCOM CALLBACK (Public)

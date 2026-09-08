@@ -812,6 +812,54 @@ export class PaymentService {
     // SELCOM CALLBACK
     // ============================================================
 
+   // ============================================================
+// SELCOM OPERATIONS
+// ============================================================
+
+async selcomCreateOrder(data: any) {
+
+    const provider =
+        this.paymentProviderFactory.getSelcomProvider();
+
+    return provider.createOrder(data);
+}
+
+
+async selcomWalletPayment(data: any) {
+
+    const provider =
+        this.paymentProviderFactory.getSelcomProvider();
+
+    return provider.walletPayment(data);
+}
+
+
+async selcomSelcomPesaPayment(data: any) {
+
+    const provider =
+        this.paymentProviderFactory.getSelcomProvider();
+
+    return provider.selcompesaPayment(data);
+}
+
+
+async selcomOrderStatus(reference: string) {
+
+    const provider =
+        this.paymentProviderFactory.getSelcomProvider();
+
+    return provider.orderStatus(reference);
+}
+
+
+async selcomCancelOrder(reference: string) {
+
+    const provider =
+        this.paymentProviderFactory.getSelcomProvider();
+
+    return provider.cancelOrder(reference);
+}
+
     async handleSelcomCallback(
         payload: any,
     ) {
@@ -1471,136 +1519,136 @@ export class PaymentService {
 
     }
 
- // Add to PaymentService
+    // Add to PaymentService
 
-// ============================================================
-// LIST ALL PAYMENTS (with pagination)
-// ============================================================
-async listSnippePayments(
-    limit: number = 20,
-    offset: number = 0
-) {
-    const provider = this.paymentProviderFactory.getProvider('snippe');
-    
-    const response = await provider.listPayments({
-        limit,
-        offset
-    });
-    
-    return response;
-}
+    // ============================================================
+    // LIST ALL PAYMENTS (with pagination)
+    // ============================================================
+    async listSnippePayments(
+        limit: number = 20,
+        offset: number = 0
+    ) {
+        const provider = this.paymentProviderFactory.getProvider('snippe');
 
-// ============================================================
-// GET ACCOUNT BALANCE
-// ============================================================
-async getSnippeBalance() {
-    const provider = this.paymentProviderFactory.getProvider('snippe');
-    
-    const balance = await provider.getBalance();
-    
-    return {
-        success: true,
-        data: balance,
-        message: 'Account balance retrieved successfully'
-    };
-}
+        const response = await provider.listPayments({
+            limit,
+            offset
+        });
 
-// ============================================================
-// SEARCH PAYMENTS
-// ============================================================
-async searchSnippePayments(reference: string) {
-    const provider = this.paymentProviderFactory.getProvider('snippe');
-    
-    const results = await provider.searchPayments({
-        reference
-    });
-    
-    return {
-        success: true,
-        data: results,
-        message: 'Payment search completed'
-    };
-}
+        return response;
+    }
 
-// ============================================================
-// TRIGGER USSD PUSH
-// ============================================================
-async triggerUssdPush(reference: string) {
-    const provider = this.paymentProviderFactory.getProvider('snippe');
-    
-    const result = await provider.triggerUssdPush({
-        reference
-    });
-    
-    return {
-        success: true,
-        data: result,
-        message: 'USSD push triggered successfully'
-    };
-}
+    // ============================================================
+    // GET ACCOUNT BALANCE
+    // ============================================================
+    async getSnippeBalance() {
+        const provider = this.paymentProviderFactory.getProvider('snippe');
 
- // ============================================================
-// ALL SUBSCRIPTION PAYMENTS
-// SEARCH + PAGINATION
-// ============================================================
+        const balance = await provider.getBalance();
 
-async getSubscriptionPayments(
-    user: Users,
-    query: SubscriptionPaymentsQueryDto,
-) {
+        return {
+            success: true,
+            data: balance,
+            message: 'Account balance retrieved successfully'
+        };
+    }
 
-    try {
+    // ============================================================
+    // SEARCH PAYMENTS
+    // ============================================================
+    async searchSnippePayments(reference: string) {
+        const provider = this.paymentProviderFactory.getProvider('snippe');
 
-        const page =
-            Number(query.page) || 1;
+        const results = await provider.searchPayments({
+            reference
+        });
 
-        const limit =
-            Number(query.limit) || 20;
+        return {
+            success: true,
+            data: results,
+            message: 'Payment search completed'
+        };
+    }
 
-        const skip =
-            (page - 1) * limit;
+    // ============================================================
+    // TRIGGER USSD PUSH
+    // ============================================================
+    async triggerUssdPush(reference: string) {
+        const provider = this.paymentProviderFactory.getProvider('snippe');
 
-        const search =
-            query.search?.trim() || '';
+        const result = await provider.triggerUssdPush({
+            reference
+        });
 
+        return {
+            success: true,
+            data: result,
+            message: 'USSD push triggered successfully'
+        };
+    }
 
-        // ========================================================
-        // QUERY BUILDER
-        // ========================================================
+    // ============================================================
+    // ALL SUBSCRIPTION PAYMENTS
+    // SEARCH + PAGINATION
+    // ============================================================
 
-        const queryBuilder =
-            this.subscriptionPaymentRepository
-                .createQueryBuilder('payment')
+    async getSubscriptionPayments(
+        user: Users,
+        query: SubscriptionPaymentsQueryDto,
+    ) {
 
-                .leftJoinAndSelect(
-                    'payment.subscriptionPlan',
-                    'plan',
-                )
+        try {
 
-                .where(
-                    'payment.user_id = :userId',
-                    {
-                        userId: user.id,
-                    },
-                )
+            const page =
+                Number(query.page) || 1;
 
-                // Client / Employer only
-                .andWhere(
-                    'payment.role = :role',
-                    {
-                        role: PaymentRole.EMPLOYER,
-                    },
-                );
+            const limit =
+                Number(query.limit) || 20;
+
+            const skip =
+                (page - 1) * limit;
+
+            const search =
+                query.search?.trim() || '';
 
 
-        // ========================================================
-        // SEARCH
-        // ========================================================
+            // ========================================================
+            // QUERY BUILDER
+            // ========================================================
 
-        if (search) {
+            const queryBuilder =
+                this.subscriptionPaymentRepository
+                    .createQueryBuilder('payment')
 
-            queryBuilder.andWhere(
-                `(
+                    .leftJoinAndSelect(
+                        'payment.subscriptionPlan',
+                        'plan',
+                    )
+
+                    .where(
+                        'payment.user_id = :userId',
+                        {
+                            userId: user.id,
+                        },
+                    )
+
+                    // Client / Employer only
+                    .andWhere(
+                        'payment.role = :role',
+                        {
+                            role: PaymentRole.EMPLOYER,
+                        },
+                    );
+
+
+            // ========================================================
+            // SEARCH
+            // ========================================================
+
+            if (search) {
+
+                queryBuilder.andWhere(
+                    `(
                     payment.transaction_id LIKE :search
                     OR payment.provider_transaction_id LIKE :search
                     OR payment.payment_type LIKE :search
@@ -1608,100 +1656,100 @@ async getSubscriptionPayments(
                     OR payment.provider LIKE :search
                     OR plan.name LIKE :search
                 )`,
-                {
-                    search: `%${search}%`,
-                },
-            );
+                    {
+                        search: `%${search}%`,
+                    },
+                );
 
-        }
-
-
-        // ========================================================
-        // PAGINATION
-        // ========================================================
-
-        queryBuilder
-            .orderBy(
-                'payment.created_at',
-                'DESC',
-            )
-
-            .skip(skip)
-
-            .take(limit);
+            }
 
 
-        // ========================================================
-        // EXECUTE
-        // ========================================================
+            // ========================================================
+            // PAGINATION
+            // ========================================================
 
-        const [
-            payments,
-            total,
-        ] =
-            await queryBuilder.getManyAndCount();
+            queryBuilder
+                .orderBy(
+                    'payment.created_at',
+                    'DESC',
+                )
+
+                .skip(skip)
+
+                .take(limit);
 
 
-        // ========================================================
-        // RESPONSE
-        // ========================================================
+            // ========================================================
+            // EXECUTE
+            // ========================================================
 
-        return {
+            const [
+                payments,
+                total,
+            ] =
+                await queryBuilder.getManyAndCount();
 
-            success: true,
 
-            message:
-                'Subscription payments retrieved successfully',
+            // ========================================================
+            // RESPONSE
+            // ========================================================
 
-            data: payments.map(
-                (payment) => ({
+            return {
 
-                    id:
-                        payment.id,
+                success: true,
 
-                    subscription_plan_id:
-                        payment.subscription_plan_id,
+                message:
+                    'Subscription payments retrieved successfully',
 
-                    plan:
-                        payment.subscriptionPlan,
+                data: payments.map(
+                    (payment) => ({
 
-                    amount:
-                        Number(payment.amount),
+                        id:
+                            payment.id,
 
-                    transaction_id:
-                        payment.transaction_id,
+                        subscription_plan_id:
+                            payment.subscription_plan_id,
 
-                    provider_transaction_id:
-                        payment.provider_transaction_id,
+                        plan:
+                            payment.subscriptionPlan,
 
-                    provider:
-                        payment.provider,
+                        amount:
+                            Number(payment.amount),
 
-                    payment_type:
-                        payment.payment_type,
+                        transaction_id:
+                            payment.transaction_id,
 
-                    status:
-                        payment.status,
+                        provider_transaction_id:
+                            payment.provider_transaction_id,
 
-                    paid_at:
-                        payment.paid_at,
+                        provider:
+                            payment.provider,
 
-                    failure_reason:
-                        payment.failure_reason,
+                        payment_type:
+                            payment.payment_type,
 
-                    role:
-                        payment.role,
+                        status:
+                            payment.status,
 
-                    created_at:
-                        payment.created_at,
+                        paid_at:
+                            payment.paid_at,
 
-                    updated_at:
-                        payment.updated_at,
+                        failure_reason:
+                            payment.failure_reason,
 
-                }),
-            ),
+                        role:
+                            payment.role,
 
-           
+                        created_at:
+                            payment.created_at,
+
+                        updated_at:
+                            payment.updated_at,
+
+                    }),
+                ),
+
+
 
                 page,
 
@@ -1713,164 +1761,164 @@ async getSubscriptionPayments(
                     Math.ceil(
                         total / limit,
                     ),
- 
- 
 
-        };
 
-    } catch (error) {
 
-        this.logger.error(
-            'Error fetching subscription payments',
-            error,
-        );
+            };
 
-        throw new InternalServerErrorException(
-            'Failed to fetch subscription payments',
-        );
+        } catch (error) {
+
+            this.logger.error(
+                'Error fetching subscription payments',
+                error,
+            );
+
+            throw new InternalServerErrorException(
+                'Failed to fetch subscription payments',
+            );
+
+        }
 
     }
-
-}
 
     // ============================================================
     // CURRENT SUBSCRIPTION (With Full Payment Data)
     // ============================================================
-async currentSubscription(user: Users) {
-    try {
-        const subscription = await this.subscriptionRepository.findOne({
-            where: {
-                user_id: user.id,
-                is_active: true,
-            },
-            relations: ['plan'],
-            order: {
-                end_date: 'DESC',
-            },
-        });
+    async currentSubscription(user: Users) {
+        try {
+            const subscription = await this.subscriptionRepository.findOne({
+                where: {
+                    user_id: user.id,
+                    is_active: true,
+                },
+                relations: ['plan'],
+                order: {
+                    end_date: 'DESC',
+                },
+            });
 
-        if (!subscription) {
-            return {
-                success: false,
-                message: 'No active subscription',
-                data: [],
-            };
-        }
-
-        // Check expiration
-        if (new Date(subscription.end_date) < new Date()) {
-            subscription.is_active = false;
-            await this.subscriptionRepository.save(subscription);
-
-            return {
-                success: false,
-                message: 'Subscription has expired',
-                data: [],
-            };
-        }
-
-        // ========================================================
-        // FETCH PAYMENT DATA
-        // ========================================================
-
-        let paymentData: any = null;
-
-        if (subscription.subscription_payment_id) {
-            const payment =
-                await this.subscriptionPaymentRepository.findOne({
-                    where: {
-                        id: subscription.subscription_payment_id,
-                    },
-                });
-
-            if (payment) {
-                paymentData = {
-                    id: payment.id,
-                    amount: Number(payment.amount),
-                    transaction_id: payment.transaction_id,
-                    provider_transaction_id:
-                        payment.provider_transaction_id,
-                    provider: payment.provider,
-                    status: payment.status,
-                    role: payment.role,
-                    paid_at: payment.paid_at,
-                    failure_reason: payment.failure_reason,
-                    meta: payment.meta,
-                    created_at: payment.created_at,
-                    updated_at: payment.updated_at,
+            if (!subscription) {
+                return {
+                    success: false,
+                    message: 'No active subscription',
+                    data: [],
                 };
             }
+
+            // Check expiration
+            if (new Date(subscription.end_date) < new Date()) {
+                subscription.is_active = false;
+                await this.subscriptionRepository.save(subscription);
+
+                return {
+                    success: false,
+                    message: 'Subscription has expired',
+                    data: [],
+                };
+            }
+
+            // ========================================================
+            // FETCH PAYMENT DATA
+            // ========================================================
+
+            let paymentData: any = null;
+
+            if (subscription.subscription_payment_id) {
+                const payment =
+                    await this.subscriptionPaymentRepository.findOne({
+                        where: {
+                            id: subscription.subscription_payment_id,
+                        },
+                    });
+
+                if (payment) {
+                    paymentData = {
+                        id: payment.id,
+                        amount: Number(payment.amount),
+                        transaction_id: payment.transaction_id,
+                        provider_transaction_id:
+                            payment.provider_transaction_id,
+                        provider: payment.provider,
+                        status: payment.status,
+                        role: payment.role,
+                        paid_at: payment.paid_at,
+                        failure_reason: payment.failure_reason,
+                        meta: payment.meta,
+                        created_at: payment.created_at,
+                        updated_at: payment.updated_at,
+                    };
+                }
+            }
+
+            // ========================================================
+            // CALCULATE REMAINING DAYS
+            // ========================================================
+
+            const now = new Date();
+            const endDate = new Date(subscription.end_date);
+
+            const remainingDays = Math.max(
+                0,
+                Math.ceil(
+                    (endDate.getTime() - now.getTime()) /
+                    (1000 * 60 * 60 * 24),
+                ),
+            );
+
+            // ========================================================
+            // RETURN ARRAY
+            // ========================================================
+
+            return {
+                success: true,
+                message: 'Current subscription retrieved successfully',
+
+                data: [
+                    {
+                        id: subscription.id,
+                        user_id: subscription.user_id,
+                        subscription_plan_id:
+                            subscription.subscription_plan_id,
+
+                        plan: subscription.plan,
+
+                        start_date: subscription.start_date,
+                        end_date: subscription.end_date,
+
+                        remaining_days: remainingDays,
+
+                        job_post_remaining:
+                            subscription.job_post_remaining,
+
+                        cv_download_remaining:
+                            subscription.cv_download_remaining,
+
+                        cv_builder_remaining:
+                            subscription.cv_builder_remaining,
+
+                        is_active: subscription.is_active,
+
+                        subscription_payment_id:
+                            subscription.subscription_payment_id,
+
+                        payment: paymentData,
+
+                        created_at: subscription.created_at,
+                        updated_at: subscription.updated_at,
+                    },
+                ],
+            };
+        } catch (error) {
+            this.logger.error(
+                'Error fetching current subscription:',
+                error,
+            );
+
+            throw new InternalServerErrorException(
+                'Failed to fetch current subscription',
+            );
         }
-
-        // ========================================================
-        // CALCULATE REMAINING DAYS
-        // ========================================================
-
-        const now = new Date();
-        const endDate = new Date(subscription.end_date);
-
-        const remainingDays = Math.max(
-            0,
-            Math.ceil(
-                (endDate.getTime() - now.getTime()) /
-                (1000 * 60 * 60 * 24),
-            ),
-        );
-
-        // ========================================================
-        // RETURN ARRAY
-        // ========================================================
-
-        return {
-            success: true,
-            message: 'Current subscription retrieved successfully',
-
-            data: [
-                {
-                    id: subscription.id,
-                    user_id: subscription.user_id,
-                    subscription_plan_id:
-                        subscription.subscription_plan_id,
-
-                    plan: subscription.plan,
-
-                    start_date: subscription.start_date,
-                    end_date: subscription.end_date,
-
-                    remaining_days: remainingDays,
-
-                    job_post_remaining:
-                        subscription.job_post_remaining,
-
-                    cv_download_remaining:
-                        subscription.cv_download_remaining,
-
-                    cv_builder_remaining:
-                        subscription.cv_builder_remaining,
-
-                    is_active: subscription.is_active,
-
-                    subscription_payment_id:
-                        subscription.subscription_payment_id,
-
-                    payment: paymentData,
-
-                    created_at: subscription.created_at,
-                    updated_at: subscription.updated_at,
-                },
-            ],
-        };
-    } catch (error) {
-        this.logger.error(
-            'Error fetching current subscription:',
-            error,
-        );
-
-        throw new InternalServerErrorException(
-            'Failed to fetch current subscription',
-        );
     }
-}
     // async currentSubscription(
     //     user: Users,
     // ) {
@@ -1979,6 +2027,6 @@ async currentSubscription(user: Users) {
     //         throw new InternalServerErrorException('Failed to fetch current subscription');
     //     }
     // }
-    
+
 
 }
