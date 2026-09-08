@@ -15,7 +15,8 @@ import {
   TriggerUssdPushResponse,
 } from '../interfaces/payment-provider.interface';
 
-const { apigwClient } = require('selcom-apigw-client');
+ const { apigwCLient } = require('selcom-apigw-client');
+
 
 @Injectable()
 export class SelcomPaymentProvider implements PaymentProvider {
@@ -59,8 +60,8 @@ export class SelcomPaymentProvider implements PaymentProvider {
   // SELCOM CLIENT
   // ============================================================
 
-  private getClient() {
-    return new apigwClient(
+    private getClient() {
+    return new apigwCLient(
       this.baseUrl,
       this.apiKey,
       this.apiSecret,
