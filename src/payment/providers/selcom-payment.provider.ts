@@ -43,7 +43,7 @@ export class SelcomPaymentProvider implements PaymentProvider {
 
         this.baseUrl =
             this.configService.get<string>('SELCOM_BASE_URL') ||
-            'https://apigw.selcommobile.com';
+            'https://apigw.selcommobile.com/v1';
 
         if (
             !this.vendor ||
@@ -197,9 +197,14 @@ export class SelcomPaymentProvider implements PaymentProvider {
                 )}`,
             );
 
+            const orderUrl = this.configService.get<string>(
+                'SELCOM_CREATE_ORDER_URL',
+            );
+
+            const orderPath = new URL(orderUrl!).pathname;
+
             const orderResponse = await client.postFunc(
-                this.configService.get<string>('SELCOM_CREATE_ORDER_URL') ||
-                'https://apigw.selcommobile.com/v1/checkout/create-order-minimal',
+                orderPath,
                 orderData,
             );
 
