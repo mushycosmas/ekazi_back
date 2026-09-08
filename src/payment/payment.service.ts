@@ -780,7 +780,7 @@ export class PaymentService {
                     'TZS',
 
                 provider:
-                    dto.provider || 'snippe',
+                    dto.provider || 'selcome',
 
                 customer: {
 

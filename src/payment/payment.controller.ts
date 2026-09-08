@@ -154,7 +154,7 @@ export class PaymentController {
 @UseGuards(SanctumGuard)
 @HttpCode(200)
 async selcomCreateOrder(
-    @Body() dto: SelcomOrderDto,
+    @Body() dto: InitiatePaymentDto,
 ) {
     return this.paymentService.selcomCreateOrder(dto);
 }
