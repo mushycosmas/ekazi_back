@@ -1,867 +1,757 @@
-import {
-    Injectable,
-    InternalServerErrorException,
-    Logger,
-    BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import {
-    ConfigService,
-} from '@nestjs/config';
-
-import {
-    HttpService,
-} from '@nestjs/axios';
-
-import {
-    firstValueFrom,
-} from 'rxjs';
-
-import * as crypto from 'crypto';
-
-import {
-    InitiatePaymentInput,
-    PaymentProvider,
-    PaymentProviderResponse,
-    VerifyPaymentInput,
-    ListPaymentsInput,
-    ListPaymentsResponse,
-    BalanceResponse,
-    SearchPaymentsInput,
-    SearchPaymentsResponse,
-    TriggerUssdPushInput,
-    TriggerUssdPushResponse,
+  PaymentProvider,
+  InitiatePaymentInput,
+  VerifyPaymentInput,
+  PaymentProviderResponse,
+  ListPaymentsInput,
+  ListPaymentsResponse,
+  BalanceResponse,
+  SearchPaymentsInput,
+  SearchPaymentsResponse,
+  TriggerUssdPushInput,
+  TriggerUssdPushResponse,
 } from '../interfaces/payment-provider.interface';
 
+const { apigwClient } = require('selcom-apigw-client');
 
 @Injectable()
-export class SelcomPaymentProvider
-    implements PaymentProvider {
+export class SelcomPaymentProvider implements PaymentProvider {
+  private readonly logger = new Logger(
+    SelcomPaymentProvider.name,
+  );
 
-    private readonly logger =
-        new Logger(
-            SelcomPaymentProvider.name,
+  private readonly vendor: string;
+  private readonly apiKey: string;
+  private readonly apiSecret: string;
+  private readonly baseUrl: string;
+
+  constructor(
+    private readonly configService: ConfigService,
+  ) {
+    this.vendor =
+      this.configService.get<string>('SELCOM_VENDOR') || '';
+
+    this.apiKey =
+      this.configService.get<string>('SELCOM_API_KEY') || '';
+
+    this.apiSecret =
+      this.configService.get<string>('SELCOM_API_SECRET') || '';
+
+    this.baseUrl =
+      this.configService.get<string>('SELCOM_BASE_URL') ||
+      'https://apigw.selcommobile.com';
+
+    if (
+      !this.vendor ||
+      !this.apiKey ||
+      !this.apiSecret
+    ) {
+      throw new Error(
+        'SELCOM_VENDOR, SELCOM_API_KEY and SELCOM_API_SECRET are required',
+      );
+    }
+  }
+
+  // ============================================================
+  // SELCOM CLIENT
+  // ============================================================
+
+  private getClient() {
+    return new apigwClient(
+      this.baseUrl,
+      this.apiKey,
+      this.apiSecret,
+    );
+  }
+
+  // ============================================================
+  // CONFIG
+  // ============================================================
+
+  getConfig() {
+    return {
+      vendor: this.vendor,
+      baseUrl: this.baseUrl,
+    };
+  }
+
+  // ============================================================
+  // INITIATE PAYMENT
+  // ============================================================
+
+  async initiate(
+    data: InitiatePaymentInput,
+  ): Promise<PaymentProviderResponse> {
+    try {
+      const client = this.getClient();
+
+      const orderId = data.reference;
+
+      if (!orderId) {
+        throw new Error(
+          'Payment reference/order_id is required',
+        );
+      }
+
+      // --------------------------------------------------------
+      // BUYER NAME
+      // --------------------------------------------------------
+
+      const buyerName = this.getBuyerName(data);
+
+      // --------------------------------------------------------
+      // PHONE
+      // --------------------------------------------------------
+
+      const buyerPhone = this.normalizePhone(
+        data.customer?.phone || data.phone,
+      );
+
+      if (!buyerPhone) {
+        throw new Error(
+          'Buyer phone number is required',
+        );
+      }
+
+      // --------------------------------------------------------
+      // AMOUNT
+      // --------------------------------------------------------
+
+      const amount = Number(data.amount);
+
+      if (!amount || amount <= 0) {
+        throw new Error(
+          'Payment amount must be greater than zero',
+        );
+      }
+
+      // ========================================================
+      // STEP 1: CREATE ORDER
+      // ========================================================
+
+      /**
+       * SELCOM checkpoint:
+       *
+       * const orderJson = {
+       *   vendor,
+       *   order_id,
+       *   buyer_email,
+       *   buyer_name,
+       *   buyer_phone,
+       *   amount,
+       *   currency,
+       *   buyer_remarks,
+       *   merchant_remarks,
+       *   no_of_items
+       * }
+       */
+
+      const orderData = {
+        vendor: this.vendor,
+
+        order_id: orderId,
+
+        buyer_email:
+          data.customer?.email || '',
+
+        buyer_name: buyerName,
+
+        buyer_phone: buyerPhone,
+
+        amount,
+
+        currency: data.currency || 'TZS',
+
+        buyer_remarks:
+          `eKazi subscription ${orderId}`,
+
+        merchant_remarks:
+          'eKazi subscription payment',
+
+        no_of_items: 1,
+      };
+
+      this.logger.log(
+        `Creating SELCOM order: ${orderId}`,
+      );
+
+      this.logger.debug(
+        `SELCOM create order payload: ${JSON.stringify(
+          {
+            ...orderData,
+
+            buyer_email:
+              orderData.buyer_email
+                ? '***'
+                : '',
+
+            buyer_phone:
+              buyerPhone
+                ? `${buyerPhone.substring(0, 6)}******`
+                : '',
+          },
+        )}`,
+      );
+
+      const orderResponse =
+        await client.postFunc(
+          '/v1/checkout/create-order-minimal',
+          orderData,
         );
 
+      this.logger.log(
+        `SELCOM create order response: ${JSON.stringify(
+          orderResponse,
+        )}`,
+      );
 
-    constructor(
-        private readonly httpService: HttpService,
+      // --------------------------------------------------------
+      // CHECK CREATE ORDER
+      // --------------------------------------------------------
 
-        private readonly configService: ConfigService,
-    ) { }
-
-
-    // ============================================================
-    // CONFIGURATION
-    // ============================================================
-
-    private getConfig() {
-
-        const vendor =
-            this.configService.get<string>(
-                'SELCOM_VENDOR',
-            );
-
-        const apiKey =
-            this.configService.get<string>(
-                'SELCOM_API_KEY',
-            );
-
-        const apiSecret =
-            this.configService.get<string>(
-                'SELCOM_API_SECRET',
-            );
-
-        const callbackUrl =
-            this.configService.get<string>(
-                'PAYMENT_CALLBACK_URL',
-            );
-
-        this.logger.debug(`SELCOM Vendor: ${vendor}`);
-        this.logger.debug(`SELCOM API Key: ${apiKey?.substring(0, 4)}...${apiKey?.substring(apiKey?.length - 4)}`);
-        this.logger.debug(`SELCOM API Secret: ${apiSecret?.substring(0, 4)}...${apiSecret?.substring(apiSecret?.length - 4)}`);
-
-        if (!vendor || !apiKey || !apiSecret) {
-            throw new InternalServerErrorException(
-                'Selcom configuration is missing. Required: SELCOM_VENDOR, SELCOM_API_KEY, SELCOM_API_SECRET',
-            );
-        }
-
+      if (!this.isOrderCreated(orderResponse)) {
         return {
-            vendor,
-            apiKey,
-            apiSecret,
-            callbackUrl,
+          success: false,
+
+          transactionId: orderId,
+
+          message:
+            orderResponse?.message ||
+            'Failed to create SELCOM order',
+
+          raw: orderResponse,
+
+          data: {
+            status: 'FAILED',
+            reference: orderId,
+          },
         };
-    }
+      }
 
+      // ========================================================
+      // STEP 2: WALLET / SELCOMPESA PAYMENT
+      // ========================================================
 
-    // ============================================================
-    // GENERATE TIMESTAMP
-    // ============================================================
+      const paymentMethod =
+        String(
+          (data as any).payment_method ||
+            (data as any).paymentMethod ||
+            'wallet',
+        ).toLowerCase();
 
-    private getTimestamp(): string {
-        const now = new Date();
+      const paymentPath =
+        paymentMethod === 'selcompesa'
+          ? '/v1/checkout/selcompesa-payment'
+          : '/v1/checkout/wallet-payment';
 
-        const formatter = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Africa/Dar_es_Salaam',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-        });
+      /**
+       * SELCOM wallet-payment checkpoint:
+       *
+       * {
+       *   transid,
+       *   order_id,
+       *   msisdn
+       * }
+       */
 
-        const parts = formatter.formatToParts(now);
+      const paymentData = {
+        transid: orderId,
 
-        const get = (type: string) =>
-            parts.find(p => p.type === type)?.value;
+        order_id: orderId,
 
-        const year = get('year');
-        const month = get('month');
-        const day = get('day');
-        const hour = get('hour');
-        const minute = get('minute');
-        const second = get('second');
+        msisdn: buyerPhone,
+      };
 
-        // SELCOM documentation:
-        // yyyy-dd-mm H:i:s
-        return `${year}-${day}-${month} ${hour}:${minute}:${second}`;
-    }
+      this.logger.log(
+        `Triggering SELCOM payment: ${paymentPath}`,
+      );
 
+      this.logger.debug(
+        `SELCOM payment payload: ${JSON.stringify(
+          {
+            ...paymentData,
 
-    // ============================================================
-    // CREATE SELCOM DIGEST
-    // ============================================================
+            msisdn:
+              `${buyerPhone.substring(0, 6)}******`,
+          },
+        )}`,
+      );
 
-    private generateDigest(
-        apiSecret: string,
-        timestamp: string,
-        data: Record<string, any>,
-        signedFields: string[],
-    ): string {
-        // IMPORTANT: Fields must be in the EXACT order as Signed-Fields
-        // Do NOT sort alphabetically!
-        const fields = signedFields
-            .filter(field => {
-                const value = this.getNestedValue(data, field);
-                return value !== undefined && value !== null && value !== '';
-            })
-            .map(field => {
-                const value = this.getNestedValue(data, field);
-                return `${field}=${value}`;
-            });
-
-        // timestamp MUST come first
-        const stringToSign = [
-            `timestamp=${timestamp}`,
-            ...fields,
-        ].join('&');
-
-        this.logger.debug(
-            `SELCOM String To Sign: ${stringToSign}`,
+      const paymentResponse =
+        await client.postFunc(
+          paymentPath,
+          paymentData,
         );
 
-        // Generate HMAC-SHA256 digest
-        const digest = crypto
-            .createHmac('sha256', apiSecret)
-            .update(stringToSign, 'utf8')
-            .digest('base64');
-
-        this.logger.debug(`SELCOM Generated Digest: ${digest}`);
-
-        return digest;
-    }
-
-
-    // ============================================================
-    // HELPER METHOD TO GET NESTED OBJECT VALUES
-    // ============================================================
-
-    private getNestedValue(obj: any, path: string): any {
-        return path.split('.').reduce((current, key) => {
-            return current && current[key] !== undefined ? current[key] : undefined;
-        }, obj);
-    }
-
-
-    // ============================================================
-    // INITIATE PAYMENT - THE FINAL WORKING VERSION
-    // ============================================================
-
-    async initiate(
-        data: InitiatePaymentInput,
-    ): Promise<PaymentProviderResponse> {
-
-        const createOrderUrl =
-            this.configService.get<string>(
-                'SELCOM_CREATE_ORDER_URL',
-            );
-
-        const walletPaymentUrl =
-            this.configService.get<string>(
-                'SELCOM_WALLET_PAYMENT_URL',
-            );
-
-        const pesaPaymentUrl =
-            this.configService.get<string>(
-                'SELCOM_PESA_PAYMENT_URL',
-            );
-
-        const {
-            vendor,
-            apiKey,
-            apiSecret,
-            callbackUrl,
-        } = this.getConfig();
-
-        if (!createOrderUrl) {
-            throw new InternalServerErrorException(
-                'SELCOM_CREATE_ORDER_URL is missing',
-            );
-        }
-
-        try {
-            this.logger.log(
-                `Initiating Selcom payment: ${data.reference}`,
-            );
-
-            const timestamp =
-                this.getTimestamp();
-
-            // Format phone number
-            let buyerPhone = data.phone
-                ?.trim()
-                .replace(/\s+/g, '');
-
-            if (buyerPhone) {
-                if (buyerPhone.startsWith('0')) {
-                    buyerPhone = '255' + buyerPhone.substring(1);
-                } else if (!buyerPhone.startsWith('255')) {
-                    buyerPhone = '255' + buyerPhone;
-                }
-            }
-
-            const buyerName =
-                [
-                    data.customer?.firstname,
-                    data.customer?.lastname,
-                ]
-                    .filter(Boolean)
-                    .join(' ')
-                    .trim() || 'Customer';
-
-            const webhookUrl =
-                data.callbackUrl ||
-                callbackUrl;
-
-            // Webhook must be base64 encoded
-            const encodedWebhook = webhookUrl
-                ? Buffer.from(webhookUrl).toString('base64')
-                : '';
-
-            // ============================================================
-            // STEP 1: Create Order
-            // ============================================================
-
-            const orderData: Record<string, any> = {
-                vendor: vendor,
-                order_id: data.reference,
-                buyer_email: data.customer?.email || '',
-                buyer_name: buyerName,
-                buyer_phone: buyerPhone || '',
-                amount: Number(data.amount),
-                currency: data.currency || 'TZS',
-                payment_methods: 'ALL',
-                webhook: encodedWebhook,
-                buyer_remarks: `eKazi subscription ${data.reference}`,
-                merchant_remarks: 'eKazi subscription payment',
-                no_of_items: 1
-            };
-
-            // Remove empty fields
-            Object.keys(orderData).forEach(key => {
-                if (orderData[key] === '' || orderData[key] === null || orderData[key] === undefined) {
-                    delete orderData[key];
-                }
-            });
-
-            const signedFields = [
-                'vendor', 'order_id', 'buyer_email', 'buyer_name', 'buyer_phone',
-                'amount', 'currency', 'payment_methods', 'webhook',
-                'buyer_remarks', 'merchant_remarks', 'no_of_items'
-            ].filter(field => {
-                const value = this.getNestedValue(orderData, field);
-                return value !== undefined && value !== null && value !== '';
-            });
-
-            // Generate digest for create order
-            const orderDigest = this.generateDigest(
-                apiSecret,
-                timestamp,
-                orderData,
-                signedFields,
-            );
-
-            const headers = {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `SELCOM ${apiKey}`,
-                'Digest-Method': 'HS256',
-                'Digest': orderDigest,
-                'Timestamp': timestamp,
-                'Signed-Fields': signedFields.join(','),
-            };
-
-            this.logger.debug(`STEP 1: Creating order...`);
-            this.logger.debug(`Order Data: ${JSON.stringify(orderData)}`);
-
-            const createResponse =
-                await firstValueFrom(
-                    this.httpService.post(
-                        createOrderUrl,
-                        orderData,
-                        {
-                            headers,
-                            timeout: 30000,
-                        },
-                    ),
-                );
-
-            const createResult = createResponse.data;
-
-            this.logger.log(
-                `STEP 1 Response: ${JSON.stringify(createResult)}`,
-            );
-
-            // Check if order creation was successful
-            if (createResult?.resultcode !== '000' || createResult?.result !== 'SUCCESS') {
-                return {
-                    success: false,
-                    message: createResult?.message || 'Order creation failed',
-                    raw: createResult,
-                    data: createResult,
-                };
-            }
-
-            // Get the order reference
-            const orderReference = createResult?.reference || createResult?.data?.[0]?.reference || data.reference;
-
-            this.logger.log(`Order created successfully. Reference: ${orderReference}`);
-
-            // ============================================================
-            // STEP 2: Initiate Payment (Wallet or SelcomPesa)
-            // ============================================================
-
-            // Determine which payment method to use
-            // Default to wallet payment
-            const paymentUrl = walletPaymentUrl || pesaPaymentUrl;
-
-            if (!paymentUrl) {
-                this.logger.warn('No payment URL configured. Order created but payment not initiated.');
-                return {
-                    success: true,
-                    transactionId: orderReference,
-                    raw: createResult,
-                    data: createResult,
-                    message: 'Order created. Please initiate payment manually.',
-                };
-            }
-
-            // Build payment request
-            const paymentData: Record<string, any> = {
-                vendor: vendor,
-                transid: orderReference,
-                amount: Number(data.amount),
-                msisdn: buyerPhone || '',
-                reference: data.reference,
-            };
-
-            // For wallet payment, we might need pin
-            // If you have a pin, add it
-            // paymentData.pin = 'YOUR_PIN_HERE';
-
-            // Remove empty fields
-            Object.keys(paymentData).forEach(key => {
-                if (paymentData[key] === '' || paymentData[key] === null || paymentData[key] === undefined) {
-                    delete paymentData[key];
-                }
-            });
-
-            // Signed fields for payment
-            const paymentSignedFields = ['vendor', 'transid', 'amount', 'msisdn'];
-
-            // Add pin if present
-            if (paymentData.pin) {
-                paymentSignedFields.push('pin');
-            }
-
-            // Generate digest for payment
-            const paymentDigest = this.generateDigest(
-                apiSecret,
-                timestamp,
-                paymentData,
-                paymentSignedFields,
-            );
-
-            const paymentHeaders = {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `SELCOM ${apiKey}`,
-                'Digest-Method': 'HS256',
-                'Digest': paymentDigest,
-                'Timestamp': timestamp,
-                'Signed-Fields': paymentSignedFields.join(','),
-            };
-
-            this.logger.debug(`STEP 2: Initiating payment...`);
-            this.logger.debug(`Payment Data: ${JSON.stringify(paymentData)}`);
-            this.logger.debug(`Payment URL: ${paymentUrl}`);
-
-            const paymentResponse =
-                await firstValueFrom(
-                    this.httpService.post(
-                        paymentUrl,
-                        paymentData,
-                        {
-                            headers: paymentHeaders,
-                            timeout: 30000,
-                        },
-                    ),
-                );
-
-            const paymentResult = paymentResponse.data;
-
-            this.logger.log(
-                `STEP 2 Response: ${JSON.stringify(paymentResult)}`,
-            );
-
-            // Check if payment was successful
-            if (paymentResult?.resultcode === '000' && paymentResult?.result === 'SUCCESS') {
-                const transactionId = paymentResult?.transid || paymentResult?.reference || orderReference;
-
-                return {
-                    success: true,
-                    transactionId: transactionId,
-                    raw: {
-                        order: createResult,
-                        payment: paymentResult,
-                    },
-                    data: {
-                        order: createResult,
-                        payment: paymentResult,
-                    },
-                    message: paymentResult?.message || 'Payment initiated successfully',
-                };
-            }
-
-            // Payment failed but order was created
-            return {
-                success: false,
-                message: paymentResult?.message || 'Payment initiation failed',
-                raw: {
-                    order: createResult,
-                    payment: paymentResult,
-                },
-                data: {
-                    order: createResult,
-                    payment: paymentResult,
-                },
-            };
-
-        } catch (error) {
-            this.logger.error(
-                'SELCOM initiation failed',
-                JSON.stringify({
-                    message: error?.message,
-                    response: error?.response?.data,
-                    status: error?.response?.status,
-                    stack: error?.stack,
-                }, null, 2),
-            );
-
-            return {
-                success: false,
-                message: error?.response?.data?.message ||
-                    error?.response?.data?.error ||
-                    error?.message ||
-                    'SELCOM payment failed',
-                raw: error?.response?.data,
-            };
-        }
-    }
-
-
-    // ============================================================
-    // VERIFY PAYMENT
-    // ============================================================
-
-    async verify(
-        data: VerifyPaymentInput,
-    ): Promise<PaymentProviderResponse> {
-
-        const url =
-            this.configService.get<string>(
-                'SELCOM_STATUS_URL',
-            );
-
-        const {
-            vendor,
-            apiKey,
-            apiSecret,
-        } = this.getConfig();
-
-        if (!url) {
-            throw new InternalServerErrorException(
-                'SELCOM_STATUS_URL is missing',
-            );
-        }
-
-        try {
-            this.logger.log(
-                `Verifying Selcom payment: ${data.reference}`,
-            );
-
-            const timestamp =
-                this.getTimestamp();
-
-            const requestData: Record<string, any> = {
-                vendor: vendor,
-                order_id: data.reference,
-                timestamp: timestamp,
-            };
-
-            const signedFields = ['vendor', 'order_id'];
-
-            const digest = this.generateDigest(
-                apiSecret,
-                timestamp,
-                requestData,
-                signedFields,
-            );
-
-            const headers = {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `SELCOM ${apiKey}`,
-                'Digest-Method': 'HS256',
-                'Digest': digest,
-                'Timestamp': timestamp,
-                'Signed-Fields': signedFields.join(','),
-            };
-
-            const response =
-                await firstValueFrom(
-                    this.httpService.post(
-                        url,
-                        requestData,
-                        {
-                            headers,
-                            timeout: 30000,
-                        },
-                    ),
-                );
-
-            const result = response.data;
-
-            const success = this.isPaymentSuccessful(result);
-
-            this.logger.log(
-                `Selcom payment verification: ${data.reference}, success: ${success}`,
-            );
-
-            return {
-                success,
-                transactionId: result?.transid ||
-                    result?.transaction_id ||
-                    result?.order_id ||
-                    data.reference,
-                message: result?.message ||
-                    (success ? 'Payment successful' : 'Payment not successful'),
-                raw: result,
-                data: result,
-            };
-
-        } catch (error) {
-            this.logger.error(
-                'Selcom verification failed',
-                JSON.stringify({
-                    message: error?.message,
-                    response: error?.response?.data,
-                    status: error?.response?.status,
-                }, null, 2),
-            );
-
-            return {
-                success: false,
-                message: error?.response?.data?.message ||
-                    error?.response?.data?.error ||
-                    error?.message ||
-                    'Selcom verification failed',
-                raw: error?.response?.data,
-            };
-        }
-    }
-
-
-    // ============================================================
-    // CANCEL ORDER
-    // ============================================================
-
-    async cancelOrder(
-        reference: string,
-    ): Promise<PaymentProviderResponse> {
-
-        const url =
-            this.configService.get<string>(
-                'SELCOM_CANCEL_ORDER_URL',
-            );
-
-        const {
-            vendor,
-            apiKey,
-            apiSecret,
-        } = this.getConfig();
-
-        if (!url) {
-            throw new InternalServerErrorException(
-                'SELCOM_CANCEL_ORDER_URL is missing',
-            );
-        }
-
-        try {
-            this.logger.log(
-                `Canceling Selcom order: ${reference}`,
-            );
-
-            const timestamp =
-                this.getTimestamp();
-
-            const requestData: Record<string, any> = {
-                vendor: vendor,
-                order_id: reference,
-                timestamp: timestamp,
-            };
-
-            const signedFields = ['vendor', 'order_id'];
-
-            const digest = this.generateDigest(
-                apiSecret,
-                timestamp,
-                requestData,
-                signedFields,
-            );
-
-            const headers = {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `SELCOM ${apiKey}`,
-                'Digest-Method': 'HS256',
-                'Digest': digest,
-                'Timestamp': timestamp,
-                'Signed-Fields': signedFields.join(','),
-            };
-
-            const response =
-                await firstValueFrom(
-                    this.httpService.post(
-                        url,
-                        requestData,
-                        {
-                            headers,
-                            timeout: 30000,
-                        },
-                    ),
-                );
-
-            const result = response.data;
-
-            this.logger.log(
-                `Selcom order cancellation: ${reference}, result: ${JSON.stringify(result)}`,
-            );
-
-            return {
-                success: this.isSuccessfulResponse(result),
-                transactionId: result?.transid ||
-                    result?.transaction_id ||
-                    reference,
-                message: result?.message ||
-                    'Selcom order cancellation request completed',
-                raw: result,
-                data: result,
-            };
-
-        } catch (error) {
-            this.logger.error(
-                'Selcom cancellation failed',
-                JSON.stringify({
-                    message: error?.message,
-                    response: error?.response?.data,
-                    status: error?.response?.status,
-                }, null, 2),
-            );
-
-            return {
-                success: false,
-                message: error?.response?.data?.message ||
-                    error?.message ||
-                    'Selcom cancellation failed',
-                raw: error?.response?.data,
-            };
-        }
-    }
-
-
-    // ============================================================
-    // RESPONSE SUCCESS
-    // ============================================================
-
-    private isSuccessfulResponse(
-        result: any,
-    ): boolean {
-
-        if (result?.resultcode === '000') {
-            return true;
-        }
-
-        const value =
-            String(
-                result?.result ??
-                result?.status ??
-                '',
-            ).toUpperCase();
-
-        return [
-            'SUCCESS',
-            'SUCCESSFUL',
-            'COMPLETED',
-            'OK',
-        ].includes(value);
-    }
-
-
-    // ============================================================
-    // PAYMENT SUCCESS
-    // ============================================================
-
-    private isPaymentSuccessful(
-        result: any,
-    ): boolean {
-
-        if (result?.resultcode === '000') {
-            return true;
-        }
-
-        const value =
-            String(
-                result?.result ??
-                result?.status ??
-                result?.payment_status ??
-                '',
-            ).toUpperCase();
-
-        return [
-            'SUCCESS',
-            'SUCCESSFUL',
-            'COMPLETED',
-            'PAID',
-        ].includes(value);
-    }
-
-
-    // ============================================================
-    // LIST PAYMENTS (Not Supported)
-    // ============================================================
-
-    async listPayments(
-        data: ListPaymentsInput,
-    ): Promise<ListPaymentsResponse> {
-
-        this.logger.warn(
-            'List payments is not supported by Selcom provider',
-        );
-
+      this.logger.log(
+        `SELCOM payment response: ${JSON.stringify(
+          paymentResponse,
+        )}`,
+      );
+
+      // ========================================================
+      // PAYMENT PENDING
+      // ========================================================
+
+      /**
+       * SELCOM resultcode 111 means:
+       *
+       * Request accepted / pending.
+       *
+       * It DOES NOT mean payment is completed.
+       */
+
+      if (
+        paymentResponse?.resultcode === '111' ||
+        paymentResponse?.result === 'PENDING'
+      ) {
         return {
-            success: false,
-            data: {
-                payments: [],
-                total: 0,
-                limit: data.limit || 20,
-                offset: data.offset || 0,
-            },
-            message: 'List payments is not supported by Selcom provider',
+          success: true,
+
+          transactionId: orderId,
+
+          message:
+            paymentResponse?.message ||
+            'Payment request sent. Waiting for customer confirmation.',
+
+          raw: paymentResponse,
+
+          data: {
+            status: 'PENDING',
+
+            reference: orderId,
+          },
         };
+      }
+
+      // ========================================================
+      // PAYMENT FAILED
+      // ========================================================
+
+      return {
+        success: false,
+
+        transactionId: orderId,
+
+        message:
+          paymentResponse?.message ||
+          'SELCOM payment request failed',
+
+        raw: paymentResponse,
+
+        data: {
+          status: 'FAILED',
+
+          reference: orderId,
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(
+        'SELCOM initiate payment failed',
+        error?.stack || error,
+      );
+
+      return {
+        success: false,
+
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          'SELCOM payment initiation failed',
+
+        raw:
+          error?.response?.data ||
+          error?.message,
+      };
+    }
+  }
+
+  // ============================================================
+  // GET BUYER NAME
+  // ============================================================
+
+  private getBuyerName(
+    data: InitiatePaymentInput,
+  ): string {
+    if (data.customer?.name) {
+      return data.customer.name;
     }
 
+    const firstName =
+      data.customer?.firstname || '';
 
-    // ============================================================
-    // GET BALANCE (Not Supported)
-    // ============================================================
+    const lastName =
+      data.customer?.lastname || '';
 
-    async getBalance(): Promise<BalanceResponse> {
+    return `${firstName} ${lastName}`.trim();
+  }
 
-        this.logger.warn(
-            'Get balance is not supported by Selcom provider',
+  // ============================================================
+  // NORMALIZE PHONE
+  // ============================================================
+
+  private normalizePhone(
+    phone: string,
+  ): string {
+    if (!phone) {
+      return '';
+    }
+
+    let value = String(phone)
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/-/g, '');
+
+    // +255714059160
+    if (value.startsWith('+')) {
+      value = value.substring(1);
+    }
+
+    // 00255714059160
+    if (value.startsWith('00')) {
+      value = value.substring(2);
+    }
+
+    // 0714059160
+    if (value.startsWith('0')) {
+      value = `255${value.substring(1)}`;
+    }
+
+    // 714059160
+    if (
+      !value.startsWith('255') &&
+      /^[67]\d{8}$/.test(value)
+    ) {
+      value = `255${value}`;
+    }
+
+    return value;
+  }
+
+  // ============================================================
+  // CHECK CREATE ORDER RESPONSE
+  // ============================================================
+
+  private isOrderCreated(
+    response: any,
+  ): boolean {
+    if (!response) {
+      return false;
+    }
+
+    return (
+      response.result === 'SUCCESS' ||
+      response.result === 'SUCCESSFUL' ||
+      response.resultcode === '000' ||
+      response.resultcode === '00'
+    );
+  }
+
+  // ============================================================
+  // VERIFY PAYMENT
+  // ============================================================
+
+  async verify(
+    data: VerifyPaymentInput,
+  ): Promise<PaymentProviderResponse> {
+    try {
+      const client = this.getClient();
+
+      const reference = data.reference;
+
+      if (!reference) {
+        return {
+          success: false,
+
+          message:
+            'Payment reference is required',
+        };
+      }
+
+      this.logger.log(
+        `Checking SELCOM order status: ${reference}`,
+      );
+
+      const statusResponse =
+        await client.postFunc(
+          '/v1/checkout/order-status',
+          {
+            vendor: this.vendor,
+
+            order_id: reference,
+          },
         );
 
-        return {
-            success: false,
-            data: {
-                balance: 0,
-                currency: 'TZS',
-                available: 0,
-                pending: 0,
-                updated_at: new Date().toISOString(),
-            },
-            message: 'Get balance is not supported by Selcom provider',
-        };
-    }
+      this.logger.log(
+        `SELCOM status response: ${JSON.stringify(
+          statusResponse,
+        )}`,
+      );
 
-
-    // ============================================================
-    // SEARCH PAYMENTS (Not Supported)
-    // ============================================================
-
-    async searchPayments(
-        data: SearchPaymentsInput,
-    ): Promise<SearchPaymentsResponse> {
-
-        this.logger.warn(
-            'Search payments is not supported by Selcom provider',
+      const success =
+        this.isPaymentSuccessful(
+          statusResponse,
         );
 
-        return {
-            success: false,
-            data: {
-                payments: [],
-            },
-            message: 'Search payments is not supported by Selcom provider',
-        };
+      return {
+        success,
+
+        transactionId: reference,
+
+        message:
+          statusResponse?.message ||
+          'SELCOM payment status received',
+
+        raw: statusResponse,
+
+        data: {
+          reference,
+
+          status:
+            this.getPaymentStatus(
+              statusResponse,
+            ),
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(
+        'SELCOM verify failed',
+        error?.stack || error,
+      );
+
+      return {
+        success: false,
+
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          'Failed to verify SELCOM payment',
+
+        raw:
+          error?.response?.data ||
+          error?.message,
+      };
     }
+  }
 
+  // ============================================================
+  // CANCEL ORDER
+  // ============================================================
 
-    // ============================================================
-    // TRIGGER USSD PUSH (Not Supported)
-    // ============================================================
+  async cancelOrder(
+    reference: string,
+  ): Promise<PaymentProviderResponse> {
+    try {
+      const client = this.getClient();
 
-    async triggerUssdPush(
-        data: TriggerUssdPushInput,
-    ): Promise<TriggerUssdPushResponse> {
+      this.logger.log(
+        `Cancelling SELCOM order: ${reference}`,
+      );
 
-        this.logger.warn(
-            'USSD push is not supported by Selcom provider',
+      const response =
+        await client.postFunc(
+          '/v1/checkout/cancel-order',
+          {
+            vendor: this.vendor,
+
+            order_id: reference,
+          },
         );
 
-        return {
-            success: false,
-            data: {
-                status: 'failed',
-                message: 'USSD push is not supported by Selcom provider',
-                reference: data.reference,
-            },
-            message: 'USSD push is not supported by Selcom provider',
-        };
+      return {
+        success:
+          response?.result === 'SUCCESS' ||
+          response?.result === 'SUCCESSFUL' ||
+          response?.resultcode === '000' ||
+          response?.resultcode === '00',
+
+        transactionId: reference,
+
+        message:
+          response?.message ||
+          'SELCOM order cancellation request completed',
+
+        raw: response,
+
+        data: {
+          reference,
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(
+        'SELCOM cancel order failed',
+        error?.stack || error,
+      );
+
+      return {
+        success: false,
+
+        transactionId: reference,
+
+        message:
+          error?.response?.data?.message ||
+          error?.message ||
+          'Failed to cancel SELCOM order',
+
+        raw:
+          error?.response?.data ||
+          error?.message,
+      };
     }
+  }
+
+  // ============================================================
+  // PAYMENT SUCCESS
+  // ============================================================
+
+  private isPaymentSuccessful(
+    response: any,
+  ): boolean {
+    if (!response) {
+      return false;
+    }
+
+    /**
+     * IMPORTANT:
+     * 111/PENDING is not successful.
+     */
+
+    if (
+      response.result === 'PENDING' ||
+      response.resultcode === '111'
+    ) {
+      return false;
+    }
+
+    return (
+      response.result === 'SUCCESS' ||
+      response.result === 'SUCCESSFUL' ||
+      response.resultcode === '000' ||
+      response.resultcode === '00'
+    );
+  }
+
+  // ============================================================
+  // PAYMENT STATUS
+  // ============================================================
+
+  private getPaymentStatus(
+    response: any,
+  ): string {
+    if (!response) {
+      return 'UNKNOWN';
+    }
+
+    if (
+      response.result === 'PENDING' ||
+      response.resultcode === '111'
+    ) {
+      return 'PENDING';
+    }
+
+    if (
+      this.isPaymentSuccessful(response)
+    ) {
+      return 'SUCCESS';
+    }
+
+    return 'FAILED';
+  }
+
+  // ============================================================
+  // LIST PAYMENTS
+  // ============================================================
+
+  async listPayments(
+    data: ListPaymentsInput,
+  ): Promise<ListPaymentsResponse> {
+    return {
+      success: false,
+
+      data: {
+        payments: [],
+
+        total: 0,
+
+        limit: data.limit,
+
+        offset: data.offset,
+      },
+
+      message:
+        'SELCOM listPayments is not supported',
+    };
+  }
+
+  // ============================================================
+  // BALANCE
+  // ============================================================
+
+  async getBalance(): Promise<BalanceResponse> {
+    return {
+      success: false,
+
+      data: {
+        balance: 0,
+
+        currency: 'TZS',
+
+        available: 0,
+
+        pending: 0,
+
+        updated_at:
+          new Date().toISOString(),
+      },
+
+      message:
+        'SELCOM getBalance is not supported',
+    };
+  }
+
+  // ============================================================
+  // SEARCH PAYMENTS
+  // ============================================================
+
+  async searchPayments(
+    data: SearchPaymentsInput,
+  ): Promise<SearchPaymentsResponse> {
+    return {
+      success: false,
+
+      data: {
+        payments: [],
+      },
+
+      message:
+        `SELCOM searchPayments is not supported for ${data.reference}`,
+    };
+  }
+
+  // ============================================================
+  // USSD PUSH
+  // ============================================================
+
+  async triggerUssdPush(
+    data: TriggerUssdPushInput,
+  ): Promise<TriggerUssdPushResponse> {
+    return {
+      success: false,
+
+      data: {
+        status: 'UNSUPPORTED',
+
+        message:
+          'Use initiate() to trigger SELCOM wallet payment',
+
+        reference: data.reference,
+      },
+
+      message:
+        'SELCOM triggerUssdPush is not supported separately',
+    };
+  }
 }
