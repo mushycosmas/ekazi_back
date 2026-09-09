@@ -407,15 +407,12 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
             return {
 
-                /*
-                 * 111 means request accepted/pending.
-                 * It is not a completed payment.
-                 */
                 success:
                     success || pending,
 
+                // SELCOM's actual reference
                 transactionId:
-                    orderId,
+                    response?.reference || orderId,
 
                 message:
                     response?.message ||
@@ -439,8 +436,13 @@ export class SelcomPaymentProvider implements SelcomProvider {
                                 ? 'SUCCESS'
                                 : 'FAILED',
 
+                    // SELCOM reference
                     reference:
-                        orderId,
+                        response?.reference || orderId,
+
+                    // Our merchant/order ID
+                    transid:
+                        response?.transid || orderId,
                 },
             };
 
