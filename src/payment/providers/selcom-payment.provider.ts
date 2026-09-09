@@ -475,36 +475,129 @@ export class SelcomPaymentProvider implements SelcomProvider {
     // ORDER STATUS
     // ============================================================
 
- async orderStatus(reference: string): Promise<PaymentProviderResponse> {
+    //  async orderStatus(reference: string): Promise<PaymentProviderResponse> {
+    //     try {
+    //         const client = this.getClient();
+
+    //         if (!reference) {
+    //             return { success: false, message: 'Payment reference is required' };
+    //         }
+
+    //         this.logger.log(`Checking SELCOM order status: ${reference}`);
+
+    //         // ✅ Use GET with query parameters
+    //         const response = await client.postFunc(
+    //             '/v1/checkout/order-status',
+    //             {
+    //                 vendor: this.vendor,
+    //                 order_id: reference,
+    //             }
+    //         );
+
+    //         this.logger.log(`SELCOM order status response: ${JSON.stringify(response)}`);
+
+    //         // Check if payment is successful
+    //         const isSuccess = this.isPaymentSuccessful(response);
+    //         const status = this.getPaymentStatus(response);
+
+    //         return {
+    //             success: isSuccess,
+    //             transactionId: response?.reference || reference,
+    //             message: response?.message || 'SELCOM order status received',
+    //             raw: response,
+    //             data: {
+    //                 reference,
+    //                 status,
+    //                 result: response?.result,
+    //                 resultcode: response?.resultcode,
+    //             },
+    //         };
+
+    //     } catch (error: any) {
+    //         this.logger.error('SELCOM order status failed', error?.stack || error);
+    //         return {
+    //             success: false,
+    //             transactionId: reference,
+    //             message: error?.response?.data?.message || error?.message || 'Failed to get SELCOM order status',
+    //             raw: error?.response?.data || error?.message,
+    //         };
+    //     }
+    // }
+ async orderStatus(
+    reference: string,
+): Promise<PaymentProviderResponse> {
     try {
         const client = this.getClient();
 
         if (!reference) {
-            return { success: false, message: 'Payment reference is required' };
+            return {
+                success: false,
+                message: 'Payment reference is required',
+            };
         }
 
-        this.logger.log(`Checking SELCOM order status: ${reference}`);
-
-        // ✅ Use GET with query parameters
-        const response = await client.postFunc(
-            '/v1/checkout/order-status',
-            {
-                vendor: this.vendor,
-                order_id: reference,
-            }
+        this.logger.log(
+            `Checking SELCOM order status: ${reference}`,
         );
 
-        this.logger.log(`SELCOM order status response: ${JSON.stringify(response)}`);
+        const orderStatusPath =
+            '/v1/checkout/order-status';
 
-        // Check if payment is successful
-        const isSuccess = this.isPaymentSuccessful(response);
-        const status = this.getPaymentStatus(response);
+        const orderStatusData = {
+            order_id: reference,
+        };
+
+        this.logger.debug(
+            `SELCOM order status method: GET`,
+        );
+
+        this.logger.debug(
+            `SELCOM order status path: ${orderStatusPath}`,
+        );
+
+        this.logger.debug(
+            `SELCOM order status payload: ${JSON.stringify(
+                orderStatusData,
+            )}`,
+        );
+
+        const response = await client.getFunc(
+            orderStatusPath,
+            orderStatusData,
+        );
+
+        this.logger.log(
+            `SELCOM order status response: ${JSON.stringify(
+                response,
+            )}`,
+        );
+
+        const isSuccess =
+            this.isPaymentSuccessful(response);
+
+        const status =
+            this.getPaymentStatus(response);
+
+        this.logger.log(
+            `SELCOM payment status: ${status}`,
+        );
+
+        this.logger.log(
+            `SELCOM payment successful: ${isSuccess}`,
+        );
 
         return {
             success: isSuccess,
-            transactionId: response?.reference || reference,
-            message: response?.message || 'SELCOM order status received',
+
+            transactionId:
+                response?.reference || reference,
+
+            message:
+                response?.message ||
+                'SELCOM order status received',
+
             raw: response,
+
             data: {
                 reference,
                 status,
@@ -514,12 +607,23 @@ export class SelcomPaymentProvider implements SelcomProvider {
         };
 
     } catch (error: any) {
-        this.logger.error('SELCOM order status failed', error?.stack || error);
+        this.logger.error(
+            `SELCOM order status failed: ${
+                error?.message || error
+            }`,
+            error?.stack,
+        );
+
         return {
             success: false,
             transactionId: reference,
-            message: error?.response?.data?.message || error?.message || 'Failed to get SELCOM order status',
-            raw: error?.response?.data || error?.message,
+            message:
+                error?.response?.data?.message ||
+                error?.message ||
+                'Failed to get SELCOM order status',
+            raw:
+                error?.response?.data ||
+                error?.message,
         };
     }
 }
@@ -529,61 +633,61 @@ export class SelcomPaymentProvider implements SelcomProvider {
     // INITIATE PAYMENT
     // ============================================================
 
-  async initiate(data: InitiatePaymentInput): Promise<PaymentProviderResponse> {
-    try {
-        const orderId = data.reference;
-        const buyerPhone = this.normalizePhone(data.customer?.phone || data.phone);
-        const amount = Number(data.amount);
+    async initiate(data: InitiatePaymentInput): Promise<PaymentProviderResponse> {
+        try {
+            const orderId = data.reference;
+            const buyerPhone = this.normalizePhone(data.customer?.phone || data.phone);
+            const amount = Number(data.amount);
 
-        // ========================================================
-        // STEP 1: CREATE ORDER WITH WEBHOOK
-        // ========================================================
-        const orderResponse = await this.createOrder({
-            vendor: this.vendor,
-            order_id: orderId,
-            buyer_email: data.customer?.email || '',
-            buyer_name: this.getBuyerName(data),
-            buyer_phone: buyerPhone,
-            amount,
-            currency: data.currency || 'TZS',
-            buyer_remarks: `eKazi subscription ${orderId}`,
-            merchant_remarks: 'eKazi subscription payment',
-            no_of_items: 1,
-            // webhook: data.callbackUrl, // ✅ CRITICAL - this tells SELCOM where to send callback
-        });
-
-        if (!orderResponse.success) {
-            return orderResponse;
-        }
-
-        // ========================================================
-        // STEP 2: INITIATE PAYMENT
-        // ========================================================
-        const paymentResponse = await this.walletPayment({
-            transid: orderId,
-            order_id: orderId,
-            msisdn: buyerPhone,
-        });
-
-        return {
-            ...paymentResponse,
-            data: {
-                ...paymentResponse.data,
+            // ========================================================
+            // STEP 1: CREATE ORDER WITH WEBHOOK
+            // ========================================================
+            const orderResponse = await this.createOrder({
+                vendor: this.vendor,
                 order_id: orderId,
-                payment_token: orderResponse.raw?.data?.payment_token,
-                payment_gateway_url: orderResponse.raw?.data?.payment_gateway_url,
-            }
-        };
+                buyer_email: data.customer?.email || '',
+                buyer_name: this.getBuyerName(data),
+                buyer_phone: buyerPhone,
+                amount,
+                currency: data.currency || 'TZS',
+                buyer_remarks: `eKazi subscription ${orderId}`,
+                merchant_remarks: 'eKazi subscription payment',
+                no_of_items: 1,
+                // webhook: data.callbackUrl, // ✅ CRITICAL - this tells SELCOM where to send callback
+            });
 
-    } catch (error: any) {
-        this.logger.error('SELCOM initiate payment failed', error?.stack || error);
-        return {
-            success: false,
-            message: error?.message || 'SELCOM payment initiation failed',
-            raw: error?.response?.data || error?.message,
-        };
+            if (!orderResponse.success) {
+                return orderResponse;
+            }
+
+            // ========================================================
+            // STEP 2: INITIATE PAYMENT
+            // ========================================================
+            const paymentResponse = await this.walletPayment({
+                transid: orderId,
+                order_id: orderId,
+                msisdn: buyerPhone,
+            });
+
+            return {
+                ...paymentResponse,
+                data: {
+                    ...paymentResponse.data,
+                    order_id: orderId,
+                    payment_token: orderResponse.raw?.data?.payment_token,
+                    payment_gateway_url: orderResponse.raw?.data?.payment_gateway_url,
+                }
+            };
+
+        } catch (error: any) {
+            this.logger.error('SELCOM initiate payment failed', error?.stack || error);
+            return {
+                success: false,
+                message: error?.message || 'SELCOM payment initiation failed',
+                raw: error?.response?.data || error?.message,
+            };
+        }
     }
-}
 
 
     // ============================================================
