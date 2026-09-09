@@ -486,7 +486,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
         this.logger.log(`Checking SELCOM order status: ${reference}`);
 
         // ✅ Use GET with query parameters
-        const response = await client.getFunc(
+        const response = await client.postFunc(
             '/v1/checkout/order-status',
             {
                 vendor: this.vendor,
