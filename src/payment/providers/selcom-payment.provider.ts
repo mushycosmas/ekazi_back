@@ -549,7 +549,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
             buyer_remarks: `eKazi subscription ${orderId}`,
             merchant_remarks: 'eKazi subscription payment',
             no_of_items: 1,
-            webhook: data.callbackUrl, // ✅ CRITICAL - this tells SELCOM where to send callback
+            // webhook: data.callbackUrl, // ✅ CRITICAL - this tells SELCOM where to send callback
         });
 
         if (!orderResponse.success) {
