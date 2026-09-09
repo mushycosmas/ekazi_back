@@ -475,269 +475,115 @@ export class SelcomPaymentProvider implements SelcomProvider {
     // ORDER STATUS
     // ============================================================
 
-    async orderStatus(
-        reference: string,
-    ): Promise<PaymentProviderResponse> {
+ async orderStatus(reference: string): Promise<PaymentProviderResponse> {
+    try {
+        const client = this.getClient();
 
-        try {
-
-            const client =
-                this.getClient();
-
-
-            if (!reference) {
-
-                return {
-
-                    success: false,
-
-                    message:
-                        'Payment reference is required',
-                };
-            }
-
-
-            this.logger.log(
-                `Checking SELCOM order status: ${reference}`,
-            );
-
-
-            const response =
-                await client.postFunc(
-                    '/v1/checkout/order-status',
-                    {
-                        vendor:
-                            this.vendor,
-
-                        order_id:
-                            reference,
-                    },
-                );
-
-
-            this.logger.log(
-                `SELCOM order status response: ${JSON.stringify(
-                    response,
-                )}`,
-            );
-
-
-            const success =
-                this.isPaymentSuccessful(
-                    response,
-                );
-
-
-            return {
-
-                success,
-
-                transactionId:
-                    reference,
-
-                message:
-                    response?.message ||
-                    'SELCOM order status received',
-
-                raw:
-                    response,
-
-                data: {
-
-                    reference,
-
-                    status:
-                        this.getPaymentStatus(
-                            response,
-                        ),
-                },
-            };
-
-        } catch (error: any) {
-
-            this.logger.error(
-                'SELCOM order status failed',
-                error?.stack || error,
-            );
-
-
-            return {
-
-                success: false,
-
-                transactionId:
-                    reference,
-
-                message:
-                    error?.response?.data?.message ||
-                    error?.message ||
-                    'Failed to get SELCOM order status',
-
-                raw:
-                    error?.response?.data ||
-                    error?.message,
-            };
+        if (!reference) {
+            return { success: false, message: 'Payment reference is required' };
         }
+
+        this.logger.log(`Checking SELCOM order status: ${reference}`);
+
+        // ✅ Use GET with query parameters
+        const response = await client.getFunc(
+            '/v1/checkout/order-status',
+            {
+                vendor: this.vendor,
+                order_id: reference,
+            }
+        );
+
+        this.logger.log(`SELCOM order status response: ${JSON.stringify(response)}`);
+
+        // Check if payment is successful
+        const isSuccess = this.isPaymentSuccessful(response);
+        const status = this.getPaymentStatus(response);
+
+        return {
+            success: isSuccess,
+            transactionId: response?.reference || reference,
+            message: response?.message || 'SELCOM order status received',
+            raw: response,
+            data: {
+                reference,
+                status,
+                result: response?.result,
+                resultcode: response?.resultcode,
+            },
+        };
+
+    } catch (error: any) {
+        this.logger.error('SELCOM order status failed', error?.stack || error);
+        return {
+            success: false,
+            transactionId: reference,
+            message: error?.response?.data?.message || error?.message || 'Failed to get SELCOM order status',
+            raw: error?.response?.data || error?.message,
+        };
     }
+}
 
 
     // ============================================================
     // INITIATE PAYMENT
     // ============================================================
 
-    async initiate(
-        data: InitiatePaymentInput,
-    ): Promise<PaymentProviderResponse> {
+  async initiate(data: InitiatePaymentInput): Promise<PaymentProviderResponse> {
+    try {
+        const orderId = data.reference;
+        const buyerPhone = this.normalizePhone(data.customer?.phone || data.phone);
+        const amount = Number(data.amount);
 
-        try {
+        // ========================================================
+        // STEP 1: CREATE ORDER WITH WEBHOOK
+        // ========================================================
+        const orderResponse = await this.createOrder({
+            vendor: this.vendor,
+            order_id: orderId,
+            buyer_email: data.customer?.email || '',
+            buyer_name: this.getBuyerName(data),
+            buyer_phone: buyerPhone,
+            amount,
+            currency: data.currency || 'TZS',
+            buyer_remarks: `eKazi subscription ${orderId}`,
+            merchant_remarks: 'eKazi subscription payment',
+            no_of_items: 1,
+            webhook: data.callbackUrl, // ✅ CRITICAL - this tells SELCOM where to send callback
+        });
 
-            const orderId =
-                data.reference;
-
-
-            if (!orderId) {
-
-                throw new Error(
-                    'Payment reference/order_id is required',
-                );
-            }
-
-
-            const buyerName =
-                this.getBuyerName(data);
-
-
-            const buyerPhone =
-                this.normalizePhone(
-                    data.customer?.phone ||
-                    data.phone,
-                );
-
-
-            if (!buyerPhone) {
-
-                throw new Error(
-                    'Buyer phone number is required',
-                );
-            }
-
-
-            const amount =
-                Number(data.amount);
-
-
-            if (!amount || amount <= 0) {
-
-                throw new Error(
-                    'Payment amount must be greater than zero',
-                );
-            }
-
-
-            // ========================================================
-            // STEP 1: CREATE ORDER
-            // ========================================================
-
-            const orderResponse =
-                await this.createOrder({
-
-                    vendor:
-                        this.vendor,
-
-                    order_id:
-                        orderId,
-
-                    buyer_email:
-                        data.customer?.email || '',
-
-                    buyer_name:
-                        buyerName,
-
-                    buyer_phone:
-                        buyerPhone,
-
-                    amount,
-
-                    currency:
-                        data.currency || 'TZS',
-
-                    buyer_remarks:
-                        `eKazi subscription ${orderId}`,
-
-                    merchant_remarks:
-                        'eKazi subscription payment',
-
-                    no_of_items:
-                        1,
-                });
-
-
-            if (!orderResponse.success) {
-
-                return orderResponse;
-            }
-
-
-            // ========================================================
-            // STEP 2: PAYMENT
-            // ========================================================
-
-            const paymentMethod =
-                String(
-                    (data as any).payment_method ||
-                    (data as any).paymentMethod ||
-                    'wallet',
-                ).toLowerCase();
-
-
-            const paymentData: SelcomWalletPaymentInput = {
-
-                transid:
-                    orderId,
-
-                order_id:
-                    orderId,
-
-                msisdn:
-                    buyerPhone,
-            };
-
-
-            const paymentResponse =
-                paymentMethod === 'selcompesa'
-                    ? await this.selcompesaPayment(
-                        paymentData,
-                    )
-                    : await this.walletPayment(
-                        paymentData,
-                    );
-
-
-            return paymentResponse;
-
-        } catch (error: any) {
-
-            this.logger.error(
-                'SELCOM initiate payment failed',
-                error?.stack || error,
-            );
-
-
-            return {
-
-                success: false,
-
-                message:
-                    error?.response?.data?.message ||
-                    error?.message ||
-                    'SELCOM payment initiation failed',
-
-                raw:
-                    error?.response?.data ||
-                    error?.message,
-            };
+        if (!orderResponse.success) {
+            return orderResponse;
         }
+
+        // ========================================================
+        // STEP 2: INITIATE PAYMENT
+        // ========================================================
+        const paymentResponse = await this.walletPayment({
+            transid: orderId,
+            order_id: orderId,
+            msisdn: buyerPhone,
+        });
+
+        return {
+            ...paymentResponse,
+            data: {
+                ...paymentResponse.data,
+                order_id: orderId,
+                payment_token: orderResponse.raw?.data?.payment_token,
+                payment_gateway_url: orderResponse.raw?.data?.payment_gateway_url,
+            }
+        };
+
+    } catch (error: any) {
+        this.logger.error('SELCOM initiate payment failed', error?.stack || error);
+        return {
+            success: false,
+            message: error?.message || 'SELCOM payment initiation failed',
+            raw: error?.response?.data || error?.message,
+        };
     }
+}
 
 
     // ============================================================

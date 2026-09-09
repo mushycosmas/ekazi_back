@@ -1284,12 +1284,10 @@ export class PaymentService {
             // IMPORTANT:
             // SELCOM order-status should use OUR order_id
             // e.g. SUB_1788941754240_57D47C99D9
-
-            const verification =
-                await provider.verify({
-                    reference:
-                        payment.transaction_id,
-                });
+           
+            const verification = await provider.verify({
+                reference: payment.transaction_id, 
+            });
 
             this.logger.log(
                 `SELCOM VERIFICATION RESULT: ${JSON.stringify(
