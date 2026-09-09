@@ -860,20 +860,170 @@ async selcomCancelOrder(reference: string) {
     return provider.cancelOrder(reference);
 }
 
-    async handleSelcomCallback(
-        payload: any,
-    ) {
+    // async handleSelcomCallback(
+    //     payload: any,
+    // ) {
 
-        const reference =
+    //     const reference =
 
+    //         payload?.order_id ||
+
+    //         payload?.reference ||
+
+    //         payload?.transaction_id;
+
+
+    //     if (!reference) {
+
+    //         throw new BadRequestException(
+    //             'Payment reference is required',
+    //         );
+
+    //     }
+
+
+    //     const payment =
+    //         await this.subscriptionPaymentRepository.findOne({
+
+    //             where: {
+
+    //                 transaction_id:
+    //                     reference,
+
+    //             },
+
+    //         });
+
+
+    //     if (!payment) {
+
+    //         throw new NotFoundException(
+    //             'Payment not found',
+    //         );
+
+    //     }
+
+
+    //     if (
+    //         payment.status ===
+    //         PaymentStatus.SUCCESS
+    //     ) {
+
+    //         return {
+
+    //             success:
+    //                 true,
+
+    //             message:
+    //                 'Payment already processed',
+
+    //         };
+
+    //     }
+
+
+    //     // FIXED: Pass provider name
+    //     const provider =
+    //         this.paymentProviderFactory.getProvider('selcom');
+
+
+    //     const verification =
+    //         await provider.verify({
+
+    //             reference,
+
+    //         });
+
+
+    //     if (
+    //         !verification.success
+    //     ) {
+
+    //         await this.subscriptionPaymentRepository.update(
+
+    //             {
+    //                 id:
+    //                     payment.id,
+    //             },
+
+    //             {
+    //                 status:
+    //                     PaymentStatus.FAILED,
+    //             },
+
+    //         );
+
+
+    //         throw new BadRequestException({
+
+    //             success:
+    //                 false,
+
+    //             message:
+    //                 'Payment verification failed',
+
+    //         });
+
+    //     }
+
+
+    //     await this.activateSubscription(
+    //         payment.id,
+    //     );
+
+
+    //     return {
+
+    //         success:
+    //             true,
+
+    //         message:
+    //             'Subscription activated successfully',
+
+    //     };
+
+    // }
+
+async handleSelcomCallback(
+    payload: any,
+) {
+    try {
+
+        // ========================================================
+        // LOG CALLBACK
+        // ========================================================
+
+        this.logger.log(
+            `SELCOM CALLBACK RECEIVED: ${JSON.stringify(payload)}`,
+        );
+
+        // ========================================================
+        // GET OUR INTERNAL ORDER ID
+        // ========================================================
+
+        const orderId =
             payload?.order_id ||
+            payload?.orderId;
 
+        // SELCOM reference / transaction reference
+        const selcomReference =
             payload?.reference ||
+            payload?.transaction_id ||
+            payload?.transid;
 
-            payload?.transaction_id;
+        this.logger.log(
+            `SELCOM order_id: ${orderId}`,
+        );
 
+        this.logger.log(
+            `SELCOM reference: ${selcomReference}`,
+        );
 
-        if (!reference) {
+        // ========================================================
+        // WE NEED AT LEAST ONE REFERENCE
+        // ========================================================
+
+        if (!orderId && !selcomReference) {
 
             throw new BadRequestException(
                 'Payment reference is required',
@@ -881,28 +1031,55 @@ async selcomCancelOrder(reference: string) {
 
         }
 
+        // ========================================================
+        // FIND OUR PAYMENT
+        // ========================================================
 
-        const payment =
-            await this.subscriptionPaymentRepository.findOne({
+        let payment: SubscriptionPayment | null = null;
 
-                where: {
+        // First try our internal transaction_id
+        if (orderId) {
 
-                    transaction_id:
-                        reference,
-
-                },
-
-            });
-
-
-        if (!payment) {
-
-            throw new NotFoundException(
-                'Payment not found',
-            );
+            payment =
+                await this.subscriptionPaymentRepository.findOne({
+                    where: {
+                        transaction_id: orderId,
+                    },
+                });
 
         }
 
+        // If not found, try provider_transaction_id
+        if (!payment && selcomReference) {
+
+            payment =
+                await this.subscriptionPaymentRepository.findOne({
+                    where: {
+                        provider_transaction_id:
+                            selcomReference,
+                    },
+                });
+
+        }
+
+        if (!payment) {
+
+            this.logger.error(
+                `SELCOM PAYMENT NOT FOUND. orderId=${orderId}, reference=${selcomReference}`,
+            );
+
+            throw new NotFoundException(
+                `Payment not found. order_id=${orderId}, reference=${selcomReference}`,
+            );
+        }
+
+        this.logger.log(
+            `SELCOM PAYMENT FOUND: ID=${payment.id}, transaction_id=${payment.transaction_id}`,
+        );
+
+        // ========================================================
+        // ALREADY PROCESSED
+        // ========================================================
 
         if (
             payment.status ===
@@ -910,81 +1087,120 @@ async selcomCancelOrder(reference: string) {
         ) {
 
             return {
-
-                success:
-                    true,
-
+                success: true,
                 message:
                     'Payment already processed',
-
             };
 
         }
 
+        // ========================================================
+        // VERIFY PAYMENT USING OUR ORDER ID
+        // ========================================================
 
-        // FIXED: Pass provider name
         const provider =
-            this.paymentProviderFactory.getProvider('selcom');
+            this.paymentProviderFactory.getSelcomProvider();
 
+        const verificationReference =
+            payment.transaction_id;
+
+        this.logger.log(
+            `VERIFYING SELCOM ORDER: ${verificationReference}`,
+        );
 
         const verification =
             await provider.verify({
-
-                reference,
-
+                reference:
+                    verificationReference,
             });
 
+        this.logger.log(
+            `SELCOM VERIFICATION RESULT: ${JSON.stringify(
+                verification,
+            )}`,
+        );
 
-        if (
-            !verification.success
-        ) {
+        // ========================================================
+        // VERIFICATION FAILED
+        // ========================================================
+
+        if (!verification.success) {
 
             await this.subscriptionPaymentRepository.update(
-
                 {
-                    id:
-                        payment.id,
+                    id: payment.id,
                 },
-
                 {
                     status:
                         PaymentStatus.FAILED,
-                },
 
+                    failure_reason:
+                        verification.message ||
+                        'Payment verification failed',
+                },
             );
 
-
-            throw new BadRequestException({
-
-                success:
-                    false,
-
+            return {
+                success: false,
                 message:
                     'Payment verification failed',
+            };
+        }
 
-            });
+        // ========================================================
+        // SAVE SELCOM PROVIDER REFERENCE
+        // ========================================================
+
+        const providerTransactionId =
+            verification.transactionId ||
+            selcomReference;
+
+        if (providerTransactionId) {
+
+            await this.subscriptionPaymentRepository.update(
+                {
+                    id: payment.id,
+                },
+                {
+                    provider_transaction_id:
+                        providerTransactionId,
+                },
+            );
 
         }
 
+        // ========================================================
+        // ACTIVATE SUBSCRIPTION
+        // ========================================================
 
         await this.activateSubscription(
             payment.id,
         );
 
+        // ========================================================
+        // SUCCESS
+        // ========================================================
+
+        this.logger.log(
+            `SELCOM PAYMENT SUCCESS. Payment ID=${payment.id}`,
+        );
 
         return {
-
-            success:
-                true,
-
+            success: true,
             message:
                 'Subscription activated successfully',
-
         };
 
+    } catch (error) {
+
+        this.logger.error(
+            'SELCOM callback processing failed',
+            error?.stack || error,
+        );
+
+        throw error;
     }
-
-
+}
     // ============================================================
     // SNIPPE WEBHOOK
     // ============================================================
