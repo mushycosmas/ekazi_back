@@ -74,6 +74,7 @@ import { Clients } from 'src/client/clients.entity';
         ]),
 
         HttpModule,
+        
 
     ],
 
