@@ -17,7 +17,7 @@ import {
     SelcomWalletPaymentInput,
 } from '../interfaces/payment-provider.interface';
 
-const { apigwCLient } = require('selcom-apigw-client');
+const { apigwClient } = require('selcom-apigw-client');
 
 
 @Injectable()
@@ -69,7 +69,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
     private getClient() {
 
-        return new apigwCLient(
+        return new apigwClient(
             this.baseUrl,
             this.apiKey,
             this.apiSecret,
