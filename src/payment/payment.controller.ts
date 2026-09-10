@@ -109,7 +109,19 @@ export class PaymentController {
 
         return this.paymentService.initiatePayment(dto, user);
     }
+    
+    @Get('list-orders')
+    @UseGuards(SanctumGuard)
+    async listSelcomOrders(
+        @Query('fromdate') fromdate: string,
+        @Query('todate') todate: string,
+    ) {
 
+        return this.paymentService.selcomListOrders(
+            fromdate,
+            todate,
+        );
+    }
     // ============================================================
     // CURRENT SUBSCRIPTION (Protected)
     // ============================================================
@@ -146,78 +158,78 @@ export class PaymentController {
         );
     }
 
-  // ============================================================
-// SELCOM CREATE ORDER MINIMAL
-// ============================================================
+    // ============================================================
+    // SELCOM CREATE ORDER MINIMAL
+    // ============================================================
 
-@Post('selcom/create-order-minimal')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomCreateOrder(
-    @Body() dto: InitiatePaymentDto,
-) {
-    return this.paymentService.selcomCreateOrder(dto);
-}
-
-
-// ============================================================
-// SELCOM WALLET PAYMENT
-// ============================================================
-
-@Post('selcom/wallet-payment')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomWalletPayment(
-    @Body() dto: SelcomWalletPaymentDto,
-) {
-    return this.paymentService.selcomWalletPayment(dto);
-}
+    @Post('selcom/create-order-minimal')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async selcomCreateOrder(
+        @Body() dto: InitiatePaymentDto,
+    ) {
+        return this.paymentService.selcomCreateOrder(dto);
+    }
 
 
-// ============================================================
-// SELCOM SELCOMPESA PAYMENT
-// ============================================================
+    // ============================================================
+    // SELCOM WALLET PAYMENT
+    // ============================================================
 
-@Post('selcom/selcompesa-payment')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomSelcomPesaPayment(
-    @Body() dto: SelcomWalletPaymentDto,
-) {
-    return this.paymentService.selcomSelcomPesaPayment(dto);
-}
-
-
-// ============================================================
-// SELCOM ORDER STATUS
-// ============================================================
-
-@Post('selcom/order-status')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomOrderStatus(
-    @Body() dto: SelcomStatusDto,
-) {
-    return this.paymentService.selcomOrderStatus(
-        dto.order_id,
-    );
-}
+    @Post('selcom/wallet-payment')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async selcomWalletPayment(
+        @Body() dto: SelcomWalletPaymentDto,
+    ) {
+        return this.paymentService.selcomWalletPayment(dto);
+    }
 
 
-// ============================================================
-// SELCOM CANCEL ORDER
-// ============================================================
+    // ============================================================
+    // SELCOM SELCOMPESA PAYMENT
+    // ============================================================
 
-@Post('selcom/cancel-order')
-@UseGuards(SanctumGuard)
-@HttpCode(200)
-async selcomCancelOrder(
-    @Body() dto: SelcomStatusDto,
-) {
-    return this.paymentService.selcomCancelOrder(
-        dto.order_id,
-    );
-}
+    @Post('selcom/selcompesa-payment')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async selcomSelcomPesaPayment(
+        @Body() dto: SelcomWalletPaymentDto,
+    ) {
+        return this.paymentService.selcomSelcomPesaPayment(dto);
+    }
+
+
+    // ============================================================
+    // SELCOM ORDER STATUS
+    // ============================================================
+
+    @Post('selcom/order-status')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async selcomOrderStatus(
+        @Body() dto: SelcomStatusDto,
+    ) {
+        return this.paymentService.selcomOrderStatus(
+            dto.order_id,
+        );
+    }
+
+
+    // ============================================================
+    // SELCOM CANCEL ORDER
+    // ============================================================
+
+    @Post('selcom/cancel-order')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async selcomCancelOrder(
+        @Body() dto: SelcomStatusDto,
+    ) {
+        return this.paymentService.selcomCancelOrder(
+            dto.order_id,
+        );
+    }
 
     // ============================================================
     // SELCOM CALLBACK (Public)

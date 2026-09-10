@@ -1,4 +1,4 @@
- // src/payment/interfaces/payment-provider.interface.ts
+// src/payment/interfaces/payment-provider.interface.ts
 
 // ============================================================
 // PAYMENT CUSTOMER
@@ -155,6 +155,11 @@ export interface PaymentProvider {
     triggerUssdPush(
         data: TriggerUssdPushInput,
     ): Promise<TriggerUssdPushResponse>;
+
+    listOrders?(
+        fromdate: string,
+        todate: string,
+    ): Promise<PaymentProviderResponse>;
 }
 
 // ============================================================

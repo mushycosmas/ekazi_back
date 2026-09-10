@@ -1613,7 +1613,157 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
         return 'FAILED';
     }
+    // ============================================================
+    // LIST SELCOM ORDERS
+    // ============================================================
 
+    async listOrders(
+        fromdate: string,
+        todate: string,
+    ): Promise<PaymentProviderResponse> {
+
+        try {
+            const client = this.getClient();
+
+            if (!fromdate) {
+                return {
+                    success: false,
+                    message: 'fromdate is required',
+                };
+            }
+
+            if (!todate) {
+                return {
+                    success: false,
+                    message: 'todate is required',
+                };
+            }
+
+            // Validate date format
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+            if (!dateRegex.test(fromdate)) {
+                return {
+                    success: false,
+                    message: 'fromdate must be in YYYY-MM-DD format',
+                };
+            }
+
+            if (!dateRegex.test(todate)) {
+                return {
+                    success: false,
+                    message: 'todate must be in YYYY-MM-DD format',
+                };
+            }
+
+            const listOrdersPath =
+                '/v1/checkout/list-orders';
+
+            const requestData = {
+                fromdate,
+                todate,
+            };
+
+            this.logger.log(
+                `Getting SELCOM orders from ${fromdate} to ${todate}`,
+            );
+
+            this.logger.debug(
+                `SELCOM list orders path: ${listOrdersPath}`,
+            );
+
+            this.logger.debug(
+                `SELCOM list orders request: ${JSON.stringify(
+                    requestData,
+                )}`,
+            );
+
+            // SELCOM list-orders uses GET
+            const response =
+                await client.getFunc(
+                    listOrdersPath,
+                    requestData,
+                );
+
+            this.logger.log(
+                `SELCOM list orders response: ${JSON.stringify(
+                    response,
+                )}`,
+            );
+
+            const success =
+                response?.result === 'SUCCESS' ||
+                response?.result === 'SUCCESSFUL' ||
+                response?.resultcode === '000' ||
+                response?.resultcode === '00';
+
+            // SELCOM may return data as an array
+            const orders =
+                Array.isArray(response?.data)
+                    ? response.data
+                    : response?.data
+                        ? [response.data]
+                        : [];
+
+            return {
+                success,
+
+                message:
+                    response?.message ||
+                    (
+                        success
+                            ? 'SELCOM orders retrieved successfully'
+                            : 'Failed to retrieve SELCOM orders'
+                    ),
+
+                data: {
+                    orders,
+                    total: orders.length,
+                    fromdate,
+                    todate,
+                },
+
+                raw: response,
+            };
+
+        } catch (error: any) {
+
+            this.logger.error(
+                `SELCOM list orders failed: ${error?.message || error
+                }`,
+                error?.stack,
+            );
+
+            this.logger.error(
+                `SELCOM list orders error response: ${JSON.stringify(
+                    error?.response?.data ||
+                    error?.response ||
+                    {},
+                )
+                }`,
+            );
+
+            return {
+                success: false,
+
+                message:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    'Failed to retrieve SELCOM orders',
+
+                data: {
+                    orders: [],
+                    total: 0,
+                    fromdate,
+                    todate,
+                },
+
+                raw:
+                    error?.response?.data ||
+                    error?.message,
+            };
+        }
+    }
 
     // ============================================================
     // LIST PAYMENTS
