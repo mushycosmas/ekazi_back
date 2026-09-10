@@ -19,7 +19,7 @@ import {
 
 // IMPORTANT:
 // SELCOM package export is apigwClient
-const { apigwClient } = require('selcom-apigw-client');
+const { apigwCLient } = require('selcom-apigw-client');
 
 
 @Injectable()
@@ -100,7 +100,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
     private getClient() {
 
-        return new apigwClient(
+        return new apigwCLient(
             this.baseUrl,
             this.apiKey,
             this.apiSecret,
