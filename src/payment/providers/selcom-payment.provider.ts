@@ -17,7 +17,7 @@ import {
     SelcomWalletPaymentInput,
 } from '../interfaces/payment-provider.interface';
 
-const { apigwClient } = require('selcom-apigw-client');
+const { apigwCLient } = require('selcom-apigw-client');
 
 
 @Injectable()
@@ -69,7 +69,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
     private getClient() {
 
-        return new apigwClient(
+        return new apigwCLient(
             this.baseUrl,
             this.apiKey,
             this.apiSecret,
@@ -523,110 +523,123 @@ export class SelcomPaymentProvider implements SelcomProvider {
     //         };
     //     }
     // }
- async orderStatus(
-    reference: string,
-): Promise<PaymentProviderResponse> {
-    try {
-        const client = this.getClient();
+    async orderStatus(
+        reference: string,
+    ): Promise<PaymentProviderResponse> {
+        try {
+            const client = this.getClient();
 
-        if (!reference) {
+            if (!reference) {
+                return {
+                    success: false,
+                    message: 'Payment reference is required',
+                };
+            }
+
+            this.logger.log(
+                `Checking SELCOM order status: ${reference}`,
+            );
+
+            const orderStatusPath =
+                '/v1/checkout/order-status';
+
+            this.logger.debug(
+                `SELCOM order status method: GET`,
+            );
+
+            this.logger.debug(
+                `SELCOM order status path: ${orderStatusPath}`,
+            );
+
+            this.logger.debug(
+                `SELCOM order status request: ${JSON.stringify({
+                    order_id: reference,
+                })}`,
+            );
+
+            const response = await client.getFunc(
+                orderStatusPath,
+                {
+                    order_id: reference,
+                },
+            );
+
+            this.logger.log(
+                `SELCOM order status response: ${JSON.stringify(response)}`,
+            );
+
+            const isSuccess =
+                this.isPaymentSuccessful(response);
+
+            const status =
+                this.getPaymentStatus(response);
+
+            this.logger.log(
+                `SELCOM payment status: ${status}`,
+            );
+
+            this.logger.log(
+                `SELCOM payment successful: ${isSuccess}`,
+            );
+
+            return {
+                success: isSuccess,
+
+                transactionId:
+                    response?.reference || reference,
+
+                message:
+                    response?.message ||
+                    'SELCOM order status received',
+
+                raw: response,
+
+                data: {
+                    reference,
+
+                    status,
+
+                    result:
+                        response?.result,
+
+                    resultcode:
+                        response?.resultcode,
+                },
+            };
+
+        } catch (error: any) {
+
+            this.logger.error(
+                `SELCOM order status failed: ${error?.message || error
+                }`,
+                error?.stack,
+            );
+
+            this.logger.error(
+                `SELCOM order status error response: ${JSON.stringify(
+                    error?.response?.data ||
+                    error?.response ||
+                    {},
+                )
+                }`,
+            );
+
             return {
                 success: false,
-                message: 'Payment reference is required',
+
+                transactionId: reference,
+
+                message:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    'Failed to get SELCOM order status',
+
+                raw:
+                    error?.response?.data ||
+                    error?.message,
             };
         }
-
-        this.logger.log(
-            `Checking SELCOM order status: ${reference}`,
-        );
-
-        const orderStatusPath =
-            '/v1/checkout/order-status';
-
-        const orderStatusData = {
-            order_id: reference,
-        };
-
-        this.logger.debug(
-            `SELCOM order status method: GET`,
-        );
-
-        this.logger.debug(
-            `SELCOM order status path: ${orderStatusPath}`,
-        );
-
-        this.logger.debug(
-            `SELCOM order status payload: ${JSON.stringify(
-                orderStatusData,
-            )}`,
-        );
-
-        const response = await client.getFunc(
-            orderStatusPath,
-            orderStatusData,
-        );
-
-        this.logger.log(
-            `SELCOM order status response: ${JSON.stringify(
-                response,
-            )}`,
-        );
-
-        const isSuccess =
-            this.isPaymentSuccessful(response);
-
-        const status =
-            this.getPaymentStatus(response);
-
-        this.logger.log(
-            `SELCOM payment status: ${status}`,
-        );
-
-        this.logger.log(
-            `SELCOM payment successful: ${isSuccess}`,
-        );
-
-        return {
-            success: isSuccess,
-
-            transactionId:
-                response?.reference || reference,
-
-            message:
-                response?.message ||
-                'SELCOM order status received',
-
-            raw: response,
-
-            data: {
-                reference,
-                status,
-                result: response?.result,
-                resultcode: response?.resultcode,
-            },
-        };
-
-    } catch (error: any) {
-        this.logger.error(
-            `SELCOM order status failed: ${
-                error?.message || error
-            }`,
-            error?.stack,
-        );
-
-        return {
-            success: false,
-            transactionId: reference,
-            message:
-                error?.response?.data?.message ||
-                error?.message ||
-                'Failed to get SELCOM order status',
-            raw:
-                error?.response?.data ||
-                error?.message,
-        };
     }
-}
 
 
     // ============================================================
