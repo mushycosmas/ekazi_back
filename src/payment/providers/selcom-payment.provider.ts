@@ -243,20 +243,26 @@ export class SelcomPaymentProvider implements SelcomProvider {
                         data.no_of_items,
                 }),
 
-                ...(data.redirect_url && {
-                    redirect_url:
-                        data.redirect_url,
-                }),
+                // ...(data.redirect_url && {
+                //     redirect_url:
+                //         data.redirect_url,
+                // }),
 
-                ...(data.cancel_url && {
-                    cancel_url:
-                        data.cancel_url,
-                }),
-
+                // ...(data.cancel_url && {
+                //     cancel_url:
+                //         data.cancel_url,
+                // }),
                 ...(data.webhook && {
-                    webhook:
+                    webhook: Buffer.from(
                         data.webhook,
+                        'utf8',
+                    ).toString('base64'),
                 }),
+
+                // ...(data.webhook && {
+                //     webhook:
+                //         data.webhook,
+                // }),
             };
 
 
@@ -360,14 +366,12 @@ export class SelcomPaymentProvider implements SelcomProvider {
             );
 
             this.logger.log(
-                `SELCOM order resultcode: ${
-                    response?.resultcode || ''
+                `SELCOM order resultcode: ${response?.resultcode || ''
                 }`,
             );
 
             this.logger.log(
-                `SELCOM order result: ${
-                    response?.result || ''
+                `SELCOM order result: ${response?.result || ''
                 }`,
             );
 
@@ -435,9 +439,8 @@ export class SelcomPaymentProvider implements SelcomProvider {
         } catch (error: any) {
 
             this.logger.error(
-                `SELCOM create order failed: ${
-                    error?.message ||
-                    error
+                `SELCOM create order failed: ${error?.message ||
+                error
                 }`,
                 error?.stack,
             );
@@ -703,9 +706,8 @@ export class SelcomPaymentProvider implements SelcomProvider {
         } catch (error: any) {
 
             this.logger.error(
-                `SELCOM wallet payment failed: ${
-                    error?.message ||
-                    error
+                `SELCOM wallet payment failed: ${error?.message ||
+                error
                 }`,
                 error?.stack,
             );
@@ -835,8 +837,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
 
             this.logger.log(
-                `SELCOM payment_status: ${
-                    paymentStatus || 'N/A'
+                `SELCOM payment_status: ${paymentStatus || 'N/A'
                 }`,
             );
 
@@ -891,9 +892,8 @@ export class SelcomPaymentProvider implements SelcomProvider {
         } catch (error: any) {
 
             this.logger.error(
-                `SELCOM order status failed: ${
-                    error?.message ||
-                    error
+                `SELCOM order status failed: ${error?.message ||
+                error
                 }`,
                 error?.stack,
             );
@@ -1004,8 +1004,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
 
             this.logger.log(
-                `SELCOM payment webhook: ${
-                    webhook || 'NOT CONFIGURED'
+                `SELCOM payment webhook: ${webhook || 'NOT CONFIGURED'
                 }`,
             );
 
@@ -1061,8 +1060,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
             if (!orderResponse.success) {
 
                 this.logger.error(
-                    `SELCOM order creation failed for ${orderId}: ${
-                        orderResponse.message
+                    `SELCOM order creation failed for ${orderId}: ${orderResponse.message
                     }`,
                 );
 
@@ -1139,9 +1137,8 @@ export class SelcomPaymentProvider implements SelcomProvider {
         } catch (error: any) {
 
             this.logger.error(
-                `SELCOM initiate payment failed: ${
-                    error?.message ||
-                    error
+                `SELCOM initiate payment failed: ${error?.message ||
+                error
                 }`,
                 error?.stack,
             );
@@ -1275,16 +1272,16 @@ export class SelcomPaymentProvider implements SelcomProvider {
         return (
 
             response.result ===
-                'SUCCESS' ||
+            'SUCCESS' ||
 
             response.result ===
-                'SUCCESSFUL' ||
+            'SUCCESSFUL' ||
 
             response.resultcode ===
-                '000' ||
+            '000' ||
 
             response.resultcode ===
-                '00'
+            '00'
         );
     }
 
@@ -1399,9 +1396,8 @@ export class SelcomPaymentProvider implements SelcomProvider {
         } catch (error: any) {
 
             this.logger.error(
-                `SELCOM cancel order failed: ${
-                    error?.message ||
-                    error
+                `SELCOM cancel order failed: ${error?.message ||
+                error
                 }`,
                 error?.stack,
             );
@@ -1492,10 +1488,10 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
         return (
             response?.result ===
-                'PENDING' ||
+            'PENDING' ||
 
             response?.resultcode ===
-                '111'
+            '111'
         );
     }
 
@@ -1531,7 +1527,7 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
             return (
                 paymentStatus ===
-                    'COMPLETED'
+                'COMPLETED'
             );
         }
 
@@ -1582,10 +1578,10 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
         if (
             response?.result ===
-                'PENDING' ||
+            'PENDING' ||
 
             response?.resultcode ===
-                '111'
+            '111'
         ) {
 
             return 'PENDING';
@@ -1599,16 +1595,16 @@ export class SelcomPaymentProvider implements SelcomProvider {
 
         if (
             response?.result ===
-                'SUCCESS' ||
+            'SUCCESS' ||
 
             response?.result ===
-                'SUCCESSFUL' ||
+            'SUCCESSFUL' ||
 
             response?.resultcode ===
-                '000' ||
+            '000' ||
 
             response?.resultcode ===
-                '00'
+            '00'
         ) {
 
             return 'INITIATED';
