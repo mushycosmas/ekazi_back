@@ -1858,6 +1858,7 @@ export class PaymentService {
 
                         updated_at:
                             payment.updated_at,
+                        meta:payment.meta,    
 
                     }),
                 ),

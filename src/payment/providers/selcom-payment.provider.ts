@@ -1462,6 +1462,38 @@ export class SelcomPaymentProvider implements SelcomProvider {
     // CHECK PAYMENT PENDING
     // ============================================================
 
+    // private isPaymentPending(
+    //     response: any,
+    // ): boolean {
+
+    //     if (!response) {
+    //         return false;
+    //     }
+
+
+    //     const paymentStatus =
+    //         this.extractPaymentStatus(
+    //             response,
+    //         );
+
+
+    //     if (
+    //         paymentStatus === 'PENDING' ||
+    //         paymentStatus === 'INPROGRESS'
+    //     ) {
+
+    //         return true;
+    //     }
+
+
+    //     return (
+    //         response?.result ===
+    //         'PENDING' ||
+
+    //         response?.resultcode ===
+    //         '111'
+    //     );
+    // }
     private isPaymentPending(
         response: any,
     ): boolean {
@@ -1470,28 +1502,34 @@ export class SelcomPaymentProvider implements SelcomProvider {
             return false;
         }
 
-
         const paymentStatus =
             this.extractPaymentStatus(
                 response,
             );
 
-
+        // Explicit payment pending states
         if (
             paymentStatus === 'PENDING' ||
             paymentStatus === 'INPROGRESS'
         ) {
-
             return true;
         }
 
+        // SELCOM wallet push accepted.
+        // Payment has NOT yet been completed.
+        if (
+            response?.resultcode === '000' &&
+            (
+                response?.result === 'SUCCESS' ||
+                response?.result === 'SUCCESSFUL'
+            )
+        ) {
+            return true;
+        }
 
         return (
-            response?.result ===
-            'PENDING' ||
-
-            response?.resultcode ===
-            '111'
+            response?.result === 'PENDING' ||
+            response?.resultcode === '111'
         );
     }
 
@@ -1593,21 +1631,29 @@ export class SelcomPaymentProvider implements SelcomProvider {
         // BUT PAYMENT NOT CONFIRMED
         // -----------------------------------------
 
+        // if (
+        //     response?.result ===
+        //     'SUCCESS' ||
+
+        //     response?.result ===
+        //     'SUCCESSFUL' ||
+
+        //     response?.resultcode ===
+        //     '000' ||
+
+        //     response?.resultcode ===
+        //     '00'
+        // ) {
+
+        //     return 'INITIATED';
+        // }
         if (
-            response?.result ===
-            'SUCCESS' ||
-
-            response?.result ===
-            'SUCCESSFUL' ||
-
-            response?.resultcode ===
-            '000' ||
-
-            response?.resultcode ===
-            '00'
+            response?.result === 'SUCCESS' ||
+            response?.result === 'SUCCESSFUL' ||
+            response?.resultcode === '000' ||
+            response?.resultcode === '00'
         ) {
-
-            return 'INITIATED';
+            return 'PENDING';
         }
 
 
