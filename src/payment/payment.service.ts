@@ -806,12 +806,12 @@ export class PaymentService {
 
         return provider.cancelOrder(reference);
     }
-    async  selcomListOrders(
+    async selcomListOrders(
         fromdate: string,
         todate: string,
     ) {
 
-      const provider = this.paymentProviderFactory.getSelcomProvider();
+        const provider = this.paymentProviderFactory.getSelcomProvider();
 
         if (!provider.listOrders) {
             return {
@@ -1728,7 +1728,6 @@ export class PaymentService {
             // ========================================================
             // QUERY BUILDER
             // ========================================================
-
             const queryBuilder =
                 this.subscriptionPaymentRepository
                     .createQueryBuilder('payment')
@@ -1750,6 +1749,14 @@ export class PaymentService {
                         'payment.role = :role',
                         {
                             role: PaymentRole.EMPLOYER,
+                        },
+                    )
+
+                    // Only successful payments
+                    .andWhere(
+                        'payment.status = :status',
+                        {
+                            status: 'success',
                         },
                     );
 
@@ -1858,7 +1865,7 @@ export class PaymentService {
 
                         updated_at:
                             payment.updated_at,
-                        meta:payment.meta,    
+                        meta: payment.meta,
 
                     }),
                 ),
@@ -2033,114 +2040,7 @@ export class PaymentService {
             );
         }
     }
-    // async currentSubscription(
-    //     user: Users,
-    // ) {
-    //     try {
-    //         const subscription = await this.subscriptionRepository.findOne({
-    //             where: {
-    //                 user_id: user.id,
-    //                 is_active: true,
-    //             },
-    //             relations: [
-    //                 'plan',
-    //             ],
-    //             order: {
-    //                 end_date: 'DESC',
-    //             },
-    //         });
 
-    //         if (!subscription) {
-    //             return {
-    //                 success: false,
-    //                 message: 'No active subscription',
-    //                 data: null,
-    //             };
-    //         }
-
-    //         if (new Date(subscription.end_date) < new Date()) {
-    //             subscription.is_active = false;
-    //             await this.subscriptionRepository.save(subscription);
-
-    //             return {
-    //                 success: false,
-    //                 message: 'Subscription has expired',
-    //                 data: null,
-    //             };
-    //         }
-
-    //         // ========================================================
-    //         // FETCH PAYMENT DATA
-    //         // ========================================================
-
-    //         // FIX: Use 'any' or define a proper interface for paymentData
-    //         let paymentData: any = null;
-
-    //         if (subscription.subscription_payment_id) {
-    //             const payment = await this.subscriptionPaymentRepository.findOne({
-    //                 where: {
-    //                     id: subscription.subscription_payment_id,
-    //                 },
-    //             });
-
-    //             if (payment) {
-    //                 paymentData = {
-    //                     id: payment.id,
-    //                     amount: Number(payment.amount),
-    //                     transaction_id: payment.transaction_id,
-    //                     provider_transaction_id: payment.provider_transaction_id,
-    //                     provider: payment.provider,
-    //                     status: payment.status,
-    //                     role: payment.role,
-    //                     paid_at: payment.paid_at,
-    //                     failure_reason: payment.failure_reason,
-    //                     meta: payment.meta,
-    //                     created_at: payment.created_at,
-    //                     updated_at: payment.updated_at,
-    //                 };
-    //             }
-    //         }
-
-    //         // ========================================================
-    //         // CALCULATE REMAINING DAYS
-    //         // ========================================================
-
-    //         const now = new Date();
-    //         const endDate = new Date(subscription.end_date);
-    //         const remainingDays = Math.max(0, Math.ceil(
-    //             (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    //         ));
-
-    //         // ========================================================
-    //         // RETURN WITH PAYMENT DATA
-    //         // ========================================================
-
-    //         return {
-    //             success: true,
-    //             message: 'Current subscription retrieved successfully',
-    //             data: {
-    //                 id: subscription.id,
-    //                 user_id: subscription.user_id,
-    //                 subscription_plan_id: subscription.subscription_plan_id,
-    //                 plan: subscription.plan,
-    //                 start_date: subscription.start_date,
-    //                 end_date: subscription.end_date,
-    //                 remaining_days: remainingDays,
-    //                 job_post_remaining: subscription.job_post_remaining,
-    //                 cv_download_remaining: subscription.cv_download_remaining,
-    //                 cv_builder_remaining: subscription.cv_builder_remaining,
-    //                 is_active: subscription.is_active,
-    //                 subscription_payment_id: subscription.subscription_payment_id,
-    //                 payment: paymentData, // Now this will work
-    //                 created_at: subscription.created_at,
-    //                 updated_at: subscription.updated_at,
-    //             },
-    //         };
-    //     } catch (error) {
-    //         this.logger.error('Error fetching current subscription:', error);
-    //         throw new InternalServerErrorException('Failed to fetch current subscription');
-    //     }
-    // }
 
 
 }
