@@ -19,6 +19,7 @@ export class ApplicantController {
         @Query('education_level_id') education_level_id?: number,
         @Query('industry_id') industry_id?: number,
         @Query('position_level_id') position_level_id?: number,
+        @Query('profile_completion') profile_completion?: number,
     ) {
         return this.applicantService.getJobseekers(
             Number(page),
@@ -34,23 +35,26 @@ export class ApplicantController {
             position_level_id
                 ? Number(position_level_id)
                 : undefined,
+            profile_completion !== undefined
+                ? Number(profile_completion)
+                : undefined,
         );
     }
-      @Get(':id')
-  @UseGuards(SanctumGuard)
-  async getApplicant(@Param('id') id: string) {
-    const applicant = await this.applicantService.getApplicant(+id);
-    if (!applicant) {
-      throw new NotFoundException(
-        {
-          success: false,
-          message: 'Applicant not found'
-        }
+    @Get(':id')
+    @UseGuards(SanctumGuard)
+    async getApplicant(@Param('id') id: string) {
+        const applicant = await this.applicantService.getApplicant(+id);
+        if (!applicant) {
+            throw new NotFoundException(
+                {
+                    success: false,
+                    message: 'Applicant not found'
+                }
 
-      );
+            );
+        }
+        return applicant;
     }
-    return applicant;
-  }
     @Get('applicant')
     @UseGuards(SanctumGuard)
     async getClientApplicants(

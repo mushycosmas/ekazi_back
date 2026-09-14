@@ -241,6 +241,10 @@ export class AuthService {
                 updator_id: user.id,
                 type_id: dto.type,
                 client_name: dto.name,
+                first_name:dto.first_name,
+                last_name:dto.last_name,
+                middle_name:dto.middle_name,
+                client_type:dto.client_type,
             });
 
             await this.clientRepo.save(client);

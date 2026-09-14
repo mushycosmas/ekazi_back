@@ -49,6 +49,13 @@ export class Clients {
     @Column({ nullable: true })
     type_id: number;
 
+    @Column({
+        type: 'varchar',
+        length: 100,
+        nullable: true,
+    })
+    client_type: string;
+
     @Column({ length: 100 })
     business: string;
 

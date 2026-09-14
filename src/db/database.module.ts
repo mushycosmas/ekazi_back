@@ -143,6 +143,7 @@ import { PlanFeature } from 'src/payment/entities/plan-feature.entity';
 import { TermConditionType } from 'src/entities/term-condition-type.entity';
 import { TermCondition } from 'src/entities/term-condition.entity';
  
+ 
 
 
 // Create a single array of all entities to avoid duplication
@@ -285,7 +286,10 @@ const allEntities = [
   PlanFeature,
   TermConditionType,
   TermCondition,
-  
+  // TaskAttachment,
+  // TaskMessageAttachment,
+  // TaskMessage,
+  // TaskParticipant,
 ];
 const secondDatabaseEntities=[
   MoodleUser

@@ -38,19 +38,19 @@ export class EmployerController {
   ) { }
 
 
-  
-  
-    @Get('users')
-    @UseGuards(SanctumGuard)
-    @ApiOperation({
-      summary: 'Get all users for the authenticated client',
-    })
-    async findByClient(
-      @CurrentUser() user: Users,
-      @Query() query: Omit<GetUsersByClientDto, 'clientId'>,
-    ) {
-      return this.usersService.findByClient(user, query);
-    }
+
+
+  @Get('users')
+  @UseGuards(SanctumGuard)
+  @ApiOperation({
+    summary: 'Get all users for the authenticated client',
+  })
+  async findByClient(
+    @CurrentUser() user: Users,
+    @Query() query: Omit<GetUsersByClientDto, 'clientId'>,
+  ) {
+    return this.usersService.findByClient(user, query);
+  }
   @UseGuards(SanctumGuard)
   @Get('account')
   employerAccount(@CurrentUser() user: Users) {
@@ -119,23 +119,23 @@ export class EmployerController {
       search,
       stage ? Number(stage) : undefined);
   }
-  
-    @Get('jobs/:jobId/match-applicants')
-    @UseGuards(SanctumGuard)
-    async findApplicantsByJob(
-        @Param('jobId', ParseIntPipe) jobId: number,
-        @Query('page') page = 1,
-        @Query('limit') limit = 20,
-        @Query('search') search?: string,
-    ) {
 
-        return this.jobMatchService.findApplicantsByJob(
-            jobId,
-            Number(page),
-            Number(limit),
-            search,
-        );
-    }
+  @Get('jobs/:jobId/match-applicants')
+  @UseGuards(SanctumGuard)
+  async findApplicantsByJob(
+    @Param('jobId', ParseIntPipe) jobId: number,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('search') search?: string,
+  ) {
+
+    return this.jobMatchService.findApplicantsByJob(
+      jobId,
+      Number(page),
+      Number(limit),
+      search,
+    );
+  }
 
   @Get('applicants/:id')
   @UseGuards(SanctumGuard)
@@ -164,6 +164,7 @@ export class EmployerController {
     @Query('education_level_id') education_level_id?: number,
     @Query('industry_id') industry_id?: number,
     @Query('position_level_id') position_level_id?: number,
+    @Query('profile_completion') profile_completion?: number,
   ) {
     return this.applicantService.getClientApplicants(
       user,
@@ -174,6 +175,9 @@ export class EmployerController {
       education_level_id ? Number(education_level_id) : undefined,
       industry_id ? Number(industry_id) : undefined,
       position_level_id ? Number(position_level_id) : undefined,
+      profile_completion !== undefined
+        ? Number(profile_completion)
+        : undefined,
     );
   }
 

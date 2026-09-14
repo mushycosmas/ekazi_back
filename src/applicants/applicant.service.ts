@@ -91,7 +91,7 @@ export class ApplicantService {
       return null;
     }
   }
-async getApplicant(applicantId: number) {
+  async getApplicant(applicantId: number) {
     // ---------------------
     // 1️⃣ Load applicant main info + relations
     // ---------------------
@@ -421,137 +421,138 @@ async getApplicant(applicantId: number) {
     };
   }
   async getJobseekers(
-  page = 1,
-  limit = 20,
-  search?: string,
-  position?: string,
-  education_level_id?: number,
-  industry_id?: number,
-  position_level_id?: number,
-) {
-  const qb = this.applicantsRepo
-    .createQueryBuilder('applicant')
+    page = 1,
+    limit = 20,
+    search?: string,
+    position?: string,
+    education_level_id?: number,
+    industry_id?: number,
+    position_level_id?: number,
+    profile_completion?: number,
+  ) {
+    const qb = this.applicantsRepo
+      .createQueryBuilder('applicant')
 
-    .select([
-      'applicant.id',
-      'applicant.first_name',
-      'applicant.middle_name',
-      'applicant.last_name',
-      'applicant.picture',
-      'applicant.background_picture',
-      'applicant.created_at',
+      .select([
+        'applicant.id',
+        'applicant.first_name',
+        'applicant.middle_name',
+        'applicant.last_name',
+        'applicant.picture',
+        'applicant.background_picture',
+        'applicant.created_at',
 
-      'featuredSubscriptions.id',
-      'featuredSubscriptions.verify',
-    ])
+        'featuredSubscriptions.id',
+        'featuredSubscriptions.verify',
+      ])
 
-    // Featured Subscription
-    .leftJoin(
-      'applicant.featuredPlanSubscriptions',
-      'featuredSubscriptions',
-    )
+      // Featured Subscription
+      .leftJoin(
+        'applicant.featuredPlanSubscriptions',
+        'featuredSubscriptions',
+      )
 
-    // Education
-    .leftJoin(
-      'applicant.applicant_education',
-      'education',
-    )
-    .leftJoin(
-      'education.education_level',
-      'educationLevel',
-    )
+      // Education
+      .leftJoin(
+        'applicant.applicant_education',
+        'education',
+      )
+      .leftJoin(
+        'education.education_level',
+        'educationLevel',
+      )
 
-    // Positions
-    .leftJoin(
-      'applicant.positions',
-      'applicantPosition',
-    )
-    .leftJoin(
-      'applicantPosition.position',
-      'position',
-    )
+      // Positions
+      .leftJoin(
+        'applicant.positions',
+        'applicantPosition',
+      )
+      .leftJoin(
+        'applicantPosition.position',
+        'position',
+      )
 
-    // Profile completion counts
-    .loadRelationCountAndMap(
-      'applicant.phoneCount',
-      'applicant.applicant_phones',
-    )
-    .loadRelationCountAndMap(
-      'applicant.addressCount',
-      'applicant.applicant_addresses',
-    )
-    .loadRelationCountAndMap(
-      'applicant.educationCount',
-      'applicant.applicant_education',
-    )
-    .loadRelationCountAndMap(
-      'applicant.positionCount',
-      'applicant.positions',
-    )
-    .loadRelationCountAndMap(
-      'applicant.toolsCount',
-      'applicant.applicant_tools',
-    )
-    .loadRelationCountAndMap(
-      'applicant.softwareCount',
-      'applicant.applicant_software',
-    )
-    .loadRelationCountAndMap(
-      'applicant.knowledgeCount',
-      'applicant.applicant_knowledge',
-    )
-    .loadRelationCountAndMap(
-      'applicant.languageCount',
-      'applicant.applicant_languages',
-    )
-    .loadRelationCountAndMap(
-      'applicant.cultureCount',
-      'applicant.applicant_cultures',
-    )
-    .loadRelationCountAndMap(
-      'applicant.proficiencyCount',
-      'applicant.applicant_proficiencies',
-    )
-    .loadRelationCountAndMap(
-      'applicant.trainingCount',
-      'applicant.applicant_trainings',
-    )
-    .loadRelationCountAndMap(
-      'applicant.refereeCount',
-      'applicant.referees',
-    )
-    .loadRelationCountAndMap(
-      'applicant.careerCount',
-      'applicant.applicant_career',
-    )
-    .loadRelationCountAndMap(
-      'applicant.objectiveCount',
-      'applicant.applicant_objectives',
-    )
+      // Profile completion counts
+      .loadRelationCountAndMap(
+        'applicant.phoneCount',
+        'applicant.applicant_phones',
+      )
+      .loadRelationCountAndMap(
+        'applicant.addressCount',
+        'applicant.applicant_addresses',
+      )
+      .loadRelationCountAndMap(
+        'applicant.educationCount',
+        'applicant.applicant_education',
+      )
+      .loadRelationCountAndMap(
+        'applicant.positionCount',
+        'applicant.positions',
+      )
+      .loadRelationCountAndMap(
+        'applicant.toolsCount',
+        'applicant.applicant_tools',
+      )
+      .loadRelationCountAndMap(
+        'applicant.softwareCount',
+        'applicant.applicant_software',
+      )
+      .loadRelationCountAndMap(
+        'applicant.knowledgeCount',
+        'applicant.applicant_knowledge',
+      )
+      .loadRelationCountAndMap(
+        'applicant.languageCount',
+        'applicant.applicant_languages',
+      )
+      .loadRelationCountAndMap(
+        'applicant.cultureCount',
+        'applicant.applicant_cultures',
+      )
+      .loadRelationCountAndMap(
+        'applicant.proficiencyCount',
+        'applicant.applicant_proficiencies',
+      )
+      .loadRelationCountAndMap(
+        'applicant.trainingCount',
+        'applicant.applicant_trainings',
+      )
+      .loadRelationCountAndMap(
+        'applicant.refereeCount',
+        'applicant.referees',
+      )
+      .loadRelationCountAndMap(
+        'applicant.careerCount',
+        'applicant.applicant_career',
+      )
+      .loadRelationCountAndMap(
+        'applicant.objectiveCount',
+        'applicant.applicant_objectives',
+      )
 
-    // Base condition so optional filters can use andWhere()
-    .where('1 = 1');
+      // Base condition so optional filters can use andWhere()
+      .where('1 = 1');
 
-  // Search by applicant name
-  if (search) {
-    qb.andWhere(
-      `
+    // Search by applicant name
+    if (search) {
+      qb.andWhere(
+        `
       (
         applicant.first_name LIKE :search
         OR applicant.middle_name LIKE :search
         OR applicant.last_name LIKE :search
       )
       `,
-      {
-        search: `%${search}%`,
-      },
-    );
-  }
+        {
+          search: `%${search}%`,
+        },
+      );
+    }
 
-  // Filter by position
-  if (position) {
-    qb.andWhere(
-      `
+    // Filter by position
+    if (position) {
+      qb.andWhere(
+        `
       EXISTS (
         SELECT 1
         FROM applicant_positions ap
@@ -561,16 +562,16 @@ async getApplicant(applicantId: number) {
         AND p.position_name LIKE :position
       )
       `,
-      {
-        position: `%${position}%`,
-      },
-    );
-  }
+        {
+          position: `%${position}%`,
+        },
+      );
+    }
 
-  // Filter by education level
-  if (education_level_id) {
-    qb.andWhere(
-      `
+    // Filter by education level
+    if (education_level_id) {
+      qb.andWhere(
+        `
       EXISTS (
         SELECT 1
         FROM applicant_education ae
@@ -578,16 +579,16 @@ async getApplicant(applicantId: number) {
         AND ae.education_level_id = :educationLevelId
       )
       `,
-      {
-        educationLevelId: education_level_id,
-      },
-    );
-  }
+        {
+          educationLevelId: education_level_id,
+        },
+      );
+    }
 
-  // Filter by industry
-  if (industry_id) {
-    qb.andWhere(
-      `
+    // Filter by industry
+    if (industry_id) {
+      qb.andWhere(
+        `
       EXISTS (
         SELECT 1
         FROM applicant_positions ap
@@ -595,16 +596,16 @@ async getApplicant(applicantId: number) {
         AND ap.industry_id = :industryId
       )
       `,
-      {
-        industryId: industry_id,
-      },
-    );
-  }
+        {
+          industryId: industry_id,
+        },
+      );
+    }
 
-  // Filter by position level
-  if (position_level_id) {
-    qb.andWhere(
-      `
+    // Filter by position level
+    if (position_level_id) {
+      qb.andWhere(
+        `
       EXISTS (
         SELECT 1
         FROM applicant_positions ap
@@ -612,61 +613,249 @@ async getApplicant(applicantId: number) {
         AND ap.position_level_id = :positionLevelId
       )
       `,
-      {
-        positionLevelId: position_level_id,
-      },
+        {
+          positionLevelId: position_level_id,
+        },
+      );
+    }
+    // filter by percentgae completion start 
+    if (profile_completion !== undefined) {
+      qb.andWhere(
+        `
+    (
+      CASE
+        WHEN
+          applicant.first_name IS NOT NULL
+          AND applicant.first_name != ''
+          AND applicant.last_name IS NOT NULL
+          AND applicant.last_name != ''
+          AND applicant.gender_id IS NOT NULL
+          AND applicant.dob IS NOT NULL
+          AND applicant.picture IS NOT NULL
+          AND applicant.picture != ''
+          AND applicant.nationality_id IS NOT NULL
+        THEN 15
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN
+          EXISTS (
+            SELECT 1
+            FROM applicant_phones ap
+            WHERE ap.applicant_id = applicant.id
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM applicant_addresses aa
+            WHERE aa.applicant_id = applicant.id
+          )
+        THEN 10
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_careers ac
+          WHERE ac.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_objectives ao
+          WHERE ao.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_education ae
+          WHERE ae.applicant_id = applicant.id
+        )
+        THEN 15
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_positions apos
+          WHERE apos.applicant_id = applicant.id
+        )
+        THEN 15
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_tools at
+          WHERE at.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_software aso
+          WHERE aso.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_knowledge ak
+          WHERE ak.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_languages al
+          WHERE al.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_cultures acul
+          WHERE acul.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_proficiencies apf
+          WHERE apf.applicant_id = applicant.id
+        )
+        THEN 3
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_trainings atr
+          WHERE atr.applicant_id = applicant.id
+        )
+        THEN 2
+        ELSE 0
+      END
+
+      +
+
+ CASE
+  WHEN EXISTS (
+    SELECT 1
+    FROM applicant_referees r
+    WHERE r.applicant_id = applicant.id
+  )
+  THEN 5
+  ELSE 0
+END
+    ) >= :profileCompletion
+    `,
+        {
+          profileCompletion: profile_completion,
+        },
+      );
+    }
+    // filter by compliation end
+    qb.orderBy('applicant.created_at', 'DESC');
+
+    const [applicants, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    const data = await Promise.all(
+      applicants.map(async (applicant) => {
+        const applicant_position =
+          await this.getApplicantPosition(applicant.id);
+
+        const profile_completion =
+          this.calculateProfileCompletion(applicant);
+
+        // Remove internal counters
+        delete (applicant as any).phoneCount;
+        delete (applicant as any).addressCount;
+        delete (applicant as any).educationCount;
+        delete (applicant as any).positionCount;
+        delete (applicant as any).toolsCount;
+        delete (applicant as any).softwareCount;
+        delete (applicant as any).knowledgeCount;
+        delete (applicant as any).languageCount;
+        delete (applicant as any).cultureCount;
+        delete (applicant as any).proficiencyCount;
+        delete (applicant as any).trainingCount;
+        delete (applicant as any).refereeCount;
+        delete (applicant as any).careerCount;
+        delete (applicant as any).objectiveCount;
+
+        return {
+          ...applicant,
+          applicant_position,
+          profile_completion,
+        };
+      }),
     );
+
+    return {
+      success: true,
+      message: 'Jobseekers fetched successfully',
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
-
-  qb.orderBy('applicant.created_at', 'DESC');
-
-  const [applicants, total] = await qb
-    .skip((page - 1) * limit)
-    .take(limit)
-    .getManyAndCount();
-
-  const data = await Promise.all(
-    applicants.map(async (applicant) => {
-      const applicant_position =
-        await this.getApplicantPosition(applicant.id);
-
-      const profile_completion =
-        this.calculateProfileCompletion(applicant);
-
-      // Remove internal counters
-      delete (applicant as any).phoneCount;
-      delete (applicant as any).addressCount;
-      delete (applicant as any).educationCount;
-      delete (applicant as any).positionCount;
-      delete (applicant as any).toolsCount;
-      delete (applicant as any).softwareCount;
-      delete (applicant as any).knowledgeCount;
-      delete (applicant as any).languageCount;
-      delete (applicant as any).cultureCount;
-      delete (applicant as any).proficiencyCount;
-      delete (applicant as any).trainingCount;
-      delete (applicant as any).refereeCount;
-      delete (applicant as any).careerCount;
-      delete (applicant as any).objectiveCount;
-
-      return {
-        ...applicant,
-        applicant_position,
-        profile_completion,
-      };
-    }),
-  );
-
-  return {
-    success: true,
-    message: 'Jobseekers fetched successfully',
-    data,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-  };
-}
 
   private calculateProfileCompletion(applicant: any) {
 
@@ -915,6 +1104,7 @@ async getApplicant(applicantId: number) {
     education_level_id?: number,
     industry_id?: number,
     position_level_id?: number,
+    profile_completion?: number,
   ) {
     const clientId = user.client_id;
 
@@ -1126,6 +1316,195 @@ async getApplicant(applicantId: number) {
         },
       );
     }
+    // filter by percentgae completion start 
+    if (profile_completion !== undefined) {
+      qb.andWhere(
+        `
+    (
+      CASE
+        WHEN
+          applicant.first_name IS NOT NULL
+          AND applicant.first_name != ''
+          AND applicant.last_name IS NOT NULL
+          AND applicant.last_name != ''
+          AND applicant.gender_id IS NOT NULL
+          AND applicant.dob IS NOT NULL
+          AND applicant.picture IS NOT NULL
+          AND applicant.picture != ''
+          AND applicant.nationality_id IS NOT NULL
+        THEN 15
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN
+          EXISTS (
+            SELECT 1
+            FROM applicant_phones ap
+            WHERE ap.applicant_id = applicant.id
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM applicant_addresses aa
+            WHERE aa.applicant_id = applicant.id
+          )
+        THEN 10
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_careers ac
+          WHERE ac.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_objectives ao
+          WHERE ao.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_education ae
+          WHERE ae.applicant_id = applicant.id
+        )
+        THEN 15
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_positions apos
+          WHERE apos.applicant_id = applicant.id
+        )
+        THEN 15
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_tools at
+          WHERE at.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_software aso
+          WHERE aso.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_knowledge ak
+          WHERE ak.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_languages al
+          WHERE al.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_cultures acul
+          WHERE acul.applicant_id = applicant.id
+        )
+        THEN 5
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_proficiencies apf
+          WHERE apf.applicant_id = applicant.id
+        )
+        THEN 3
+        ELSE 0
+      END
+
+      +
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM applicant_trainings atr
+          WHERE atr.applicant_id = applicant.id
+        )
+        THEN 2
+        ELSE 0
+      END
+
+      +
+
+ CASE
+  WHEN EXISTS (
+    SELECT 1
+    FROM applicant_referees r
+    WHERE r.applicant_id = applicant.id
+  )
+  THEN 5
+  ELSE 0
+END
+    ) >= :profileCompletion
+    `,
+        {
+          profileCompletion: profile_completion,
+        },
+      );
+    }
+    // filter by compliation end
     qb.orderBy(
       'applicant.created_at',
       'DESC',
