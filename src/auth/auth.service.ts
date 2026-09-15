@@ -205,7 +205,9 @@ export class AuthService {
             // =========================
             // User is registered but NOT verified and NOT logged in.
             // Payment must happen before email verification.
-            const paymentToken = this.createRegistrationPaymentToken(user.id);
+            const paymentToken = await this.createRegistrationPaymentToken(
+                user.id,
+            );
 
             console.log('💳 Registration payment token generated');
 
