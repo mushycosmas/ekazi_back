@@ -168,23 +168,65 @@ export class PaymentService {
         // ========================================================
         // EMPLOYER
         // ========================================================
+        if (role === PaymentRole.EMPLOYER) {
 
-        if (
-            role === PaymentRole.EMPLOYER
-        ) {
+            this.logger.log(
+                `[Payment] Resolving employer. user_id=${user.id}, client_id=${(user as any).client_id}`,
+            );
 
-            const client =
-                await this.clientRepository.findOne({
+            let client: Clients | null = null;
+
+            // ========================================================
+            // FIRST: If Users has client_id, use it
+            // ========================================================
+
+            const clientId = (user as any).client_id;
+
+            if (clientId) {
+                client = await this.clientRepository.findOne({
+                    where: {
+                        id: Number(clientId),
+                    },
+                });
+            }
+
+            // ========================================================
+            // SECOND: Try Clients.user_id
+            // ========================================================
+
+            if (!client) {
+                client = await this.clientRepository.findOne({
                     where: {
                         user_id: user.id,
                     },
                 });
+            }
+
+            // ========================================================
+            // CLIENT NOT FOUND
+            // ========================================================
 
             if (!client) {
+                this.logger.error(
+                    `[Payment] Employer client not found. ` +
+                    `user_id=${user.id}, ` +
+                    `client_id=${clientId || 'NULL'}`,
+                );
+
                 throw new NotFoundException(
-                    'Employer/client profile not found',
+                    `Employer/client profile not found for user ${user.id}`,
                 );
             }
+
+            this.logger.log(
+                `[Payment] Employer client found. ` +
+                `client_id=${client.id}, ` +
+                `user_id=${user.id}`,
+            );
+
+            // ========================================================
+            // NAME
+            // ========================================================
 
             const firstname =
                 client.first_name?.trim();
@@ -210,15 +252,60 @@ export class PaymentService {
                 lastname,
                 email,
                 phone,
-                name: [
-                    firstname,
-                    lastname,
-                ]
-                    .filter(Boolean)
-                    .join(' '),
+                name: `${firstname} ${lastname}`,
                 client_id: client.id,
             };
         }
+        // if (
+        //     role === PaymentRole.EMPLOYER
+        // ) {
+
+        //     const client =
+        //         await this.clientRepository.findOne({
+        //             where: {
+        //                 user_id: user.id,
+        //             },
+        //         });
+
+        //     if (!client) {
+        //         throw new NotFoundException(
+        //             'Employer/client profile not found',
+        //         );
+        //     }
+
+        //     const firstname =
+        //         client.first_name?.trim();
+
+        //     const lastname =
+        //         client.last_name?.trim();
+
+        //     if (!firstname) {
+        //         throw new BadRequestException(
+        //             'Client first name is required for payment',
+        //         );
+        //     }
+
+        //     if (!lastname) {
+        //         throw new BadRequestException(
+        //             'Client last name is required for payment',
+        //         );
+        //     }
+
+        //     return {
+        //         firstname,
+        //         middlename: '',
+        //         lastname,
+        //         email,
+        //         phone,
+        //         name: [
+        //             firstname,
+        //             lastname,
+        //         ]
+        //             .filter(Boolean)
+        //             .join(' '),
+        //         client_id: client.id,
+        //     };
+        // }
 
         throw new BadRequestException(
             'Unsupported payment role',
