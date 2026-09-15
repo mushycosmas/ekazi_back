@@ -292,8 +292,10 @@ export class AuthService {
             throw new UnauthorizedException({
                 success: false,
                 message: 'Please verify your email before logging in',
+                data:user.verified,
             });
         }
+        console.log("login",user.verified)
 
         // Generate plain token
         const plainToken = randomBytes(40).toString('hex');

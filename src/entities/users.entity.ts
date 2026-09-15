@@ -85,13 +85,18 @@ export class Users {
   //   transformer: VerifiedTransformer 
   // })
   // verified: number;
+
   @Column({
     type: 'tinyint',
     width: 1,
     default: 0,
+    transformer: {
+      to: (value: boolean) => (value ? 1 : 0),
+      from: (value: number) => value === 1,
+    },
   })
-  verified: boolean | null;
-
+  verified: boolean | null
+  
   @Column({ type: 'varchar', length: 100, nullable: true })
   verify_key: string | null;
 
@@ -109,15 +114,15 @@ export class Users {
 
   // @Column({ type: 'datetime', nullable: true })
   // updated_at: Date | null;
-    @CreateDateColumn({
-      type: 'timestamp',
-    })
-    created_at: Date;
-  
-    @UpdateDateColumn({
-      type: 'timestamp',
-    })
-    updated_at: Date;
+  @CreateDateColumn({
+    type: 'timestamp',
+  })
+  created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+  })
+  updated_at: Date;
 
   @Column({
     type: 'timestamp',
@@ -141,7 +146,7 @@ export class Users {
   @OneToMany(() => Applicants, (applicant) => applicant.user)
   applicants: Applicants[];
 
-  
+
 
   @OneToMany(() => JobEvaluationAptitudes, (aptitude) => aptitude.user,)
   evaluationAptitudes: JobEvaluationAptitudes[];
@@ -193,16 +198,16 @@ export class Users {
     () => Role,
     role => role.users,
     {
-        nullable: true,
+      nullable: true,
     }
-)
-@JoinColumn({ name: 'role_id' })
-role: Role;
+  )
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
 
 
-@OneToMany(
+  @OneToMany(
     () => UserPermission,
     userPermission => userPermission.user,
-)
-userPermissions: UserPermission[];
+  )
+  userPermissions: UserPermission[];
 }
