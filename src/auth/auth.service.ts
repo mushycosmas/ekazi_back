@@ -234,26 +234,32 @@ export class AuthService {
             });
         }
     }
-    private createRegistrationPaymentToken(userId: number): string {
-        const secret = this.configService.get<string>('APP_KEY');
+    private async createRegistrationPaymentToken(
+        userId: number,
+    ): Promise<string> {
+        // Generate the same token format used by login()
+        const plainToken = randomBytes(40).toString('hex');
 
-        if (!secret) {
-            throw new InternalServerErrorException(
-                'APP_KEY is not configured',
-            );
-        }
-
-        const expiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes
-
-        const payload = `${userId}.${expiresAt}`;
-
-        const signature = createHmac('sha256', secret)
-            .update(payload)
+        // Store only the SHA256 hash in personal_access_tokens
+        const hashedToken = createHash('sha256')
+            .update(plainToken)
             .digest('hex');
 
-        return Buffer.from(
-            `${payload}.${signature}`,
-        ).toString('base64url');
+        const token = this.tokenRepository.create({
+            tokenable_type: 'Users',
+            tokenable_id: userId,
+            name: 'api-token',
+            token: hashedToken,
+            abilities: '["*"]',
+            expires_at: new Date(
+                Date.now() + 30 * 24 * 60 * 60 * 1000,
+            ),
+        });
+
+        await this.tokenRepository.save(token);
+
+        // Return the plain token to the frontend
+        return plainToken;
     }
 
     async login(username: string, password: string) {
@@ -292,10 +298,10 @@ export class AuthService {
             throw new UnauthorizedException({
                 success: false,
                 message: 'Please verify your email before logging in',
-                data:user.verified,
+                data: user.verified,
             });
         }
-        console.log("login",user.verified)
+        console.log("login", user.verified)
 
         // Generate plain token
         const plainToken = randomBytes(40).toString('hex');
