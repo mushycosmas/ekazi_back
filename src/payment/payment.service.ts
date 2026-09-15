@@ -21,6 +21,7 @@ import {
 } from 'crypto';
 
 import { Users } from 'src/entities/users.entity';
+import { AuthService } from 'src/auth/auth.service';
 
 import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { Clients } from 'src/client/clients.entity';
@@ -42,6 +43,7 @@ import {
 import {
     PaymentProviderFactory,
 } from './providers/payment-provider.factory';
+
 
 
 @Injectable()
@@ -87,11 +89,17 @@ export class PaymentService {
         private readonly dataSource:
             DataSource,
 
+        private readonly authService:
+            AuthService,
+
     ) { }
 
 
     // ============================================================
     // RESOLVE CUSTOMER INFORMATION
+    // ============================================================
+    // ============================================================
+    // RESOLVE AUTHENTICATED CUSTOMER
     // ============================================================
 
     private async resolveCustomer(
@@ -99,23 +107,14 @@ export class PaymentService {
         role: PaymentRole,
         phone: string,
     ) {
-
-        // --------------------------------------------------------
-        // EMAIL ALWAYS COMES FROM USERS
-        // --------------------------------------------------------
-
         const email =
             user.email?.trim();
 
-
         if (!email) {
-
             throw new BadRequestException(
                 'User email is required for payment',
             );
-
         }
-
 
         // ========================================================
         // APPLICANT
@@ -127,77 +126,52 @@ export class PaymentService {
 
             const applicant =
                 await this.applicantRepository.findOne({
-
                     where: {
-
-                        user_id:
-                            user.id,
-
+                        user_id: user.id,
                     },
-
                 });
 
-
             if (!applicant) {
-
                 throw new NotFoundException(
                     'Applicant profile not found',
                 );
-
             }
 
-
-            const firstName =
+            const firstname =
                 applicant.first_name?.trim() ||
                 'Applicant';
 
-
-            const middleName =
+            const middlename =
                 applicant.middle_name?.trim() ||
                 '';
 
-
-            const lastName =
+            const lastname =
                 applicant.last_name?.trim() ||
                 'Customer';
 
-
             return {
-
-                firstname:
-                    firstName,
-
-                lastname:
-                    lastName,
-
-                middlename:
-                    middleName,
-
+                firstname,
+                middlename,
+                lastname,
                 email,
-
                 phone,
-
-                name:
-                    [
-                        firstName,
-                        middleName,
-                        lastName,
-                    ]
-                        .filter(Boolean)
-                        .join(' '),
-
+                name: [
+                    firstname,
+                    middlename,
+                    lastname,
+                ]
+                    .filter(Boolean)
+                    .join(' '),
             };
-
         }
 
-
         // ========================================================
-        // EMPLOYER / CLIENT
+        // EMPLOYER
         // ========================================================
 
-
-
-        if (role === PaymentRole.EMPLOYER) {
+        if (
+            role === PaymentRole.EMPLOYER
+        ) {
 
             const client =
                 await this.clientRepository.findOne({
@@ -212,14 +186,12 @@ export class PaymentService {
                 );
             }
 
-            // Get names directly from CLIENT
             const firstname =
                 client.first_name?.trim();
 
             const lastname =
                 client.last_name?.trim();
 
-            // Validate before sending to payment provider
             if (!firstname) {
                 throw new BadRequestException(
                     'Client first name is required for payment',
@@ -234,44 +206,497 @@ export class PaymentService {
 
             return {
                 firstname,
-                lastname,
-
                 middlename: '',
-
+                lastname,
                 email,
-
                 phone,
-
                 name: [
                     firstname,
                     lastname,
                 ]
                     .filter(Boolean)
                     .join(' '),
-
                 client_id: client.id,
             };
         }
 
-
         throw new BadRequestException(
             'Unsupported payment role',
         );
-
     }
 
-
-    // ============================================================
-    // INITIATE PAYMENT
-    // ============================================================
-
-    async initiatePayment(
-
-        dto: InitiatePaymentDto,
-
-        user: Users,
-
+    private async createPayment(
+        plan: SubscriptionPlan,
+        role: PaymentRole,
+        customer: {
+            firstname: string;
+            middlename?: string;
+            lastname: string;
+            email: string;
+            phone: string;
+            name: string;
+            client_id?: number;
+        },
+        userId: number,
+        providerName?: string,
+        registrationPayment: boolean = false,
     ) {
+
+        // ============================================================
+        // AMOUNT
+        // ============================================================
+
+        let amount = Number(plan.price);
+
+        if (!amount || amount <= 0) {
+            throw new BadRequestException(
+                'Subscription plan amount must be greater than zero',
+            );
+        }
+
+
+        // ============================================================
+        // REFERENCE
+        // ============================================================
+
+        const reference =
+            `SUB_${Date.now()}_${randomUUID()
+                .replace(/-/g, '')
+                .substring(0, 8)
+                .toUpperCase()}`;
+
+
+        // ============================================================
+        // PROVIDER
+        // ============================================================
+
+        const provider =
+            providerName || 'selcom';
+
+
+        // ============================================================
+        // CREATE PAYMENT RECORD
+        // ============================================================
+
+        const payment =
+            this.subscriptionPaymentRepository.create({
+                user_id: userId,
+
+                subscription_plan_id:
+                    plan.id,
+
+                amount,
+
+                transaction_id:
+                    reference,
+
+                provider,
+
+                role,
+
+                status:
+                    PaymentStatus.PENDING,
+
+                meta: {
+                    registration_payment:
+                        registrationPayment,
+
+                    verification_email_sent_at:
+                        null,
+
+                    customer: {
+                        firstname:
+                            customer.firstname,
+
+                        middlename:
+                            customer.middlename || '',
+
+                        lastname:
+                            customer.lastname,
+
+                        email:
+                            customer.email,
+
+                        phone:
+                            customer.phone,
+
+                        name:
+                            customer.name,
+
+                        client_id:
+                            customer.client_id || null,
+                    },
+                },
+            });
+
+        await this.subscriptionPaymentRepository.save(
+            payment,
+        );
+
+
+        // ============================================================
+        // CALLBACK
+        // ============================================================
+
+        const callbackUrl =
+            process.env.PAYMENT_CALLBACK_URL ||
+            'https://backend.ekazi.co.tz/api/payment/callback/selcom';
+
+
+        // ============================================================
+        // PAYMENT PROVIDER
+        // ============================================================
+
+        const paymentProvider =
+            this.paymentProviderFactory.getProvider(
+                provider,
+            );
+
+
+        this.logger.log(
+            `[Payment] Provider: ${provider}`,
+        );
+
+        this.logger.log(
+            `[Payment] Reference: ${reference}`,
+        );
+
+        this.logger.log(
+            `[Payment] User ID: ${userId ?? 'GUEST'}`,
+        );
+
+        this.logger.log(
+            `[Payment] Amount: ${amount}`,
+        );
+
+
+        // ============================================================
+        // INITIATE
+        // ============================================================
+
+        try {
+
+            const providerResponse =
+                await paymentProvider.initiate({
+                    reference,
+
+                    amount,
+
+                    phone:
+                        customer.phone,
+
+                    currency:
+                        'TZS',
+
+                    callbackUrl,
+
+                    customer,
+                });
+
+
+            // ========================================================
+            // PROVIDER FAILED
+            // ========================================================
+
+            if (!providerResponse.success) {
+
+                await this.subscriptionPaymentRepository.update(
+                    {
+                        id: payment.id,
+                    },
+                    {
+                        status:
+                            PaymentStatus.FAILED,
+
+                        failure_reason:
+                            providerResponse.message ||
+                            'Payment initiation failed',
+                    },
+                );
+
+                throw new BadRequestException({
+                    success: false,
+
+                    message:
+                        providerResponse.message ||
+                        'Payment initiation failed',
+
+                    data:
+                        providerResponse.raw,
+                });
+            }
+
+
+            // ========================================================
+            // TRANSACTION REFERENCE
+            // ========================================================
+
+            if (!providerResponse.transactionId) {
+
+                await this.subscriptionPaymentRepository.update(
+                    {
+                        id: payment.id,
+                    },
+                    {
+                        status:
+                            PaymentStatus.FAILED,
+
+                        failure_reason:
+                            'Payment provider did not return a transaction reference',
+                    },
+                );
+
+                throw new BadRequestException(
+                    'Payment provider did not return a transaction reference',
+                );
+            }
+
+
+            // ========================================================
+            // SAVE PROVIDER TRANSACTION
+            // ========================================================
+
+            payment.provider_transaction_id =
+                providerResponse.transactionId;
+
+
+            payment.payment_type =
+                providerResponse.raw?.payment_type ||
+                providerResponse.raw?.data?.payment_type ||
+                providerResponse.raw?.payment_method ||
+                providerResponse.raw?.data?.payment_method ||
+                null;
+
+
+            await this.subscriptionPaymentRepository.save(
+                payment,
+            );
+
+
+            // ========================================================
+            // RESPONSE
+            // ========================================================
+
+            return {
+                success: true,
+
+                message:
+                    'Payment initiated successfully',
+
+                data: {
+                    reference,
+
+                    amount,
+
+                    currency: 'TZS',
+
+                    provider,
+
+                    customer: {
+                        firstname:
+                            customer.firstname,
+
+                        lastname:
+                            customer.lastname,
+
+                        email:
+                            customer.email,
+
+                        phone:
+                            customer.phone,
+                    },
+
+                    payment:
+                        providerResponse.raw,
+                },
+            };
+
+        } catch (error) {
+
+            if (
+                error instanceof BadRequestException
+            ) {
+                throw error;
+            }
+
+            this.logger.error(
+                `[Payment] Provider initiation failed: ${error?.message || error
+                }`,
+                error?.stack,
+            );
+
+            await this.subscriptionPaymentRepository.update(
+                {
+                    id: payment.id,
+                },
+                {
+                    status:
+                        PaymentStatus.FAILED,
+
+                    failure_reason:
+                        error?.message ||
+                        'Payment provider error',
+                },
+            );
+
+            throw new InternalServerErrorException(
+                'Unable to initiate payment',
+            );
+        }
+    }
+    // ============================================================
+    // CALCULATE PAYMENT AMOUNT
+    // ============================================================
+
+    private async calculatePaymentAmount(
+        plan: SubscriptionPlan,
+        userId: number,
+    ): Promise<number> {
+        let amount = Number(plan.price);
+
+        if (!amount || amount <= 0) {
+            throw new BadRequestException(
+                'Subscription plan amount must be greater than zero',
+            );
+        }
+
+        const currentSubscription =
+            await this.subscriptionRepository.findOne({
+                where: {
+                    user_id: userId,
+                    is_active: true,
+                },
+                relations: ['plan'],
+                order: {
+                    end_date: 'DESC',
+                },
+            });
+
+        if (
+            currentSubscription &&
+            currentSubscription.plan &&
+            currentSubscription.plan.id !== plan.id
+        ) {
+            const now = new Date();
+
+            const endDate =
+                new Date(currentSubscription.end_date);
+
+            let remainingDays =
+                Math.ceil(
+                    (
+                        endDate.getTime() -
+                        now.getTime()
+                    ) /
+                    (
+                        1000 *
+                        60 *
+                        60 *
+                        24
+                    ),
+                );
+
+            if (remainingDays < 0) {
+                remainingDays = 0;
+            }
+
+            const oldPlan =
+                await this.subscriptionPlanRepository.findOne({
+                    where: {
+                        id:
+                            currentSubscription.plan.id,
+                    },
+                });
+
+            if (
+                oldPlan &&
+                Number(oldPlan.duration_days) > 0
+            ) {
+                const credit =
+                    (
+                        Number(oldPlan.price) /
+                        Number(oldPlan.duration_days)
+                    ) *
+                    remainingDays;
+
+                amount =
+                    Math.max(
+                        0,
+                        Number(plan.price) -
+                        credit,
+                    );
+
+                amount =
+                    Math.round(
+                        amount * 100,
+                    ) / 100;
+            }
+        }
+
+        if (amount <= 0) {
+            this.logger.warn(
+                `Calculated payment amount is ${amount} for user ${userId}.`,
+            );
+        }
+
+        return amount;
+    }
+
+    // ============================================================
+    // CHECK PENDING PAYMENT
+    // ============================================================
+
+    private async checkPendingPayment(
+        userId: number,
+        planId: number,
+    ) {
+        const existingPayment =
+            await this.subscriptionPaymentRepository.findOne({
+                where: {
+                    user_id: userId,
+                    subscription_plan_id: planId,
+                    status: PaymentStatus.PENDING,
+                },
+                order: {
+                    created_at: 'DESC',
+                },
+            });
+
+        if (!existingPayment) {
+            return null;
+        }
+
+        const age =
+            Date.now() -
+            new Date(
+                existingPayment.created_at,
+            ).getTime();
+
+        // Ignore stale pending payments older than 5 minutes.
+        if (
+            age >=
+            5 * 60 * 1000
+        ) {
+            return null;
+        }
+
+        return existingPayment;
+    }
+
+    // ============================================================
+    // COMMON PAYMENT INITIATION
+    // ============================================================
+
+    private async initiatePaymentInternal(
+        dto: InitiatePaymentDto,
+        user: Users,
+        registrationPayment: boolean = false,
+    ) {
+        if (!user?.id) {
+            throw new BadRequestException(
+                'Authenticated user is required',
+            );
+        }
 
         // ========================================================
         // FIND PLAN
@@ -279,25 +704,16 @@ export class PaymentService {
 
         const plan =
             await this.subscriptionPlanRepository.findOne({
-
                 where: {
-
-                    id:
-                        dto.plan_id,
-
+                    id: dto.plan_id,
                 },
-
             });
 
-
         if (!plan) {
-
             throw new NotFoundException(
                 'Subscription plan not found',
             );
-
         }
-
 
         // ========================================================
         // DETERMINE ROLE
@@ -308,27 +724,34 @@ export class PaymentService {
                 ? PaymentRole.APPLICANT
                 : PaymentRole.EMPLOYER;
 
+        // ========================================================
+        // REGISTRATION PAYMENT CHECK
+        // ========================================================
+
+        if (registrationPayment) {
+            if (user.verified === true) {
+                throw new BadRequestException(
+                    'Account is already verified. Use the normal payment endpoint.',
+                );
+            }
+        }
 
         // ========================================================
-        // RESOLVE CUSTOMER
+        // CUSTOMER
         // ========================================================
 
         const customer =
             await this.resolveCustomer(
-
                 user,
-
                 role,
-
                 dto.phone,
-
             );
 
-
         this.logger.log(
-            `Payment customer resolved: ${JSON.stringify({
+            `[Payment] Customer resolved: ${JSON.stringify({
                 userId: user.id,
                 role,
+                registrationPayment,
                 firstname: customer.firstname,
                 lastname: customer.lastname,
                 middlename: customer.middlename,
@@ -338,426 +761,219 @@ export class PaymentService {
             })}`,
         );
 
-
-        // ========================================================
-        // CHECK ACTIVE SUBSCRIPTION
-        // ========================================================
-
-        const currentSubscription =
-            await this.subscriptionRepository.findOne({
-
-                where: {
-
-                    user_id:
-                        user.id,
-
-                    is_active:
-                        true,
-
-                },
-
-                relations: [
-                    'plan',
-                ],
-
-                order: {
-
-                    end_date:
-                        'DESC',
-
-                },
-
-            });
-
-
         // ========================================================
         // PAYMENT AMOUNT
         // ========================================================
 
-        let amount =
-            Number(plan.price);
-
-
-        // ========================================================
-        // PRORATE UPGRADE
-        // ========================================================
-
-        if (
-
-            currentSubscription &&
-
-            currentSubscription.plan &&
-
-            currentSubscription.plan.id !==
-            plan.id
-
-        ) {
-
-            const now =
-                new Date();
-
-
-            const endDate =
-                new Date(
-                    currentSubscription.end_date,
-                );
-
-
-            let remainingDays =
-                Math.ceil(
-
-                    (
-                        endDate.getTime() -
-                        now.getTime()
-                    )
-                    /
-                    (
-                        1000 *
-                        60 *
-                        60 *
-                        24
-                    ),
-
-                );
-
-
-            if (
-                remainingDays < 0
-            ) {
-
-                remainingDays = 0;
-
-            }
-
-
-            const oldPlan =
-                await this.subscriptionPlanRepository.findOne({
-
-                    where: {
-
-                        id:
-                            currentSubscription.plan.id,
-
-                    },
-
-                });
-
-
-            if (
-
-                oldPlan &&
-
-                Number(oldPlan.duration_days) > 0
-
-            ) {
-
-                const credit =
-
-                    (
-                        Number(oldPlan.price)
-                        /
-                        Number(oldPlan.duration_days)
-                    )
-                    *
-                    remainingDays;
-
-
-                amount =
-                    Math.max(
-
-                        0,
-
-                        Number(plan.price)
-                        -
-                        credit,
-
-                    );
-
-            }
-
-        }
-
+        const amount =
+            await this.calculatePaymentAmount(
+                plan,
+                user.id,
+            );
 
         // ========================================================
         // PREVENT DUPLICATE PENDING PAYMENT
         // ========================================================
 
-        const existingPayment =
-            await this.subscriptionPaymentRepository.findOne({
+        const pendingPayment =
+            await this.checkPendingPayment(
+                user.id,
+                plan.id,
+            );
 
-                where: {
-
-                    user_id:
-                        user.id,
-
-                    subscription_plan_id:
-                        plan.id,
-
-                    status:
-                        PaymentStatus.PENDING,
-
-                },
-
-            });
-
-
-        if (existingPayment) {
+        if (pendingPayment) {
             return {
                 success: false,
-                message: 'You already have a pending payment',
+                message:
+                    'You already have a pending payment',
                 data: {
                     reference:
-                        existingPayment.transaction_id,
+                        pendingPayment.transaction_id,
 
                     provider_reference:
-                        existingPayment.provider_transaction_id,
+                        pendingPayment.provider_transaction_id,
 
                     amount:
-                        existingPayment.amount,
+                        pendingPayment.amount,
 
                     status:
-                        existingPayment.status,
+                        pendingPayment.status,
                 },
             };
         }
 
-
         // ========================================================
-        // UNIQUE REFERENCE
+        // PROVIDER
         // ========================================================
 
-        const reference =
-            `SUB_${Date.now()}_${randomUUID()
-                .replace(/-/g, '')
-                .substring(0, 10)
-                .toUpperCase()}`;
-
+        const providerName =
+            dto.provider?.trim() ||
+            'selcom';
 
         // ========================================================
         // CREATE PAYMENT
         // ========================================================
 
-        const payment =
-            this.subscriptionPaymentRepository.create({
+        return this.createPayment(
+            {
+                ...plan,
+                price: amount,
+            } as SubscriptionPlan,
 
-                user_id:
-                    user.id,
+            role,
 
-                subscription_plan_id:
-                    plan.id,
+            customer,
 
-                amount,
+            user.id,
 
-                transaction_id:
-                    reference,
+            providerName,
 
-                provider:
-                    dto.provider ?? 'selcom',
-
-                role,
-
-                status:
-                    PaymentStatus.PENDING,
-
-                meta:
-                {
-
-                    customer: {
-
-                        firstname:
-                            customer.firstname,
-
-                        lastname:
-                            customer.lastname,
-
-                        middlename:
-                            customer.middlename,
-
-                        email:
-                            customer.email,
-
-                        phone:
-                            customer.phone,
-
-                    },
-
-                },
-
-            });
-
-
-        await this.subscriptionPaymentRepository.save(
-            payment,
+            registrationPayment,
         );
-
-
-        // ========================================================
-        // CALLBACK
-        // ========================================================
-
-        const callbackUrl =
-            process.env.PAYMENT_CALLBACK_URL ||
-            'https://backend.ekazi.co.tz/api/payment/callback/selcom';
-
-
-        // ========================================================
-        // PROVIDER - FIXED: Pass provider name
-        // ========================================================
-
-        const provider =
-            this.paymentProviderFactory.getProvider(dto.provider);
-
-
-        this.logger.log(
-            `Using payment provider: ${dto.provider || 'selcome'}`,
-        );
-
-
-        // ========================================================
-        // INITIATE
-        // ========================================================
-
-        const providerResponse =
-            await provider.initiate({
-
-                reference,
-
-                amount,
-
-                phone:
-                    dto.phone,
-
-                currency:
-                    'TZS',
-
-                callbackUrl,
-
-                customer,
-
-            });
-
-        // ========================================================
-        // PROVIDER FAILED
-        // ========================================================
-
-        if (
-            !providerResponse.success
-        ) {
-
-            await this.subscriptionPaymentRepository.update(
-
-                {
-                    id:
-                        payment.id,
-                },
-
-                {
-                    status:
-                        PaymentStatus.FAILED,
-                },
-
-            );
-
-
-            throw new BadRequestException({
-
-                success:
-                    false,
-
-                message:
-                    providerResponse.message ||
-                    'Payment initiation failed',
-
-                data:
-                    providerResponse.raw,
-
-            });
-
-        }
-        // ========================================================
-        // SAVE SNIPPE PROVIDER TRANSACTION ID
-        // ========================================================
-
-        if (!providerResponse.transactionId) {
-            await this.subscriptionPaymentRepository.update(
-                { id: payment.id },
-                {
-                    status: PaymentStatus.FAILED,
-                    failure_reason:
-                        'Payment provider did not return a transaction reference',
-                },
-            );
-
-            throw new BadRequestException(
-                'Payment provider did not return a transaction reference',
-            );
-        }
-
-        payment.provider_transaction_id =
-            providerResponse.transactionId;
-        // Get payment type returned by Snippe
-        payment.payment_type =
-            providerResponse.raw?.payment_type ||
-            providerResponse.raw?.data?.payment_type ||
-            providerResponse.raw?.payment_method ||
-            providerResponse.raw?.data?.payment_method ||
-            null;
-
-        await this.subscriptionPaymentRepository.save(
-            payment,
-        );
-
-        // ========================================================
-        // RESPONSE
-        // ========================================================
-
-        return {
-
-            success:
-                true,
-
-            message:
-                'Payment initiated successfully',
-
-            data: {
-
-                reference,
-
-                amount,
-
-                currency:
-                    'TZS',
-
-                provider:
-                    dto.provider || 'selcom',
-
-                customer: {
-
-                    firstname:
-                        customer.firstname,
-
-                    lastname:
-                        customer.lastname,
-
-                    email:
-                        customer.email,
-
-                    phone:
-                        customer.phone,
-
-                },
-
-                payment:
-                    providerResponse.raw,
-
-            },
-
-        };
-
     }
 
+    // ============================================================
+    // NORMAL AUTHENTICATED PAYMENT
+    // ============================================================
+    //
+    // Existing verified users use this endpoint.
+    // Verification email is NOT sent from this flow.
 
+    async initiatePayment(
+        dto: InitiatePaymentDto,
+        user: Users,
+    ) {
+        return this.initiatePaymentInternal(
+            dto,
+            user,
+            false,
+        );
+    }
 
+    // ============================================================
+    // REGISTRATION PAYMENT
+    // ============================================================
+    //
+    // Flow:
+    // Register user -> create user/client -> authenticate user
+    // -> select subscription -> pay -> callback verifies payment
+    // -> subscription is created -> verification email is sent.
+    //
+    // This endpoint is intended for newly registered,
+    // authenticated but unverified users.
+
+    async initiateRegistrationPayment(
+        dto: InitiatePaymentDto,
+        user: Users,
+    ) {
+        return this.initiatePaymentInternal(
+            dto,
+            user,
+            true,
+        );
+    }
+
+    // ============================================================
+    // SEND REGISTRATION VERIFICATION EMAIL
+    // ============================================================
+    //
+    // IMPORTANT:
+    // This is called ONLY after successful payment verification
+    // AND successful subscription activation.
+    //
+    // Normal authenticated payments have:
+    // registration_payment = false
+    // and therefore never send this email.
+
+    private async sendRegistrationVerificationEmailIfRequired(
+        payment: SubscriptionPayment,
+    ) {
+        const registrationPayment =
+            payment.meta?.registration_payment === true;
+
+        if (!registrationPayment) {
+            return;
+        }
+
+        if (!payment.user_id) {
+            this.logger.warn(
+                `Registration payment ${payment.id} has no user_id. Verification email skipped.`,
+            );
+            return;
+        }
+
+        if (
+            payment.meta?.verification_email_sent_at
+        ) {
+            this.logger.log(
+                `Verification email already sent for payment ${payment.id}.`,
+            );
+            return;
+        }
+
+        const user =
+            await this.dataSource
+                .getRepository(Users)
+                .findOne({
+                    where: {
+                        id: payment.user_id,
+                    },
+                });
+
+        if (!user) {
+            this.logger.warn(
+                `User ${payment.user_id} not found for payment ${payment.id}. Verification email skipped.`,
+            );
+            return;
+        }
+
+        // Do not send verification email if the account
+        // has already been verified.
+        if (user.verified === true) {
+            this.logger.log(
+                `User ${user.id} is already verified. Verification email skipped.`,
+            );
+            return;
+        }
+
+        const email =
+            user.email?.trim();
+
+        if (!email) {
+            this.logger.warn(
+                `User ${user.id} has no email. Verification email skipped.`,
+            );
+            return;
+        }
+
+        try {
+            await this.authService.sendVerificationEmail(
+                email,
+                user.username || email,
+            );
+
+            payment.meta = {
+                ...(payment.meta || {}),
+                verification_email_sent_at:
+                    new Date().toISOString(),
+            };
+
+            await this.subscriptionPaymentRepository.save(
+                payment,
+            );
+
+            this.logger.log(
+                `Verification email sent after successful registration payment. User=${user.id}, Payment=${payment.id}`,
+            );
+        } catch (error: any) {
+            // Do NOT fail the payment/subscription because
+            // email delivery failed after successful payment.
+            this.logger.error(
+                `Failed to send verification email after successful payment. User=${user.id}, Payment=${payment.id}`,
+                error?.stack || error,
+            );
+        }
+    }
 
     // ============================================================
     // SELCOM OPERATIONS
@@ -931,6 +1147,12 @@ export class PaymentService {
                 payment.status ===
                 PaymentStatus.SUCCESS
             ) {
+                // Retry registration verification email if a previous
+                // delivery attempt failed after the payment succeeded.
+                await this.sendRegistrationVerificationEmailIfRequired(
+                    payment,
+                );
+
                 return {
                     success: true,
                     message: 'Payment already processed',
@@ -1011,6 +1233,10 @@ export class PaymentService {
 
                 await this.activateSubscription(
                     payment.id,
+                );
+
+                await this.sendRegistrationVerificationEmailIfRequired(
+                    payment,
                 );
 
                 this.logger.log(
@@ -1216,6 +1442,11 @@ export class PaymentService {
                 payment.status ===
                 PaymentStatus.SUCCESS
             ) {
+                // Retry registration verification email if a previous
+                // delivery attempt failed after the payment succeeded.
+                await this.sendRegistrationVerificationEmailIfRequired(
+                    payment,
+                );
 
                 return {
 
@@ -1379,6 +1610,10 @@ export class PaymentService {
                 payment.id,
             );
 
+            await this.sendRegistrationVerificationEmailIfRequired(
+                payment,
+            );
+
             this.logger.log(
                 `Subscription successfully activated for payment ${payment.id}`,
             );
@@ -1407,7 +1642,6 @@ export class PaymentService {
     // ============================================================
     // ACTIVATE SUBSCRIPTION
     // ============================================================
-
     private async activateSubscription(
         paymentId: number,
     ) {
@@ -1415,33 +1649,30 @@ export class PaymentService {
         const queryRunner =
             this.dataSource.createQueryRunner();
 
-
         await queryRunner.connect();
-
         await queryRunner.startTransaction();
-
 
         try {
 
+            // ========================================================
+            // LOCK PAYMENT
+            // ========================================================
+
             const payment =
                 await queryRunner.manager
-
                     .createQueryBuilder(
                         SubscriptionPayment,
                         'payment',
                     )
-
                     .setLock(
                         'pessimistic_write',
                     )
-
                     .where(
                         'payment.id = :paymentId',
                         {
                             paymentId,
                         },
                     )
-
                     .getOne();
 
 
@@ -1450,34 +1681,57 @@ export class PaymentService {
                 throw new NotFoundException(
                     'Payment not found',
                 );
-
             }
 
 
-            if (
-                payment.status ===
-                PaymentStatus.SUCCESS
-            ) {
+            // ========================================================
+            // USER REQUIRED
+            // ========================================================
+
+            if (!payment.user_id) {
+
+                throw new BadRequestException(
+                    'Payment is not linked to a user account',
+                );
+            }
+
+
+            // ========================================================
+            // CHECK EXISTING SUBSCRIPTION
+            // ========================================================
+
+            const existingSubscription =
+                await queryRunner.manager.findOne(
+                    Subscription,
+                    {
+                        where: {
+                            subscription_payment_id:
+                                payment.id,
+                        },
+                    },
+                );
+
+
+            if (existingSubscription) {
 
                 await queryRunner.commitTransaction();
 
-                return;
-
+                return existingSubscription;
             }
 
+
+            // ========================================================
+            // PLAN
+            // ========================================================
 
             const plan =
                 await queryRunner.manager.findOne(
                     SubscriptionPlan,
                     {
-
                         where: {
-
                             id:
                                 payment.subscription_plan_id,
-
                         },
-
                     },
                 );
 
@@ -1487,74 +1741,59 @@ export class PaymentService {
                 throw new NotFoundException(
                     'Subscription plan not found',
                 );
-
             }
 
 
-            // ----------------------------------------------------
+            // ========================================================
             // DEACTIVATE OLD
-            // ----------------------------------------------------
+            // ========================================================
 
             await queryRunner.manager.update(
-
                 Subscription,
 
                 {
-
                     user_id:
                         payment.user_id,
 
                     is_active:
                         true,
-
                 },
 
                 {
-
                     is_active:
                         false,
-
                 },
-
             );
 
 
-            // ----------------------------------------------------
+            // ========================================================
             // DATES
-            // ----------------------------------------------------
+            // ========================================================
 
             const startDate =
                 new Date();
-
 
             const endDate =
                 new Date(
                     startDate,
                 );
 
-
             endDate.setDate(
-
-                endDate.getDate()
-                +
+                endDate.getDate() +
                 Number(
                     plan.duration_days,
                 ),
-
             );
 
 
-            // ----------------------------------------------------
+            // ========================================================
             // CREATE SUBSCRIPTION
-            // ----------------------------------------------------
+            // ========================================================
 
             const subscription =
                 queryRunner.manager.create(
-
                     Subscription,
-
                     {
-
                         user_id:
                             payment.user_id,
 
@@ -1575,15 +1814,16 @@ export class PaymentService {
                             plan.cv_download_limit ??
                             -1,
 
-                        cv_builder_remaining: plan.cv_builder_limit ??
+                        cv_builder_remaining:
+                            plan.cv_builder_limit ??
                             -1,
 
                         is_active:
                             true,
-                        subscription_payment_id: payment.id,
 
+                        subscription_payment_id:
+                            payment.id,
                     },
-
                 );
 
 
@@ -1593,12 +1833,16 @@ export class PaymentService {
             );
 
 
-            // ----------------------------------------------------
-            // SUCCESS
-            // ----------------------------------------------------
+            // ========================================================
+            // MARK PAYMENT SUCCESS
+            // ========================================================
 
             payment.status =
                 PaymentStatus.SUCCESS;
+
+            payment.paid_at =
+                payment.paid_at ||
+                new Date();
 
 
             await queryRunner.manager.save(
@@ -1609,16 +1853,24 @@ export class PaymentService {
 
             await queryRunner.commitTransaction();
 
+            return subscription;
+
         } catch (error) {
 
             await queryRunner.rollbackTransaction();
 
-
             this.logger.error(
                 'Subscription activation failed',
-                error,
+                error?.stack || error,
             );
 
+            if (
+                error instanceof BadRequestException ||
+                error instanceof NotFoundException ||
+                error instanceof ConflictException
+            ) {
+                throw error;
+            }
 
             throw new InternalServerErrorException(
                 'Failed to activate subscription',
@@ -1627,9 +1879,7 @@ export class PaymentService {
         } finally {
 
             await queryRunner.release();
-
         }
-
     }
 
     // Add to PaymentService

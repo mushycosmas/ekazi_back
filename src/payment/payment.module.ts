@@ -51,6 +51,7 @@ import {
 } from 'src/entities/personal-access-token.entity';
 import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { Clients } from 'src/client/clients.entity';
+import { AuthModule } from 'src/auth/auth.module';
 
 
 @Module({
@@ -74,6 +75,7 @@ import { Clients } from 'src/client/clients.entity';
         ]),
 
         HttpModule,
+        AuthModule,
         
 
     ],

@@ -58,112 +58,7 @@ export class AuthService {
     ) { }
 
 
-    // async registerEmployer(dto: CreateEmployerDto) {
-    //     const existing = await this.usersRepository.findOne({
-    //         where: { email: dto.email },
-    //     });
 
-    //     if (existing) {
-    //         throw new BadRequestException('Email already exists');
-    //     }
-
-    //     const role = await this.roleRepository.findOne({
-    //         where: { name: 'Post Jobs Only' },
-    //     });
-
-    //     if (!role) {
-    //         throw new BadRequestException('Role not found');
-    //     }
-
-    //     const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    //     // =========================
-    //     // USER
-    //     // =========================
-    //     const now = new Date();
-
-    //     const user = this.usersRepository.create({
-    //         username: dto.name,
-    //         email: dto.email,
-    //         temp_email: dto.email,
-    //         password: hashedPassword,
-    //         role_id: role.id,
-    //         hide: false,
-    //         verify_key: dto.email + new Date().toISOString().slice(0, 10),
-    //         created_at: now,
-    //         updated_at: now,
-    //     });
-
-    //     await this.usersRepository.save(user);
-
-    //     // =========================
-    //     // CLIENT
-    //     // =========================
-    //     const client = this.clientRepo.create({
-    //         creator_id: user.id,
-    //         updator_id: user.id,
-    //         type_id: dto.type,
-    //         client_name: dto.name,
-    //     });
-
-    //     await this.clientRepo.save(client);
-
-    //     // link user
-    //     user.client_id = client.id;
-    //     await this.usersRepository.save(user);
-
-    //     // =========================
-    //     // ROLE ASSIGN (Spatie equivalent)
-    //     // =========================
-    //     // If using nestjs CASL or custom roles:
-    //     // user.role = role;
-
-    //     // =========================
-    //     // CLIENT EMAIL
-    //     // =========================
-    //     await this.clientEmailRepo.save({
-    //         client_email: dto.email,
-    //         client_id: client.id,
-    //     });
-
-    //     // =========================
-    //     // CLIENT PHONE
-    //     // =========================
-    //     await this.clientPhoneRepo.save({
-    //         phone_number: dto.phone,
-    //         client_id: client.id,
-    //     });
-
-    //     // =========================
-    //     // NOTIFICATION
-    //     // =========================
-    //     await this.notificationRepo.save({
-    //         client_id: client.id,
-    //         data: 'New Client Joined',
-    //         type: 'new-client',
-    //     });
-    //     if (!user.email) {
-    //         throw new BadRequestException('User email is missing');
-    //     }
-    //     if (!user.username) {
-    //         throw new BadRequestException('User email is missing');
-    //     }
-    //     // ✅ SEND EMAIL VERIFICATION AFTER SUCCESS
-    //     await this.sendVerificationEmail(
-    //         user.email,
-    //         user.username,
-    //     );
-
-    //     return {
-    //         success: true,
-    //         message: 'Employer account created successfully',
-    //         data: {
-    //             id: user.id,
-    //             email: user.email,
-    //             client_id: client.id,
-    //         },
-    //     };
-    // }
     async registerEmployer(dto: CreateEmployerDto) {
         try {
             console.log('🚀 START registerEmployer:', dto.email);
@@ -241,10 +136,10 @@ export class AuthService {
                 updator_id: user.id,
                 type_id: dto.type,
                 client_name: dto.name,
-                first_name:dto.first_name,
-                last_name:dto.last_name,
-                middle_name:dto.middle_name,
-                client_type:dto.client_type,
+                first_name: dto.first_name,
+                last_name: dto.last_name,
+                middle_name: dto.middle_name,
+                client_type: dto.client_type,
             });
 
             await this.clientRepo.save(client);
@@ -301,20 +196,28 @@ export class AuthService {
                 );
             }
 
+            // // =========================
+            // // EMAIL VERIFICATION
+            // // =========================
+            // await this.sendVerificationEmail(user.email, user.username);
             // =========================
-            // EMAIL VERIFICATION
+            // PAYMENT AUTHORIZATION
             // =========================
-            await this.sendVerificationEmail(user.email, user.username);
+            // User is registered but NOT verified and NOT logged in.
+            // Payment must happen before email verification.
+            const paymentToken = this.createRegistrationPaymentToken(user.id);
 
-            console.log('📨 Verification email sent');
+            console.log('💳 Registration payment token generated');
 
             return {
                 success: true,
-                message: 'Employer account created successfully',
+                message: 'Employer account created successfully. Please complete subscription payment.',
                 data: {
                     id: user.id,
                     email: user.email,
                     client_id: client.id,
+                    payment_required: true,
+                    payment_token: paymentToken,
                 },
             };
         } catch (error) {
@@ -331,6 +234,27 @@ export class AuthService {
             });
         }
     }
+    private createRegistrationPaymentToken(userId: number): string {
+        const secret = this.configService.get<string>('APP_KEY');
+
+        if (!secret) {
+            throw new InternalServerErrorException(
+                'APP_KEY is not configured',
+            );
+        }
+
+        const expiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes
+
+        const payload = `${userId}.${expiresAt}`;
+
+        const signature = createHmac('sha256', secret)
+            .update(payload)
+            .digest('hex');
+
+        return Buffer.from(
+            `${payload}.${signature}`,
+        ).toString('base64url');
+    }
 
     async login(username: string, password: string) {
         const user = await this.usersRepository.findOne({
@@ -339,22 +263,41 @@ export class AuthService {
         });
 
         if (!user) {
-            throw new UnauthorizedException('Invalid credentials not user');
+            throw new UnauthorizedException(
+                'Invalid credentials not user',
+            );
         }
+
         if (!user.password) {
-            throw new UnauthorizedException('Invalid credentials not have password');
+            throw new UnauthorizedException(
+                'Invalid credentials not have password',
+            );
         }
-        const valid = await bcrypt.compare(password, user.password);
-        console.log('password', user.password);
+
+        const valid = await bcrypt.compare(
+            password,
+            user.password,
+        );
 
         if (!valid) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new UnauthorizedException(
+                'Invalid credentials',
+            );
+        }
+
+        // =========================
+        // EMAIL VERIFICATION CHECK
+        // =========================
+        if (user.verified !== true) {
+            throw new UnauthorizedException({
+                success: false,
+                message: 'Please verify your email before logging in',
+            });
         }
 
         // Generate plain token
         const plainToken = randomBytes(40).toString('hex');
 
-        // Hash token before storing (Laravel Sanctum style)
         const hashedToken = createHash('sha256')
             .update(plainToken)
             .digest('hex');
@@ -374,7 +317,7 @@ export class AuthService {
 
         return {
             success: true,
-            token: plainToken, // return only the plain token
+            token: plainToken,
             data: user,
         };
     }
@@ -799,46 +742,46 @@ export class AuthService {
 
 
         // Verify account
-        user.verified = true,
-            user.email_verified_at = new Date();
+        // user.verified = true,
+        //     user.email_verified_at = new Date();
 
-        // Clear token after success
-        user.verify_key = null,
-            user.verify_key_expires_at = null,
+        // // Clear token after success
+        // user.verify_key = null,
+        //     user.verify_key_expires_at = null,
 
 
-            await this.usersRepository.save(user);
+        //     await this.usersRepository.save(user);
 
-        // ==========================
-        // CREATE LOGIN TOKEN
-        // ==========================
-        const plainToken = randomBytes(40).toString('hex');
+        // // ==========================
+        // // CREATE LOGIN TOKEN
+        // // ==========================
+        // const plainToken = randomBytes(40).toString('hex');
 
-        const hashedToken = createHash('sha256')
-            .update(plainToken)
-            .digest('hex');
+        // const hashedToken = createHash('sha256')
+        //     .update(plainToken)
+        //     .digest('hex');
 
-        const personalToken = this.tokenRepository.create({
-            tokenable_type: 'Users',
-            tokenable_id: user.id,
-            name: 'api-token',
-            token: hashedToken,
-            abilities: '["*"]',
-            expires_at: new Date(
-                Date.now() + 30 * 24 * 60 * 60 * 1000,
-            ),
-        });
+        // const personalToken = this.tokenRepository.create({
+        //     tokenable_type: 'Users',
+        //     tokenable_id: user.id,
+        //     name: 'api-token',
+        //     token: hashedToken,
+        //     abilities: '["*"]',
+        //     expires_at: new Date(
+        //         Date.now() + 30 * 24 * 60 * 60 * 1000,
+        //     ),
+        // });
 
-        await this.tokenRepository.save(personalToken);
+        // await this.tokenRepository.save(personalToken);
 
         return {
             success: true,
             message: 'Email verified successfully.',
-            token: plainToken,
+            // token: plainToken,
             data: user,
         };
     }
-    
+
     async myaccount(user: Users) {
         try {
             const account = await this.usersRepository.findOne({

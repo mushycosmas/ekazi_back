@@ -49,10 +49,15 @@ export class SubscriptionPayment {
 
 
     @Index()
+    // @Column({
+    //     type: 'int',
+    // })
+    // user_id: number;
     @Column({
         type: 'int',
+        nullable: true,
     })
-    user_id: number;
+    user_id: number | null;
 
     @ManyToOne(
         () => Users,
@@ -162,12 +167,12 @@ export class SubscriptionPayment {
     updated_at: Date;
 
     @ManyToOne(
-    () => SubscriptionPlan,
-)
-@JoinColumn({
-    name: 'subscription_plan_id',
-})
-subscriptionPlan: SubscriptionPlan;
+        () => SubscriptionPlan,
+    )
+    @JoinColumn({
+        name: 'subscription_plan_id',
+    })
+    subscriptionPlan: SubscriptionPlan;
 
 
 }

@@ -44,6 +44,7 @@ import { Role } from 'src/auth/role.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsInt, Min, Max } from 'class-validator';
 import { SelcomOrderDto, SelcomStatusDto, SelcomWalletPaymentDto } from './dto/selcom-order.dto';
+import { GuestInitiatePaymentDto } from './dto/guest-initiate-payment.dto';
 
 // ============================================================
 // DTOs for new endpoints (Fixed decorator usage)
@@ -109,7 +110,22 @@ export class PaymentController {
 
         return this.paymentService.initiatePayment(dto, user);
     }
-    
+    // ============================================================
+    // GUEST PAYMENT
+    // ============================================================
+    @Post('initiate-registration')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async initiateRegistrationPayment(
+        @Body() dto: InitiatePaymentDto,
+        @CurrentUser() user: Users,
+    ) {
+        return this.paymentService.initiateRegistrationPayment(
+            dto,
+            user,
+        );
+    }
+
     @Get('list-orders')
     @UseGuards(SanctumGuard)
     async listSelcomOrders(

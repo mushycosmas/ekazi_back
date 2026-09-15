@@ -1,0 +1,975 @@
+// import { flatten, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+// import { InjectRepository } from '@nestjs/typeorm';
+// import { Repository } from 'typeorm';
+// import { randomBytes, createHash, createHmac } from 'crypto';
+// import * as bcrypt from 'bcryptjs';
+// import { ChangePasswordDto } from './dto/chage-password.dto';
+// import { PasswordReset } from 'src/entities/password-resets.entity';
+// import { MailService } from 'src/mail/mail.service';
+// import { ResetPasswordDto } from './dto/reset-password.dto';
+// import { EmailVerification } from 'src/entities/email-verification.entity';
+// import { ConfigService } from '@nestjs/config';
+// import { InternalServerErrorException } from '@nestjs/common';
+// import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
+// import { Users } from 'src/entities/users.entity';
+// import { CreateEmployerDto } from 'src/employer/dto/create-employer.dto';
+// import { BadRequestException } from '@nestjs/common';
+// import { Role } from 'src/entities/role.entity';
+// import { Clients } from 'src/client/clients.entity';
+// import { ClientEmail } from 'src/client/entities/client-email.entity';
+// import { ClientPhone } from 'src/client/entities/client-phones.entity';
+// import { Notification } from 'src/client/entities/notifications.entity';
+
+
+
+// @Injectable()
+// export class AuthService {
+//     constructor(
+//         @InjectRepository(Users)
+//         private readonly usersRepository: Repository<Users>,
+
+//         @InjectRepository(Role)
+//         private readonly roleRepository: Repository<Role>,
+
+//         @InjectRepository(Clients)
+//         private clientRepo: Repository<Clients>,
+
+
+//         @InjectRepository(ClientEmail)
+//         private clientEmailRepo: Repository<ClientEmail>,
+
+//         @InjectRepository(ClientPhone)
+//         private clientPhoneRepo: Repository<ClientPhone>,
+
+//         @InjectRepository(Notification)
+//         private notificationRepo: Repository<Notification>,
+
+//         @InjectRepository(PersonalAccessToken)
+//         private readonly tokenRepository: Repository<PersonalAccessToken>,
+
+//         @InjectRepository(PasswordReset)
+//         private readonly passwordResetRepository: Repository<PasswordReset>,
+
+//         @InjectRepository(EmailVerification)
+//         private emailVerificationRepository: Repository<EmailVerification>,
+
+//         private readonly mailService: MailService,
+//         private configService: ConfigService, // ✅ ADD THIS
+//     ) { }
+
+
+//     // async registerEmployer(dto: CreateEmployerDto) {
+//     //     const existing = await this.usersRepository.findOne({
+//     //         where: { email: dto.email },
+//     //     });
+
+//     //     if (existing) {
+//     //         throw new BadRequestException('Email already exists');
+//     //     }
+
+//     //     const role = await this.roleRepository.findOne({
+//     //         where: { name: 'Post Jobs Only' },
+//     //     });
+
+//     //     if (!role) {
+//     //         throw new BadRequestException('Role not found');
+//     //     }
+
+//     //     const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+//     //     // =========================
+//     //     // USER
+//     //     // =========================
+//     //     const now = new Date();
+
+//     //     const user = this.usersRepository.create({
+//     //         username: dto.name,
+//     //         email: dto.email,
+//     //         temp_email: dto.email,
+//     //         password: hashedPassword,
+//     //         role_id: role.id,
+//     //         hide: false,
+//     //         verify_key: dto.email + new Date().toISOString().slice(0, 10),
+//     //         created_at: now,
+//     //         updated_at: now,
+//     //     });
+
+//     //     await this.usersRepository.save(user);
+
+//     //     // =========================
+//     //     // CLIENT
+//     //     // =========================
+//     //     const client = this.clientRepo.create({
+//     //         creator_id: user.id,
+//     //         updator_id: user.id,
+//     //         type_id: dto.type,
+//     //         client_name: dto.name,
+//     //     });
+
+//     //     await this.clientRepo.save(client);
+
+//     //     // link user
+//     //     user.client_id = client.id;
+//     //     await this.usersRepository.save(user);
+
+//     //     // =========================
+//     //     // ROLE ASSIGN (Spatie equivalent)
+//     //     // =========================
+//     //     // If using nestjs CASL or custom roles:
+//     //     // user.role = role;
+
+//     //     // =========================
+//     //     // CLIENT EMAIL
+//     //     // =========================
+//     //     await this.clientEmailRepo.save({
+//     //         client_email: dto.email,
+//     //         client_id: client.id,
+//     //     });
+
+//     //     // =========================
+//     //     // CLIENT PHONE
+//     //     // =========================
+//     //     await this.clientPhoneRepo.save({
+//     //         phone_number: dto.phone,
+//     //         client_id: client.id,
+//     //     });
+
+//     //     // =========================
+//     //     // NOTIFICATION
+//     //     // =========================
+//     //     await this.notificationRepo.save({
+//     //         client_id: client.id,
+//     //         data: 'New Client Joined',
+//     //         type: 'new-client',
+//     //     });
+//     //     if (!user.email) {
+//     //         throw new BadRequestException('User email is missing');
+//     //     }
+//     //     if (!user.username) {
+//     //         throw new BadRequestException('User email is missing');
+//     //     }
+//     //     // ✅ SEND EMAIL VERIFICATION AFTER SUCCESS
+//     //     await this.sendVerificationEmail(
+//     //         user.email,
+//     //         user.username,
+//     //     );
+
+//     //     return {
+//     //         success: true,
+//     //         message: 'Employer account created successfully',
+//     //         data: {
+//     //             id: user.id,
+//     //             email: user.email,
+//     //             client_id: client.id,
+//     //         },
+//     //     };
+//     // }
+//     async registerEmployer(dto: CreateEmployerDto) {
+//         try {
+//             console.log('🚀 START registerEmployer:', dto.email);
+
+//             // =========================
+//             // CHECK EXISTING USER
+//             // =========================
+//             const existing = await this.usersRepository.findOne({
+//                 where: { email: dto.email },
+//             });
+
+//             if (existing) {
+//                 throw new BadRequestException({
+//                     success: false,
+//                     message: 'Email already exists',
+//                 });
+//             }
+
+//             console.log('✅ Email is unique');
+
+//             // =========================
+//             // ROLE CHECK
+//             // =========================
+//             const role = await this.roleRepository.findOne({
+//                 where: { name: 'Post Jobs Only' },
+//             });
+
+//             if (!role) {
+//                 throw new BadRequestException(
+
+//                     {
+//                         success: false,
+//                         message: 'Role not found',
+//                     }
+//                 );
+//             }
+
+//             console.log('✅ Role found:', role.id);
+
+//             // =========================
+//             // HASH PASSWORD
+//             // =========================
+//             const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+//             console.log('🔐 Password hashed');
+
+//             const now = new Date();
+
+//             // =========================
+//             // CREATE USER
+//             // =========================
+//             const user = this.usersRepository.create({
+//                 username: dto.name,
+//                 email: dto.email,
+//                 temp_email: dto.email,
+//                 password: hashedPassword,
+//                 role_id: role.id,
+//                 hide: false,
+//                 verified: false, // ✅ ALWAYS UNVERIFIED ON REGISTER
+
+//                 verify_key: dto.email + new Date().toISOString().slice(0, 10),
+//                 created_at: now,
+//                 updated_at: now,
+//             });
+
+//             await this.usersRepository.save(user);
+
+//             console.log('👤 User created:', user.id);
+
+//             // =========================
+//             // CREATE CLIENT
+//             // =========================
+//             const client = this.clientRepo.create({
+//                 creator_id: user.id,
+//                 updator_id: user.id,
+//                 type_id: dto.type,
+//                 client_name: dto.name,
+//                 first_name:dto.first_name,
+//                 last_name:dto.last_name,
+//                 middle_name:dto.middle_name,
+//                 client_type:dto.client_type,
+//             });
+
+//             await this.clientRepo.save(client);
+
+//             console.log('🏢 Client created:', client.id);
+
+//             // link user
+//             user.client_id = client.id;
+//             await this.usersRepository.save(user);
+
+//             // =========================
+//             // EMAIL
+//             // =========================
+//             await this.clientEmailRepo.save({
+//                 client_email: dto.email,
+//                 client_id: client.id,
+//             });
+
+//             console.log('📧 Email saved');
+
+//             // =========================
+//             // PHONE
+//             // =========================
+//             if (dto.phone) {
+//                 await this.clientPhoneRepo.save({
+//                     phone_number: dto.phone,
+//                     client_id: client.id,
+//                 });
+
+//                 console.log('📞 Phone saved');
+//             }
+
+//             // =========================
+//             // NOTIFICATION
+//             // =========================
+//             await this.notificationRepo.save({
+//                 client_id: client.id,
+//                 data: 'New Client Joined',
+//                 type: 'new-client',
+//             });
+
+//             console.log('🔔 Notification sent');
+
+//             // =========================
+//             // VALIDATION CHECKS
+//             // =========================
+//             if (!user.email || !user.username) {
+//                 throw new BadRequestException(
+//                     {
+//                         success: false,
+//                         message: 'User data incomplete',
+
+//                     }
+//                 );
+//             }
+
+//             // =========================
+//             // EMAIL VERIFICATION
+//             // =========================
+//             await this.sendVerificationEmail(user.email, user.username);
+
+//             console.log('📨 Verification email sent');
+
+//             return {
+//                 success: true,
+//                 message: 'Employer account created successfully',
+//                 data: {
+//                     id: user.id,
+//                     email: user.email,
+//                     client_id: client.id,
+//                 },
+//             };
+//         } catch (error) {
+//             console.error('❌ registerEmployer ERROR:', {
+//                 message: error.message,
+//                 stack: error.stack,
+//                 dto,
+//             });
+
+//             throw new InternalServerErrorException({
+//                 success: false,
+//                 message: 'Failed to register employer',
+//                 error: error.message,
+//             });
+//         }
+//     }
+
+//     async login(username: string, password: string) {
+//         const user = await this.usersRepository.findOne({
+//             where: { email: username },
+//             relations: ['role'],
+//         });
+
+//         if (!user) {
+//             throw new UnauthorizedException('Invalid credentials not user');
+//         }
+//         if (!user.password) {
+//             throw new UnauthorizedException('Invalid credentials not have password');
+//         }
+//         const valid = await bcrypt.compare(password, user.password);
+//         console.log('password', user.password);
+
+//         if (!valid) {
+//             throw new UnauthorizedException('Invalid credentials');
+//         }
+
+//         // Generate plain token
+//         const plainToken = randomBytes(40).toString('hex');
+
+//         // Hash token before storing (Laravel Sanctum style)
+//         const hashedToken = createHash('sha256')
+//             .update(plainToken)
+//             .digest('hex');
+
+//         const token = this.tokenRepository.create({
+//             tokenable_type: 'Users',
+//             tokenable_id: user.id,
+//             name: 'api-token',
+//             token: hashedToken,
+//             abilities: '["*"]',
+//             expires_at: new Date(
+//                 Date.now() + 30 * 24 * 60 * 60 * 1000,
+//             ),
+//         });
+
+//         await this.tokenRepository.save(token);
+
+//         return {
+//             success: true,
+//             token: plainToken, // return only the plain token
+//             data: user,
+//         };
+//     }
+
+//     async logout(req: any) {
+//         const token = req.token; // comes from SanctumGuard
+
+//         if (!token) {
+//             throw new UnauthorizedException('No token found');
+//         }
+
+//         await this.tokenRepository.delete({
+//             id: token.id,
+//         });
+
+//         return {
+//             success: true,
+//             message: 'Logged out successfully',
+//         };
+//     }
+//     async changePassword(user: Users, dto: ChangePasswordDto) {
+//         if (!user) {
+//             throw new UnauthorizedException('User not found');
+//         }
+//         if (!user.password) {
+//             throw new UnauthorizedException('User has no password set');
+//         }
+//         // check current password
+//         const valid = await bcrypt.compare(dto.currentPassword, user.password);
+
+//         if (!valid) {
+//             throw new UnauthorizedException('Current password is incorrect');
+//         }
+
+//         // hash new password
+//         const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+
+//         user.password = hashedPassword;
+
+//         await this.usersRepository.save(user);
+
+//         return {
+//             success: true,
+//             message: 'Password changed successfully',
+//         };
+//     }
+
+
+//     async forgotPassword(email: string) {
+//         try {
+//             console.log('[FORGOT PASSWORD] Request received:', {
+//                 email,
+//                 time: new Date().toISOString(),
+//             });
+
+//             const user = await this.usersRepository.findOne({
+//                 where: { email },
+//             });
+
+//             // Prevent email enumeration
+//             if (!user) {
+//                 console.log('[FORGOT PASSWORD] User not found:', email);
+
+//                 return {
+//                     success: true,
+//                     message:
+//                         'If the email exists, a password reset code has been sent.',
+//                 };
+//             }
+
+//             console.log('[FORGOT PASSWORD] User found:', {
+//                 id: user.id,
+//                 email: user.email,
+//             });
+
+//             // Generate plain token
+//             const plainToken = randomBytes(32).toString('hex');
+
+//             // Hash before saving
+//             const hashedToken = createHash('sha256')
+//                 .update(plainToken)
+//                 .digest('hex');
+
+//             console.log('[FORGOT PASSWORD] Generated token');
+
+//             // Remove old tokens
+//             await this.passwordResetRepository.delete({ email });
+
+//             console.log('[FORGOT PASSWORD] Old reset tokens cleared');
+
+//             // Save hashed token
+//             await this.passwordResetRepository.save({
+//                 email,
+//                 token: hashedToken,
+//                 expires_at: new Date(Date.now() + 15 * 60 * 1000),
+//             });
+
+//             console.log('[FORGOT PASSWORD] Token saved');
+
+//             // Send plain token to email
+//             await this.mailService.sendPasswordReset(email, plainToken);
+
+//             console.log('[FORGOT PASSWORD] Email sent successfully');
+
+//             return {
+//                 success: true,
+//                 message:
+//                     'A password reset link has been sent to your email.',
+//             };
+//         } catch (error) {
+//             console.error('[FORGOT PASSWORD ERROR]', {
+//                 message: error.message,
+//                 stack: error.stack,
+//                 email,
+//             });
+
+//             return {
+//                 success: false,
+//                 message: 'Failed to process forgot password request',
+//                 error: error.message,
+//             };
+//         }
+//     }
+
+//     async resetPassword(dto: ResetPasswordDto) {
+//         const { email, token, newPassword } = dto;
+
+//         // 1. Find reset record
+//         const resetRecord = await this.passwordResetRepository.findOne({
+//             where: { email },
+//         });
+
+//         if (!resetRecord) {
+//             throw new UnauthorizedException('Invalid or expired reset token');
+//         }
+
+//         // 2. Check token match
+//         const hashedToken = createHash('sha256').update(token).digest('hex');
+
+//         if (hashedToken !== resetRecord.token) {
+//             throw new UnauthorizedException('Invalid reset token');
+//         }
+
+//         // 3. Check expiry (15 min)
+//         const isExpired =
+//             new Date(resetRecord.created_at).getTime() +
+//             15 * 60 * 1000 <
+//             Date.now();
+
+//         if (isExpired) {
+//             await this.passwordResetRepository.delete({ email });
+//             throw new UnauthorizedException('Reset token expired');
+//         }
+
+//         // 4. Find user
+//         const user = await this.usersRepository.findOne({
+//             where: { email },
+//         });
+
+//         if (!user) {
+//             throw new UnauthorizedException('User not found');
+//         }
+
+//         // 5. Hash new password
+//         const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+//         user.password = hashedPassword;
+//         await this.usersRepository.save(user);
+
+//         // 6. Delete reset token
+//         await this.passwordResetRepository.delete({ email });
+
+//         return {
+//             success: true,
+//             message: 'Password reset successfully',
+//         };
+//     }
+
+
+//     // ===============================
+//     // SEND VERIFICATION EMAIL (NO DB)
+//     // ===============================
+//     // async sendVerificationEmail(email: string, username: string) {
+//     //     const secret = this.configService.get('APP_KEY');
+
+//     //     const token = randomBytes(32).toString('hex');
+
+//     //     const signature = createHmac('sha256', secret)
+//     //         .update(token + email)
+//     //         .digest('hex');
+
+//     //     const fullToken = `${token}.${signature}`;
+
+//     //     const verifyLink = `${this.configService.get(
+//     //         'FRONTEND_URL',
+//     //     )}/verify-email?token=${fullToken}&email=${email}`;
+
+//     //     await this.mailService.sendMail({
+//     //         from: `"${this.configService.get('APP_NAME')}" <${this.configService.get(
+//     //             'MAIL_FROM_ADDRESS',
+//     //         )}>`,
+//     //         to: 'ibrahim@exactmanpower.co.tz',
+//     //         cc: ['halidiselemani94@gmail.com'],
+//     //         subject: 'New Employer Registered',
+//     //         html: `
+//     //     <h2>📣 New Employer Registered</h2>
+
+//     //     <p>A new employer has successfully registered on the <strong>eKazi Portal</strong>.</p>
+
+//     //     <table cellpadding="6" cellspacing="0" border="0">
+//     //         <tr>
+//     //             <td><strong>Name:</strong></td>
+//     //             <td>${username}</td>
+//     //         </tr>
+//     //         <tr>
+//     //             <td><strong>Email:</strong></td>
+//     //             <td>${email}</td>
+//     //         </tr>
+//     //         <tr>
+//     //             <td><strong>Registered At:</strong></td>
+//     //             <td>${new Date().toLocaleString()}</td>
+//     //         </tr>
+//     //     </table>
+
+//     //     <br>
+
+//     //     <p>The employer can verify their email using the link below:</p>
+
+//     //     <a href="${verifyLink}"
+//     //        style="display:inline-block;padding:12px 20px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:6px;">
+//     //         Verify Email
+//     //     </a>
+
+//     //     <br><br>
+
+//     //     <p>Regards,<br><strong>eKazi Portal System</strong></p>
+//     // `,
+//     //     });
+//     // }
+//     async sendVerificationEmail(email: string, username: string) {
+//         const verificationCode = Math.floor(
+//             100000 + Math.random() * 900000,
+//         ).toString();
+
+//         const expiresAt = new Date();
+//         expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+//         // Format expiry time
+//         const expiryTime = expiresAt.toLocaleString('en-US', {
+//             dateStyle: 'medium',
+//             timeStyle: 'short',
+//         });
+
+//         // Save code to database
+//         await this.usersRepository.update(
+//             { email },
+//             {
+//                 verify_key: verificationCode,
+//                 verified: false,
+//                 verify_key_expires_at: expiresAt,
+//             },
+//         );
+
+//         await this.mailService.sendMail({
+//             from: `"${this.configService.get('APP_NAME')}" <${this.configService.get(
+//                 'MAIL_FROM_ADDRESS',
+//             )}>`,
+//             to: email,
+//             subject: 'Verify Your eKazi Account',
+//             html: `
+//         <h2>Welcome to eKazi</h2>
+
+//         <p>Hello <strong>${username}</strong>,</p>
+
+//         <p>Thank you for registering with eKazi.</p>
+
+//         <p>Your verification code is:</p>
+
+//         <div style="
+//             font-size:32px;
+//             font-weight:bold;
+//             letter-spacing:6px;
+//             background:#f4f4f4;
+//             padding:15px;
+//             text-align:center;
+//             border-radius:8px;
+//         ">
+//             ${verificationCode}
+//         </div>
+
+//         <p>
+//             This verification code will expire in 
+//             <strong>10 minutes</strong>.
+//         </p>
+
+//         <p>
+//             Expiry time:
+//             <strong>${expiryTime}</strong>
+//         </p>
+
+//         <p>
+//             Please enter this code before the expiry time to activate your account.
+//         </p>
+
+//         <p>
+//             If you did not create this account, you can ignore this email.
+//         </p>
+
+//         <br>
+
+//         <p><strong>eKazi Team</strong></p>
+//         `,
+//         });
+//     }
+
+//     async resendVerificationEmail(email: string) {
+
+//         const user = await this.usersRepository.findOne({
+//             where: { email },
+//         });
+
+//         if (!user) {
+//             throw new NotFoundException({
+//                 success: false,
+//                 message: 'User not found',
+//             });
+//         }
+
+
+//         if (user.verified === true) {
+//             return {
+//                 success: false,
+//                 message: 'Account already verified',
+//             };
+//         }
+
+
+//         const verificationCode = Math.floor(
+//             100000 + Math.random() * 900000,
+//         ).toString();
+
+
+//         const expiresAt = new Date();
+//         expiresAt.setMinutes(
+//             expiresAt.getMinutes() + 10,
+//         );
+
+
+//         user.verify_key = verificationCode;
+//         user.verify_key_expires_at = expiresAt;
+
+
+//         await this.usersRepository.save(user);
+
+
+//         await this.mailService.sendMail({
+//             from: `"eKazi" <${this.configService.get('MAIL_FROM_ADDRESS')}>`,
+//             to: email,
+//             subject: 'New eKazi Verification Code',
+//             html: `
+//             <h2>Email Verification</h2>
+
+//             <p>Your new verification code is:</p>
+
+//             <h1>${verificationCode}</h1>
+
+//             <p>
+//                 This code expires at:
+//                 <strong>${expiresAt.toLocaleString()}</strong>
+//             </p>
+
+//             <p>
+//                 If you did not request this code, ignore this email.
+//             </p>
+
+//             <br>
+//             <strong>eKazi Team</strong>
+//         `,
+//         });
+
+
+//         return {
+//             success: true,
+//             message: 'New verification code sent successfully',
+//         };
+//     }
+//     async verifyEmail(token: string) {
+
+//         const user = await this.usersRepository.findOne({
+//             where: {
+//                 verify_key: token,
+//             },
+//         });
+
+//         if (!user) {
+//             throw new UnauthorizedException({
+//                 success: false,
+//                 message: 'Invalid verification token',
+//             });
+//         }
+
+
+//         // Already verified check
+//         if (user.verified === true) {
+//             throw new BadRequestException({
+//                 success: false,
+//                 message: 'Account already verified',
+//             });
+//         }
+
+
+//         // Check token expiry
+//         if (
+//             !user.verify_key_expires_at ||
+//             new Date() > user.verify_key_expires_at
+//         ) {
+//             throw new UnauthorizedException({
+//                 success: false,
+//                 message: 'Verification token has expired. Please request a new one.',
+//             });
+//         }
+
+
+//         // Verify account
+//         user.verified = true,
+//             user.email_verified_at = new Date();
+
+//         // Clear token after success
+//         user.verify_key = null,
+//             user.verify_key_expires_at = null,
+
+
+//             await this.usersRepository.save(user);
+
+//         // ==========================
+//         // CREATE LOGIN TOKEN
+//         // ==========================
+//         const plainToken = randomBytes(40).toString('hex');
+
+//         const hashedToken = createHash('sha256')
+//             .update(plainToken)
+//             .digest('hex');
+
+//         const personalToken = this.tokenRepository.create({
+//             tokenable_type: 'Users',
+//             tokenable_id: user.id,
+//             name: 'api-token',
+//             token: hashedToken,
+//             abilities: '["*"]',
+//             expires_at: new Date(
+//                 Date.now() + 30 * 24 * 60 * 60 * 1000,
+//             ),
+//         });
+
+//         await this.tokenRepository.save(personalToken);
+
+//         return {
+//             success: true,
+//             message: 'Email verified successfully.',
+//             token: plainToken,
+//             data: user,
+//         };
+//     }
+    
+//     async myaccount(user: Users) {
+//         try {
+//             const account = await this.usersRepository.findOne({
+//                 where: {
+//                     id: user.id,
+//                 },
+//                 relations: [
+//                     'role',
+//                     'role.permissions',
+
+//                     // User permissions
+//                     'userPermissions',
+//                     'userPermissions.permission',
+
+//                     // Client staff + position
+//                     'clientStaff',
+//                     'clientStaff.position',
+//                 ],
+//             });
+
+//             if (!account) {
+//                 throw new NotFoundException({
+//                     success: false,
+//                     message: 'User account not found',
+//                 });
+//             }
+
+//             // ========================================================
+//             // ROLE PERMISSIONS
+//             // ========================================================
+
+//             const rolePermissions =
+//                 account.role?.permissions?.map(permission => ({
+//                     id: permission.id,
+//                     name: permission.name,
+//                 })) || [];
+
+//             // ========================================================
+//             // USER PERMISSIONS
+//             // ========================================================
+
+//             const userPermissions =
+//                 account.userPermissions?.map(userPermission => ({
+//                     id: userPermission.id,
+//                     permission_id: userPermission.permission_id,
+
+//                     permission: userPermission.permission
+//                         ? {
+//                             id: userPermission.permission.id,
+//                             name: userPermission.permission.name,
+//                         }
+//                         : null,
+//                 })) || [];
+
+//             // ========================================================
+//             // CLIENT STAFF
+//             // ========================================================
+
+//             const clientStaff =
+//                 account.clientStaff?.map(staff => ({
+//                     id: staff.id,
+
+//                     client_id: staff.client_id,
+//                     user_id: staff.user_id,
+
+//                     prefix_id: staff.prefix_id,
+
+//                     first_name: staff.first_name,
+//                     middle_name: staff.middle_name,
+//                     last_name: staff.last_name,
+
+//                     phone_number: staff.phone_number,
+
+//                     client_staff_position_id:
+//                         staff.client_staff_position_id,
+
+//                     position: staff.position
+//                         ? {
+//                             id: staff.position.id,
+//                             position_name:
+//                                 staff.position.position_name,
+//                         }
+//                         : null,
+
+//                     created_at: staff.created_at,
+//                     updated_at: staff.updated_at,
+//                 })) || [];
+
+//             // ========================================================
+//             // RESPONSE
+//             // ========================================================
+
+//             return {
+//                 success: true,
+//                 message: 'Successfully retrieved user account',
+
+//                 data: {
+//                     id: account.id,
+//                     username: account.username,
+//                     email: account.email,
+//                     verified: account.verified,
+
+//                     role_id: account.role_id,
+
+//                     role: account.role
+//                         ? {
+//                             id: account.role.id,
+//                             name: account.role.name,
+//                         }
+//                         : null,
+
+//                     role_permissions: rolePermissions,
+
+//                     user_permissions: userPermissions,
+
+//                     client_staff: clientStaff,
+//                 },
+//             };
+
+//         } catch (error) {
+
+//             if (error instanceof HttpException) {
+//                 throw error;
+//             }
+
+//             throw new InternalServerErrorException({
+//                 success: false,
+//                 message: 'Failed to fetch employer account',
+//                 error: error.message,
+//             });
+//         }
+//     }
+
+// }

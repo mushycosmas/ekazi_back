@@ -1,1569 +1,2534 @@
- import {
-     Injectable,
-     NotFoundException,
-     BadRequestException,
-     ConflictException,
-     InternalServerErrorException,
-     Logger,
- } from '@nestjs/common';
+//  import {
+//      Injectable,
+//      NotFoundException,
+//      BadRequestException,
+//      ConflictException,
+//      InternalServerErrorException,
+//      Logger,
+//  } from '@nestjs/common';
  
- import {
-     InjectRepository,
- } from '@nestjs/typeorm';
+//  import {
+//      InjectRepository,
+//  } from '@nestjs/typeorm';
  
- import {
-     DataSource,
-     Repository,
- } from 'typeorm';
+//  import {
+//      DataSource,
+//      Repository,
+//  } from 'typeorm';
  
- import {
-     randomUUID,
- } from 'crypto';
+//  import {
+//      randomUUID,
+//  } from 'crypto';
  
- import { Users } from 'src/entities/users.entity';
+//  import { Users } from 'src/entities/users.entity';
  
+//  import { Applicants } from 'src/entities/applicants/applicants.entity';
+//  import { Clients } from 'src/client/clients.entity';
  
- import { Applicants } from 'src/entities/applicants/applicants.entity';
- import { Clients } from 'src/client/clients.entity';
+//  import { Subscription } from './entities/subscription.entity';
+//  import { SubscriptionPlan } from './entities/subscription-plan.entity';
+//  import { SubscriptionPaymentsQueryDto } from './dto/subscription-payments-query.dto';
  
- import { Subscription } from './entities/subscription.entity';
- import { SubscriptionPlan } from './entities/subscription-plan.entity';
+//  import {
+//      SubscriptionPayment,
+//      PaymentStatus,
+//      PaymentRole,
+//  } from './entities/subscription-payment.entity';
  
- import {
-     SubscriptionPayment,
-     PaymentStatus,
-     PaymentRole,
- } from './entities/subscription-payment.entity';
+//  import {
+//      InitiatePaymentDto,
+//  } from './dto/initiate-payment.dto';
  
- import {
-     InitiatePaymentDto,
- } from './dto/initiate-payment.dto';
+//  import {
+//      PaymentProviderFactory,
+//  } from './providers/payment-provider.factory';
  
- import {
-     PaymentProviderFactory,
- } from './providers/payment-provider.factory';
  
+//  @Injectable()
+//  export class PaymentService {
  
- @Injectable()
- export class PaymentService {
+//      private readonly logger =
+//          new Logger(
+//              PaymentService.name,
+//          );
  
-     private readonly logger =
-         new Logger(
-             PaymentService.name,
-         );
  
+//      constructor(
  
-     constructor(
+//          @InjectRepository(Subscription)
+//          private readonly subscriptionRepository:
+//              Repository<Subscription>,
  
-         @InjectRepository(Subscription)
-         private readonly subscriptionRepository:
-             Repository<Subscription>,
  
+//          @InjectRepository(SubscriptionPlan)
+//          private readonly subscriptionPlanRepository:
+//              Repository<SubscriptionPlan>,
  
-         @InjectRepository(SubscriptionPlan)
-         private readonly subscriptionPlanRepository:
-             Repository<SubscriptionPlan>,
  
+//          @InjectRepository(SubscriptionPayment)
+//          private readonly subscriptionPaymentRepository:
+//              Repository<SubscriptionPayment>,
  
-         @InjectRepository(SubscriptionPayment)
-         private readonly subscriptionPaymentRepository:
-             Repository<SubscriptionPayment>,
  
+//          @InjectRepository(Applicants)
+//          private readonly applicantRepository:
+//              Repository<Applicants>,
  
-         @InjectRepository(Applicants)
-         private readonly applicantRepository:
-             Repository<Applicants>,
  
+//          @InjectRepository(Clients)
+//          private readonly clientRepository:
+//              Repository<Clients>,
  
-         @InjectRepository(Clients)
-         private readonly clientRepository:
-             Repository<Clients>,
  
+//          private readonly paymentProviderFactory:
+//              PaymentProviderFactory,
  
-         private readonly paymentProviderFactory:
-             PaymentProviderFactory,
  
+//          private readonly dataSource:
+//              DataSource,
  
-         private readonly dataSource:
-             DataSource,
+//      ) { }
  
-     ) { }
  
+//      // ============================================================
+//      // RESOLVE CUSTOMER INFORMATION
+//      // ============================================================
  
-     // ============================================================
-     // RESOLVE CUSTOMER INFORMATION
-     // ============================================================
+//      private async resolveCustomer(
+//          user: Users,
+//          role: PaymentRole,
+//          phone: string,
+//      ) {
  
-     private async resolveCustomer(
-         user: Users,
-         role: PaymentRole,
-         phone: string,
-     ) {
+//          // --------------------------------------------------------
+//          // EMAIL ALWAYS COMES FROM USERS
+//          // --------------------------------------------------------
  
-         // --------------------------------------------------------
-         // EMAIL ALWAYS COMES FROM USERS
-         // --------------------------------------------------------
+//          const email =
+//              user.email?.trim();
  
-         const email =
-             user.email?.trim();
  
+//          if (!email) {
  
-         if (!email) {
+//              throw new BadRequestException(
+//                  'User email is required for payment',
+//              );
  
-             throw new BadRequestException(
-                 'User email is required for payment',
-             );
+//          }
  
-         }
  
+//          // ========================================================
+//          // APPLICANT
+//          // ========================================================
  
-         // ========================================================
-         // APPLICANT
-         // ========================================================
+//          if (
+//              role === PaymentRole.APPLICANT
+//          ) {
  
-         if (
-             role === PaymentRole.APPLICANT
-         ) {
+//              const applicant =
+//                  await this.applicantRepository.findOne({
  
-             const applicant =
-                 await this.applicantRepository.findOne({
+//                      where: {
  
-                     where: {
+//                          user_id:
+//                              user.id,
  
-                         user_id:
-                             user.id,
+//                      },
  
-                     },
+//                  });
  
-                 });
  
+//              if (!applicant) {
  
-             if (!applicant) {
+//                  throw new NotFoundException(
+//                      'Applicant profile not found',
+//                  );
  
-                 throw new NotFoundException(
-                     'Applicant profile not found',
-                 );
+//              }
  
-             }
  
+//              const firstName =
+//                  applicant.first_name?.trim() ||
+//                  'Applicant';
  
-             const firstName =
-                 applicant.first_name?.trim() ||
-                 'Applicant';
  
+//              const middleName =
+//                  applicant.middle_name?.trim() ||
+//                  '';
  
-             const middleName =
-                 applicant.middle_name?.trim() ||
-                 '';
  
+//              const lastName =
+//                  applicant.last_name?.trim() ||
+//                  'Customer';
  
-             const lastName =
-                 applicant.last_name?.trim() ||
-                 'Customer';
  
+//              return {
  
-             return {
+//                  firstname:
+//                      firstName,
  
-                 firstname:
-                     firstName,
+//                  lastname:
+//                      lastName,
  
-                 lastname:
-                     lastName,
+//                  middlename:
+//                      middleName,
  
-                 middlename:
-                     middleName,
+//                  email,
  
-                 email,
+//                  phone,
  
-                 phone,
+//                  name:
+//                      [
+//                          firstName,
+//                          middleName,
+//                          lastName,
+//                      ]
+//                          .filter(Boolean)
+//                          .join(' '),
  
-                 name:
-                     [
-                         firstName,
-                         middleName,
-                         lastName,
-                     ]
-                         .filter(Boolean)
-                         .join(' '),
+//              };
  
-             };
+//          }
  
-         }
  
+//          // ========================================================
+//          // EMPLOYER / CLIENT
+//          // ========================================================
  
-         // ========================================================
-         // EMPLOYER / CLIENT
-         // ========================================================
  
  
+//          if (role === PaymentRole.EMPLOYER) {
  
-         if (role === PaymentRole.EMPLOYER) {
+//              const client =
+//                  await this.clientRepository.findOne({
+//                      where: {
+//                          user_id: user.id,
+//                      },
+//                  });
  
-             const client =
-                 await this.clientRepository.findOne({
-                     where: {
-                         user_id: user.id,
-                     },
-                 });
+//              if (!client) {
+//                  throw new NotFoundException(
+//                      'Employer/client profile not found',
+//                  );
+//              }
  
-             if (!client) {
-                 throw new NotFoundException(
-                     'Employer/client profile not found',
-                 );
-             }
+//              // Get names directly from CLIENT
+//              const firstname =
+//                  client.first_name?.trim();
  
-             // Get names directly from CLIENT
-             const firstname =
-                 client.first_name?.trim();
+//              const lastname =
+//                  client.last_name?.trim();
  
-             const lastname =
-                 client.last_name?.trim();
+//              // Validate before sending to payment provider
+//              if (!firstname) {
+//                  throw new BadRequestException(
+//                      'Client first name is required for payment',
+//                  );
+//              }
  
-             // Validate before sending to payment provider
-             if (!firstname) {
-                 throw new BadRequestException(
-                     'Client first name is required for payment',
-                 );
-             }
+//              if (!lastname) {
+//                  throw new BadRequestException(
+//                      'Client last name is required for payment',
+//                  );
+//              }
  
-             if (!lastname) {
-                 throw new BadRequestException(
-                     'Client last name is required for payment',
-                 );
-             }
+//              return {
+//                  firstname,
+//                  lastname,
  
-             return {
-                 firstname,
-                 lastname,
+//                  middlename: '',
  
-                 middlename: '',
+//                  email,
  
-                 email,
+//                  phone,
  
-                 phone,
+//                  name: [
+//                      firstname,
+//                      lastname,
+//                  ]
+//                      .filter(Boolean)
+//                      .join(' '),
  
-                 name: [
-                     firstname,
-                     lastname,
-                 ]
-                     .filter(Boolean)
-                     .join(' '),
+//                  client_id: client.id,
+//              };
+//          }
  
-                 client_id: client.id,
-             };
-         }
  
+//          throw new BadRequestException(
+//              'Unsupported payment role',
+//          );
  
-         throw new BadRequestException(
-             'Unsupported payment role',
-         );
+//      }
  
-     }
  
+//      // ============================================================
+//      // INITIATE PAYMENT
+//      // ============================================================
  
-     // ============================================================
-     // INITIATE PAYMENT
-     // ============================================================
+//      async initiatePayment(
  
-     async initiatePayment(
+//          dto: InitiatePaymentDto,
  
-         dto: InitiatePaymentDto,
+//          user: Users,
  
-         user: Users,
+//      ) {
  
-     ) {
+//          // ========================================================
+//          // FIND PLAN
+//          // ========================================================
  
-         // ========================================================
-         // FIND PLAN
-         // ========================================================
+//          const plan =
+//              await this.subscriptionPlanRepository.findOne({
  
-         const plan =
-             await this.subscriptionPlanRepository.findOne({
+//                  where: {
  
-                 where: {
+//                      id:
+//                          dto.plan_id,
  
-                     id:
-                         dto.plan_id,
+//                  },
  
-                 },
+//              });
  
-             });
  
+//          if (!plan) {
  
-         if (!plan) {
+//              throw new NotFoundException(
+//                  'Subscription plan not found',
+//              );
  
-             throw new NotFoundException(
-                 'Subscription plan not found',
-             );
+//          }
  
-         }
  
+//          // ========================================================
+//          // DETERMINE ROLE
+//          // ========================================================
  
-         // ========================================================
-         // DETERMINE ROLE
-         // ========================================================
+//          const role =
+//              plan.role === 'applicant'
+//                  ? PaymentRole.APPLICANT
+//                  : PaymentRole.EMPLOYER;
  
-         const role =
-             plan.role === 'applicant'
-                 ? PaymentRole.APPLICANT
-                 : PaymentRole.EMPLOYER;
  
+//          // ========================================================
+//          // RESOLVE CUSTOMER
+//          // ========================================================
  
-         // ========================================================
-         // RESOLVE CUSTOMER
-         // ========================================================
+//          const customer =
+//              await this.resolveCustomer(
  
-         const customer =
-             await this.resolveCustomer(
+//                  user,
  
-                 user,
+//                  role,
  
-                 role,
+//                  dto.phone,
  
-                 dto.phone,
+//              );
  
-             );
  
+//          this.logger.log(
+//              `Payment customer resolved: ${JSON.stringify({
+//                  userId: user.id,
+//                  role,
+//                  firstname: customer.firstname,
+//                  lastname: customer.lastname,
+//                  middlename: customer.middlename,
+//                  email: customer.email,
+//                  phone: customer.phone,
+//                  name: customer.name,
+//              })}`,
+//          );
  
-         this.logger.log(
-             `Payment customer resolved: ${JSON.stringify({
-                 userId: user.id,
-                 role,
-                 firstname: customer.firstname,
-                 lastname: customer.lastname,
-                 middlename: customer.middlename,
-                 email: customer.email,
-                 phone: customer.phone,
-                 name: customer.name,
-             })}`,
-         );
  
+//          // ========================================================
+//          // CHECK ACTIVE SUBSCRIPTION
+//          // ========================================================
  
-         // ========================================================
-         // CHECK ACTIVE SUBSCRIPTION
-         // ========================================================
+//          const currentSubscription =
+//              await this.subscriptionRepository.findOne({
  
-         const currentSubscription =
-             await this.subscriptionRepository.findOne({
+//                  where: {
  
-                 where: {
+//                      user_id:
+//                          user.id,
  
-                     user_id:
-                         user.id,
+//                      is_active:
+//                          true,
  
-                     is_active:
-                         true,
+//                  },
  
-                 },
+//                  relations: [
+//                      'plan',
+//                  ],
  
-                 relations: [
-                     'plan',
-                 ],
+//                  order: {
  
-                 order: {
+//                      end_date:
+//                          'DESC',
  
-                     end_date:
-                         'DESC',
+//                  },
  
-                 },
+//              });
  
-             });
  
+//          // ========================================================
+//          // PAYMENT AMOUNT
+//          // ========================================================
  
-         // ========================================================
-         // PAYMENT AMOUNT
-         // ========================================================
+//          let amount =
+//              Number(plan.price);
  
-         let amount =
-             Number(plan.price);
  
+//          // ========================================================
+//          // PRORATE UPGRADE
+//          // ========================================================
  
-         // ========================================================
-         // PRORATE UPGRADE
-         // ========================================================
+//          if (
  
-         if (
+//              currentSubscription &&
  
-             currentSubscription &&
+//              currentSubscription.plan &&
  
-             currentSubscription.plan &&
+//              currentSubscription.plan.id !==
+//              plan.id
  
-             currentSubscription.plan.id !==
-             plan.id
+//          ) {
  
-         ) {
+//              const now =
+//                  new Date();
  
-             const now =
-                 new Date();
  
+//              const endDate =
+//                  new Date(
+//                      currentSubscription.end_date,
+//                  );
  
-             const endDate =
-                 new Date(
-                     currentSubscription.end_date,
-                 );
  
+//              let remainingDays =
+//                  Math.ceil(
  
-             let remainingDays =
-                 Math.ceil(
+//                      (
+//                          endDate.getTime() -
+//                          now.getTime()
+//                      )
+//                      /
+//                      (
+//                          1000 *
+//                          60 *
+//                          60 *
+//                          24
+//                      ),
  
-                     (
-                         endDate.getTime() -
-                         now.getTime()
-                     )
-                     /
-                     (
-                         1000 *
-                         60 *
-                         60 *
-                         24
-                     ),
+//                  );
  
-                 );
  
+//              if (
+//                  remainingDays < 0
+//              ) {
  
-             if (
-                 remainingDays < 0
-             ) {
+//                  remainingDays = 0;
  
-                 remainingDays = 0;
+//              }
  
-             }
  
+//              const oldPlan =
+//                  await this.subscriptionPlanRepository.findOne({
  
-             const oldPlan =
-                 await this.subscriptionPlanRepository.findOne({
+//                      where: {
  
-                     where: {
+//                          id:
+//                              currentSubscription.plan.id,
  
-                         id:
-                             currentSubscription.plan.id,
+//                      },
  
-                     },
+//                  });
  
-                 });
  
+//              if (
  
-             if (
+//                  oldPlan &&
  
-                 oldPlan &&
+//                  Number(oldPlan.duration_days) > 0
  
-                 Number(oldPlan.duration_days) > 0
+//              ) {
  
-             ) {
+//                  const credit =
  
-                 const credit =
+//                      (
+//                          Number(oldPlan.price)
+//                          /
+//                          Number(oldPlan.duration_days)
+//                      )
+//                      *
+//                      remainingDays;
  
-                     (
-                         Number(oldPlan.price)
-                         /
-                         Number(oldPlan.duration_days)
-                     )
-                     *
-                     remainingDays;
  
+//                  amount =
+//                      Math.max(
  
-                 amount =
-                     Math.max(
+//                          0,
  
-                         0,
+//                          Number(plan.price)
+//                          -
+//                          credit,
  
-                         Number(plan.price)
-                         -
-                         credit,
+//                      );
  
-                     );
+//              }
  
-             }
+//          }
  
-         }
  
+//          // ========================================================
+//          // PREVENT DUPLICATE PENDING PAYMENT
+//          // ========================================================
  
-         // ========================================================
-         // PREVENT DUPLICATE PENDING PAYMENT
-         // ========================================================
+//          const existingPayment =
+//              await this.subscriptionPaymentRepository.findOne({
  
-         const existingPayment =
-             await this.subscriptionPaymentRepository.findOne({
+//                  where: {
  
-                 where: {
+//                      user_id:
+//                          user.id,
  
-                     user_id:
-                         user.id,
+//                      subscription_plan_id:
+//                          plan.id,
  
-                     subscription_plan_id:
-                         plan.id,
+//                      status:
+//                          PaymentStatus.PENDING,
  
-                     status:
-                         PaymentStatus.PENDING,
+//                  },
  
-                 },
+//              });
  
-             });
  
+//          if (existingPayment) {
+//              return {
+//                  success: false,
+//                  message: 'You already have a pending payment',
+//                  data: {
+//                      reference:
+//                          existingPayment.transaction_id,
  
-         if (existingPayment) {
+//                      provider_reference:
+//                          existingPayment.provider_transaction_id,
  
-             const createdAt =
-                 new Date(
-                     existingPayment.created_at,
-                 );
+//                      amount:
+//                          existingPayment.amount,
  
+//                      status:
+//                          existingPayment.status,
+//                  },
+//              };
+//          }
  
-             const fiveMinutesAgo =
-                 new Date(
  
-                     Date.now()
-                     -
-                     5 * 60 * 1000,
+//          // ========================================================
+//          // UNIQUE REFERENCE
+//          // ========================================================
  
-                 );
+//          const reference =
+//              `SUB_${Date.now()}_${randomUUID()
+//                  .replace(/-/g, '')
+//                  .substring(0, 10)
+//                  .toUpperCase()}`;
  
  
-             if (
-                 createdAt > fiveMinutesAgo
-             ) {
+//          // ========================================================
+//          // CREATE PAYMENT
+//          // ========================================================
  
-                 return {
+//          const payment =
+//              this.subscriptionPaymentRepository.create({
  
-                     success:
-                         false,
+//                  user_id:
+//                      user.id,
  
-                     message:
-                         'You already have a pending payment',
+//                  subscription_plan_id:
+//                      plan.id,
  
-                     data: {
+//                  amount,
  
-                         reference:
-                             existingPayment.transaction_id,
+//                  transaction_id:
+//                      reference,
  
-                         amount:
-                             existingPayment.amount,
+//                  provider:
+//                      dto.provider ?? 'selcom',
  
-                     },
+//                  role,
  
-                 };
+//                  status:
+//                      PaymentStatus.PENDING,
  
-             }
+//                  meta:
+//                  {
  
+//                      customer: {
  
-             /*
-              * Old pending payment is no longer considered active.
-              * Mark it failed before creating a new payment.
-              */
+//                          firstname:
+//                              customer.firstname,
  
-             await this.subscriptionPaymentRepository.update(
+//                          lastname:
+//                              customer.lastname,
  
-                 {
-                     id:
-                         existingPayment.id,
-                 },
+//                          middlename:
+//                              customer.middlename,
  
-                 {
-                     status:
-                         PaymentStatus.FAILED,
-                 },
+//                          email:
+//                              customer.email,
  
-             );
+//                          phone:
+//                              customer.phone,
  
-         }
+//                      },
  
+//                  },
  
-         // ========================================================
-         // UNIQUE REFERENCE
-         // ========================================================
+//              });
  
-         const reference =
-             `SUB_${Date.now()}_${randomUUID()
-                 .replace(/-/g, '')
-                 .substring(0, 10)
-                 .toUpperCase()}`;
  
+//          await this.subscriptionPaymentRepository.save(
+//              payment,
+//          );
  
-         // ========================================================
-         // CREATE PAYMENT
-         // ========================================================
  
-         const payment =
-             this.subscriptionPaymentRepository.create({
+//          // ========================================================
+//          // CALLBACK
+//          // ========================================================
  
-                 user_id:
-                     user.id,
+//          const callbackUrl =
+//              process.env.PAYMENT_CALLBACK_URL ||
+//              'https://backend.ekazi.co.tz/api/payment/callback/selcom';
  
-                 subscription_plan_id:
-                     plan.id,
  
-                 amount,
+//          // ========================================================
+//          // PROVIDER - FIXED: Pass provider name
+//          // ========================================================
  
-                 transaction_id:
-                     reference,
+//          const provider =
+//              this.paymentProviderFactory.getProvider(dto.provider);
  
-                 provider:
-                     dto.provider?? 'snippe',
  
-                 role,
+//          this.logger.log(
+//              `Using payment provider: ${dto.provider || 'selcome'}`,
+//          );
  
-                 status:
-                     PaymentStatus.PENDING,
  
-                 meta:
-                 {
+//          // ========================================================
+//          // INITIATE
+//          // ========================================================
  
-                     customer: {
+//          const providerResponse =
+//              await provider.initiate({
  
-                         firstname:
-                             customer.firstname,
+//                  reference,
  
-                         lastname:
-                             customer.lastname,
+//                  amount,
  
-                         middlename:
-                             customer.middlename,
+//                  phone:
+//                      dto.phone,
  
-                         email:
-                             customer.email,
+//                  currency:
+//                      'TZS',
  
-                         phone:
-                             customer.phone,
+//                  callbackUrl,
  
-                     },
+//                  customer,
  
-                 },
+//              });
  
-             });
+//          // ========================================================
+//          // PROVIDER FAILED
+//          // ========================================================
  
+//          if (
+//              !providerResponse.success
+//          ) {
  
-         await this.subscriptionPaymentRepository.save(
-             payment,
-         );
+//              await this.subscriptionPaymentRepository.update(
  
+//                  {
+//                      id:
+//                          payment.id,
+//                  },
  
-         // ========================================================
-         // CALLBACK
-         // ========================================================
+//                  {
+//                      status:
+//                          PaymentStatus.FAILED,
+//                  },
  
-         const callbackUrl =
-             process.env.PAYMENT_CALLBACK_URL ||
-             'https://backend.ekazi.co.tz/api/payment/callback/snippe';
+//              );
  
  
-         // ========================================================
-         // PROVIDER
-         // ========================================================
+//              throw new BadRequestException({
  
-         const provider =
-             this.paymentProviderFactory.getProvider();
+//                  success:
+//                      false,
  
+//                  message:
+//                      providerResponse.message ||
+//                      'Payment initiation failed',
  
-         this.logger.log(
-             `Using payment provider: ${dto.provider}`,
-         );
+//                  data:
+//                      providerResponse.raw,
  
+//              });
  
-         // ========================================================
-         // INITIATE
-         // ========================================================
+//          }
+//          // ========================================================
+//          // SAVE SNIPPE PROVIDER TRANSACTION ID
+//          // ========================================================
  
-         const providerResponse =
-             await provider.initiate({
+//          if (!providerResponse.transactionId) {
+//              await this.subscriptionPaymentRepository.update(
+//                  { id: payment.id },
+//                  {
+//                      status: PaymentStatus.FAILED,
+//                      failure_reason:
+//                          'Payment provider did not return a transaction reference',
+//                  },
+//              );
  
-                 reference,
+//              throw new BadRequestException(
+//                  'Payment provider did not return a transaction reference',
+//              );
+//          }
  
-                 amount,
+//          payment.provider_transaction_id =
+//              providerResponse.transactionId;
+//          // Get payment type returned by Snippe
+//          payment.payment_type =
+//              providerResponse.raw?.payment_type ||
+//              providerResponse.raw?.data?.payment_type ||
+//              providerResponse.raw?.payment_method ||
+//              providerResponse.raw?.data?.payment_method ||
+//              null;
  
-                 phone:
-                     dto.phone,
+//          await this.subscriptionPaymentRepository.save(
+//              payment,
+//          );
  
-                 currency:
-                     'TZS',
+//          // ========================================================
+//          // RESPONSE
+//          // ========================================================
  
-                 callbackUrl,
+//          return {
  
-                 customer,
+//              success:
+//                  true,
  
-             });
+//              message:
+//                  'Payment initiated successfully',
  
-         // ========================================================
-         // PROVIDER FAILED
-         // ========================================================
+//              data: {
  
-         if (
-             !providerResponse.success
-         ) {
+//                  reference,
  
-             await this.subscriptionPaymentRepository.update(
+//                  amount,
  
-                 {
-                     id:
-                         payment.id,
-                 },
+//                  currency:
+//                      'TZS',
  
-                 {
-                     status:
-                         PaymentStatus.FAILED,
-                 },
+//                  provider:
+//                      dto.provider || 'selcom',
  
-             );
+//                  customer: {
  
+//                      firstname:
+//                          customer.firstname,
  
-             throw new BadRequestException({
+//                      lastname:
+//                          customer.lastname,
  
-                 success:
-                     false,
+//                      email:
+//                          customer.email,
  
-                 message:
-                     providerResponse.message ||
-                     'Payment initiation failed',
+//                      phone:
+//                          customer.phone,
  
-                 data:
-                     providerResponse.raw,
+//                  },
  
-             });
+//                  payment:
+//                      providerResponse.raw,
  
-         }
-         // ========================================================
-         // SAVE SNIPPE PROVIDER TRANSACTION ID
-         // ========================================================
+//              },
  
-         if (!providerResponse.transactionId) {
+//          };
  
-             await this.subscriptionPaymentRepository.update(
-                 {
-                     id: payment.id,
-                 },
-                 {
-                     status:
-                         PaymentStatus.FAILED,
+//      }
  
-                     failure_reason:
-                         'Snippe did not return a transaction reference',
-                 },
-             );
+//  //     //outside initiate start 
+//  // async externalInitiatePayment(
  
-             throw new BadRequestException(
-                 'Snippe did not return a transaction reference',
-             );
-         }
+//  //         dto: InitiatePaymentDto,
  
-         payment.provider_transaction_id =
-             providerResponse.transactionId;
+//  //     ) {
  
-         await this.subscriptionPaymentRepository.save(
-             payment,
-         );
+//  //         // ========================================================
+//  //         // FIND PLAN
+//  //         // ========================================================
  
-         // ========================================================
-         // RESPONSE
-         // ========================================================
+//  //         const plan =
+//  //             await this.subscriptionPlanRepository.findOne({
  
-         return {
+//  //                 where: {
  
-             success:
-                 true,
+//  //                     id:
+//  //                         dto.plan_id,
  
-             message:
-                 'Payment initiated successfully',
+//  //                 },
  
-             data: {
+//  //             });
  
-                 reference,
  
-                 amount,
+//  //         if (!plan) {
  
-                 currency:
-                     'TZS',
+//  //             throw new NotFoundException(
+//  //                 'Subscription plan not found',
+//  //             );
  
-                 provider:
-                     dto.provider,
+//  //         }
  
-                 customer: {
  
-                     firstname:
-                         customer.firstname,
+//  //         // ========================================================
+//  //         // DETERMINE ROLE
+//  //         // ========================================================
  
-                     lastname:
-                         customer.lastname,
+//  //         const role =
+//  //             plan.role === 'applicant'
+//  //                 ? PaymentRole.APPLICANT
+//  //                 : PaymentRole.EMPLOYER;
  
-                     email:
-                         customer.email,
  
-                     phone:
-                         customer.phone,
+//  //         // ========================================================
+//  //         // RESOLVE CUSTOMER
+//  //         // ========================================================
  
-                 },
+//  //         const customer =
+//  //             await this.resolveCustomer(
  
-                 payment:
-                     providerResponse.raw,
+//  //                 role,
  
-             },
+//  //                 dto.phone,
  
-         };
+//  //             );
  
-     }
  
+//  //         this.logger.log(
+//  //             `Payment customer resolved: ${JSON.stringify({
+//  //                 userId: user.id,
+//  //                 role,
+//  //                 firstname: customer.firstname,
+//  //                 lastname: customer.lastname,
+//  //                 middlename: customer.middlename,
+//  //                 email: customer.email,
+//  //                 phone: customer.phone,
+//  //                 name: customer.name,
+//  //             })}`,
+//  //         );
  
-     // ============================================================
-     // SELCOM CALLBACK
-     // ============================================================
  
-     async handleSelcomCallback(
-         payload: any,
-     ) {
+//  //         // ========================================================
+//  //         // CHECK ACTIVE SUBSCRIPTION
+//  //         // ========================================================
  
-         const reference =
+//  //         const currentSubscription =
+//  //             await this.subscriptionRepository.findOne({
  
-             payload?.order_id ||
+//  //                 where: {
  
-             payload?.reference ||
+//  //                     user_id:
+//  //                         user.id,
  
-             payload?.transaction_id;
+//  //                     is_active:
+//  //                         true,
  
+//  //                 },
  
-         if (!reference) {
+//  //                 relations: [
+//  //                     'plan',
+//  //                 ],
  
-             throw new BadRequestException(
-                 'Payment reference is required',
-             );
+//  //                 order: {
  
-         }
+//  //                     end_date:
+//  //                         'DESC',
  
+//  //                 },
  
-         const payment =
-             await this.subscriptionPaymentRepository.findOne({
+//  //             });
  
-                 where: {
  
-                     transaction_id:
-                         reference,
+//  //         // ========================================================
+//  //         // PAYMENT AMOUNT
+//  //         // ========================================================
  
-                 },
+//  //         let amount =
+//  //             Number(plan.price);
  
-             });
  
+//  //         // ========================================================
+//  //         // PRORATE UPGRADE
+//  //         // ========================================================
  
-         if (!payment) {
+//  //         if (
  
-             throw new NotFoundException(
-                 'Payment not found',
-             );
+//  //             currentSubscription &&
  
-         }
+//  //             currentSubscription.plan &&
  
+//  //             currentSubscription.plan.id !==
+//  //             plan.id
  
-         if (
-             payment.status ===
-             PaymentStatus.SUCCESS
-         ) {
+//  //         ) {
  
-             return {
+//  //             const now =
+//  //                 new Date();
  
-                 success:
-                     true,
  
-                 message:
-                     'Payment already processed',
+//  //             const endDate =
+//  //                 new Date(
+//  //                     currentSubscription.end_date,
+//  //                 );
  
-             };
  
-         }
+//  //             let remainingDays =
+//  //                 Math.ceil(
  
+//  //                     (
+//  //                         endDate.getTime() -
+//  //                         now.getTime()
+//  //                     )
+//  //                     /
+//  //                     (
+//  //                         1000 *
+//  //                         60 *
+//  //                         60 *
+//  //                         24
+//  //                     ),
  
-         const provider =
-             this.paymentProviderFactory.getProvider();
+//  //                 );
  
  
-         const verification =
-             await provider.verify({
+//  //             if (
+//  //                 remainingDays < 0
+//  //             ) {
  
-                 reference,
+//  //                 remainingDays = 0;
  
-             });
+//  //             }
  
  
-         if (
-             !verification.success
-         ) {
+//  //             const oldPlan =
+//  //                 await this.subscriptionPlanRepository.findOne({
  
-             await this.subscriptionPaymentRepository.update(
+//  //                     where: {
  
-                 {
-                     id:
-                         payment.id,
-                 },
+//  //                         id:
+//  //                             currentSubscription.plan.id,
  
-                 {
-                     status:
-                         PaymentStatus.FAILED,
-                 },
+//  //                     },
  
-             );
+//  //                 });
  
  
-             throw new BadRequestException({
+//  //             if (
  
-                 success:
-                     false,
+//  //                 oldPlan &&
  
-                 message:
-                     'Payment verification failed',
+//  //                 Number(oldPlan.duration_days) > 0
  
-             });
+//  //             ) {
  
-         }
+//  //                 const credit =
  
+//  //                     (
+//  //                         Number(oldPlan.price)
+//  //                         /
+//  //                         Number(oldPlan.duration_days)
+//  //                     )
+//  //                     *
+//  //                     remainingDays;
  
-         await this.activateSubscription(
-             payment.id,
-         );
  
+//  //                 amount =
+//  //                     Math.max(
  
-         return {
+//  //                         0,
  
-             success:
-                 true,
+//  //                         Number(plan.price)
+//  //                         -
+//  //                         credit,
  
-             message:
-                 'Subscription activated successfully',
+//  //                     );
  
-         };
+//  //             }
  
-     }
+//  //         }
  
  
-     // ============================================================
-     // SNIPPE WEBHOOK
-     // ============================================================
+//  //         // ========================================================
+//  //         // PREVENT DUPLICATE PENDING PAYMENT
+//  //         // ========================================================
  
-     // ============================================================
-     // SNIPPE WEBHOOK
-     // ============================================================
+//  //         const existingPayment =
+//  //             await this.subscriptionPaymentRepository.findOne({
  
-     async handleSnippeWebhook(
-         event: any,
-     ) {
-         try {
+//  //                 where: {
  
-             // --------------------------------------------------------
-             // LOG FULL WEBHOOK
-             // --------------------------------------------------------
+//  //                     user_id:
+//  //                         user.id,
  
-             this.logger.log(
-                 `Snippe webhook received: ${JSON.stringify(event)}`,
-             );
+//  //                     subscription_plan_id:
+//  //                         plan.id,
  
-             // --------------------------------------------------------
-             // EVENT TYPE
-             // --------------------------------------------------------
+//  //                     status:
+//  //                         PaymentStatus.PENDING,
  
-             const eventType =
-                 event?.type ||
-                 event?.event;
+//  //                 },
  
-             this.logger.log(
-                 `Snippe event type: ${eventType}`,
-             );
+//  //             });
  
-             // --------------------------------------------------------
-             // SNIPPE PAYMENT REFERENCE
-             //
-             // Example:
-             // SN1787557846088555
-             // --------------------------------------------------------
  
-             const snippeReference =
-                 event?.data?.reference ||
-                 event?.reference;
+//  //         if (existingPayment) {
+//  //             return {
+//  //                 success: false,
+//  //                 message: 'You already have a pending payment',
+//  //                 data: {
+//  //                     reference:
+//  //                         existingPayment.transaction_id,
  
-             // --------------------------------------------------------
-             // YOUR INTERNAL REFERENCE
-             //
-             // Example:
-             // SUB_1787557845327_2D5AFCC55
-             //
-             // This is what you stored in:
-             // subscription_payments.transaction_id
-             // --------------------------------------------------------
+//  //                     provider_reference:
+//  //                         existingPayment.provider_transaction_id,
  
-             const internalReference =
-                 event?.data?.metadata?.order_id ||
-                 event?.metadata?.order_id ||
-                 event?.data?.order_id ||
-                 event?.order_id;
+//  //                     amount:
+//  //                         existingPayment.amount,
  
-             this.logger.log(
-                 `Snippe reference: ${snippeReference}`,
-             );
+//  //                     status:
+//  //                         existingPayment.status,
+//  //                 },
+//  //             };
+//  //         }
  
-             this.logger.log(
-                 `Internal reference: ${internalReference}`,
-             );
  
-             // --------------------------------------------------------
-             // REFERENCE REQUIRED
-             // --------------------------------------------------------
+//  //         // ========================================================
+//  //         // UNIQUE REFERENCE
+//  //         // ========================================================
  
-             if (!internalReference) {
+//  //         const reference =
+//  //             `SUB_${Date.now()}_${randomUUID()
+//  //                 .replace(/-/g, '')
+//  //                 .substring(0, 10)
+//  //                 .toUpperCase()}`;
  
-                 this.logger.error(
-                     `Internal payment reference missing from webhook: ${JSON.stringify(event)}`,
-                 );
  
-                 throw new BadRequestException(
-                     'Internal payment reference not found in Snippe webhook',
-                 );
-             }
+//  //         // ========================================================
+//  //         // CREATE PAYMENT
+//  //         // ========================================================
  
-             // --------------------------------------------------------
-             // FIND PAYMENT USING OUR REFERENCE
-             // --------------------------------------------------------
+//  //         const payment =
+//  //             this.subscriptionPaymentRepository.create({
  
-             const payment =
-                 await this.subscriptionPaymentRepository.findOne({
+//  //                 user_id:
+//  //                     user.id,
  
-                     where: {
+//  //                 subscription_plan_id:
+//  //                     plan.id,
  
-                         transaction_id:
-                             internalReference,
+//  //                 amount,
  
-                     },
+//  //                 transaction_id:
+//  //                     reference,
  
-                 });
+//  //                 provider:
+//  //                     dto.provider ?? 'selcom',
  
-             if (!payment) {
+//  //                 role,
  
-                 this.logger.error(
-                     `Payment not found using internal reference: ${internalReference}`,
-                 );
+//  //                 status:
+//  //                     PaymentStatus.PENDING,
  
-                 throw new NotFoundException(
-                     `Payment not found: ${internalReference}`,
-                 );
-             }
+//  //                 meta:
+//  //                 {
  
-             this.logger.log(
-                 `Payment found: ID=${payment.id}, status=${payment.status}`,
-             );
+//  //                     customer: {
  
-             // --------------------------------------------------------
-             // ALREADY PROCESSED
-             // --------------------------------------------------------
+//  //                         firstname:
+//  //                             customer.firstname,
  
-             if (
-                 payment.status ===
-                 PaymentStatus.SUCCESS
-             ) {
+//  //                         lastname:
+//  //                             customer.lastname,
  
-                 return {
+//  //                         middlename:
+//  //                             customer.middlename,
  
-                     success: true,
+//  //                         email:
+//  //                             customer.email,
  
-                     message:
-                         'Payment already processed',
+//  //                         phone:
+//  //                             customer.phone,
  
-                 };
-             }
+//  //                     },
  
-             // --------------------------------------------------------
-             // HANDLE FAILED PAYMENT
-             // --------------------------------------------------------
+//  //                 },
  
-             if (
-                 eventType === 'payment.failed' ||
-                 eventType === 'payment.expired' ||
-                 eventType === 'payment.voided'
-             ) {
+//  //             });
  
-                 await this.subscriptionPaymentRepository.update(
  
-                     {
-                         id: payment.id,
-                     },
+//  //         await this.subscriptionPaymentRepository.save(
+//  //             payment,
+//  //         );
  
-                     {
-                         status:
-                             PaymentStatus.FAILED,
-                     },
  
-                 );
+//  //         // ========================================================
+//  //         // CALLBACK
+//  //         // ========================================================
  
-                 this.logger.warn(
-                     `Payment marked as failed: ${internalReference}`,
-                 );
+//  //         const callbackUrl =
+//  //             process.env.PAYMENT_CALLBACK_URL ||
+//  //             'https://backend.ekazi.co.tz/api/payment/callback/selcom';
  
-                 return {
  
-                     success: true,
+//  //         // ========================================================
+//  //         // PROVIDER - FIXED: Pass provider name
+//  //         // ========================================================
  
-                     message:
-                         'Payment marked as failed',
+//  //         const provider =
+//  //             this.paymentProviderFactory.getProvider(dto.provider);
  
-                 };
-             }
  
-             // --------------------------------------------------------
-             // ONLY PROCESS COMPLETED PAYMENT
-             // --------------------------------------------------------
+//  //         this.logger.log(
+//  //             `Using payment provider: ${dto.provider || 'selcome'}`,
+//  //         );
  
-             if (
-                 eventType !== 'payment.completed'
-             ) {
  
-                 this.logger.log(
-                     `Ignoring Snippe event: ${eventType}`,
-                 );
+//  //         // ========================================================
+//  //         // INITIATE
+//  //         // ========================================================
  
-                 return {
+//  //         const providerResponse =
+//  //             await provider.initiate({
  
-                     success: true,
+//  //                 reference,
  
-                     message:
-                         'Webhook event ignored',
+//  //                 amount,
  
-                 };
-             }
+//  //                 phone:
+//  //                     dto.phone,
  
-             // --------------------------------------------------------
-             // CHECK SNIPPE REFERENCE
-             // --------------------------------------------------------
+//  //                 currency:
+//  //                     'TZS',
  
-             if (!snippeReference) {
+//  //                 callbackUrl,
  
-                 this.logger.error(
-                     `Snippe reference missing for payment: ${internalReference}`,
-                 );
+//  //                 customer,
  
-                 throw new BadRequestException(
-                     'Snippe payment reference is missing',
-                 );
-             }
+//  //             });
  
-             // --------------------------------------------------------
-             // CHECK WEBHOOK STATUS
-             // --------------------------------------------------------
+//  //         // ========================================================
+//  //         // PROVIDER FAILED
+//  //         // ========================================================
  
-             const webhookStatus =
-                 event?.data?.status;
+//  //         if (
+//  //             !providerResponse.success
+//  //         ) {
  
-             this.logger.log(
-                 `Snippe webhook payment status: ${webhookStatus}`,
-             );
+//  //             await this.subscriptionPaymentRepository.update(
  
-             if (
-                 webhookStatus !== 'completed'
-             ) {
+//  //                 {
+//  //                     id:
+//  //                         payment.id,
+//  //                 },
  
-                 this.logger.warn(
-                     `Payment webhook received but status is ${webhookStatus}`,
-                 );
+//  //                 {
+//  //                     status:
+//  //                         PaymentStatus.FAILED,
+//  //                 },
  
-                 return {
+//  //             );
  
-                     success: false,
  
-                     message:
-                         `Payment is not completed. Current status: ${webhookStatus}`,
+//  //             throw new BadRequestException({
  
-                 };
-             }
+//  //                 success:
+//  //                     false,
  
-             // --------------------------------------------------------
-             // VERIFY PAYMENT WITH SNIPPE
-             // --------------------------------------------------------
+//  //                 message:
+//  //                     providerResponse.message ||
+//  //                     'Payment initiation failed',
  
-             const provider =
-                 this.paymentProviderFactory.getProvider();
+//  //                 data:
+//  //                     providerResponse.raw,
  
-             const verification =
-                 await provider.verify({
+//  //             });
  
-                     reference:
-                         snippeReference,
+//  //         }
+//  //         // ========================================================
+//  //         // SAVE SNIPPE PROVIDER TRANSACTION ID
+//  //         // ========================================================
  
-                 });
+//  //         if (!providerResponse.transactionId) {
+//  //             await this.subscriptionPaymentRepository.update(
+//  //                 { id: payment.id },
+//  //                 {
+//  //                     status: PaymentStatus.FAILED,
+//  //                     failure_reason:
+//  //                         'Payment provider did not return a transaction reference',
+//  //                 },
+//  //             );
  
-             this.logger.log(
-                 `Snippe verification result: ${JSON.stringify({
-                     success: verification.success,
-                     transactionId: verification.transactionId,
-                     message: verification.message,
-                 })}`,
-             );
+//  //             throw new BadRequestException(
+//  //                 'Payment provider did not return a transaction reference',
+//  //             );
+//  //         }
  
-             if (
-                 !verification.success
-             ) {
+//  //         payment.provider_transaction_id =
+//  //             providerResponse.transactionId;
+//  //         // Get payment type returned by Snippe
+//  //         payment.payment_type =
+//  //             providerResponse.raw?.payment_type ||
+//  //             providerResponse.raw?.data?.payment_type ||
+//  //             providerResponse.raw?.payment_method ||
+//  //             providerResponse.raw?.data?.payment_method ||
+//  //             null;
  
-                 this.logger.error(
-                     `Snippe payment verification failed: ${snippeReference}`,
-                 );
+//  //         await this.subscriptionPaymentRepository.save(
+//  //             payment,
+//  //         );
  
-                 return {
+//  //         // ========================================================
+//  //         // RESPONSE
+//  //         // ========================================================
  
-                     success: false,
+//  //         return {
  
-                     message:
-                         'Payment verification failed',
+//  //             success:
+//  //                 true,
  
-                 };
-             }
+//  //             message:
+//  //                 'Payment initiated successfully',
  
-             // --------------------------------------------------------
-             // ACTIVATE SUBSCRIPTION
-             // --------------------------------------------------------
+//  //             data: {
  
-             await this.activateSubscription(
-                 payment.id,
-             );
+//  //                 reference,
  
-             this.logger.log(
-                 `Subscription successfully activated for payment ${payment.id}`,
-             );
+//  //                 amount,
  
-             return {
+//  //                 currency:
+//  //                     'TZS',
  
-                 success: true,
+//  //                 provider:
+//  //                     dto.provider || 'selcom',
  
-                 message:
-                     'Snippe payment processed successfully',
+//  //                 customer: {
  
-             };
+//  //                     firstname:
+//  //                         customer.firstname,
  
-         } catch (error) {
+//  //                     lastname:
+//  //                         customer.lastname,
  
-             this.logger.error(
-                 'Snippe webhook processing failed',
-                 error?.stack || error,
-             );
+//  //                     email:
+//  //                         customer.email,
  
-             throw error;
-         }
-     }
+//  //                     phone:
+//  //                         customer.phone,
  
+//  //                 },
  
-     // ============================================================
-     // ACTIVATE SUBSCRIPTION
-     // ============================================================
+//  //                 payment:
+//  //                     providerResponse.raw,
  
-     private async activateSubscription(
-         paymentId: number,
-     ) {
+//  //             },
  
-         const queryRunner =
-             this.dataSource.createQueryRunner();
+//  //         };
  
+//  //     }
+//      //  end initiate payment
  
-         await queryRunner.connect();
  
-         await queryRunner.startTransaction();
  
+//      // ============================================================
+//      // SELCOM OPERATIONS
+//      // ============================================================
  
-         try {
+//      async selcomCreateOrder(data: any) {
  
-             const payment =
-                 await queryRunner.manager
+//          const provider =
+//              this.paymentProviderFactory.getSelcomProvider();
  
-                     .createQueryBuilder(
-                         SubscriptionPayment,
-                         'payment',
-                     )
+//          return provider.createOrder(data);
+//      }
  
-                     .setLock(
-                         'pessimistic_write',
-                     )
  
-                     .where(
-                         'payment.id = :paymentId',
-                         {
-                             paymentId,
-                         },
-                     )
+//      async selcomWalletPayment(data: any) {
  
-                     .getOne();
+//          const provider =
+//              this.paymentProviderFactory.getSelcomProvider();
  
+//          return provider.walletPayment(data);
+//      }
  
-             if (!payment) {
  
-                 throw new NotFoundException(
-                     'Payment not found',
-                 );
+//      async selcomSelcomPesaPayment(data: any) {
  
-             }
+//          const provider =
+//              this.paymentProviderFactory.getSelcomProvider();
  
+//          return provider.selcompesaPayment(data);
+//      }
  
-             if (
-                 payment.status ===
-                 PaymentStatus.SUCCESS
-             ) {
  
-                 await queryRunner.commitTransaction();
+//      async selcomOrderStatus(reference: string) {
  
-                 return;
+//          const provider =
+//              this.paymentProviderFactory.getSelcomProvider();
  
-             }
+//          return provider.orderStatus(reference);
+//      }
  
  
-             const plan =
-                 await queryRunner.manager.findOne(
-                     SubscriptionPlan,
-                     {
+//      async selcomCancelOrder(reference: string) {
  
-                         where: {
+//          const provider =
+//              this.paymentProviderFactory.getSelcomProvider();
  
-                             id:
-                                 payment.subscription_plan_id,
+//          return provider.cancelOrder(reference);
+//      }
+//      async selcomListOrders(
+//          fromdate: string,
+//          todate: string,
+//      ) {
  
-                         },
+//          const provider = this.paymentProviderFactory.getSelcomProvider();
  
-                     },
-                 );
+//          if (!provider.listOrders) {
+//              return {
+//                  success: false,
+//                  message:
+//                      'List orders is not supported by this payment provider',
+//              };
+//          }
  
+//          return provider.listOrders(
+//              fromdate,
+//              todate,
+//          );
+//      }
  
-             if (!plan) {
+//      // ============================================================
+//      // SELCOM CALLBACK
+//      // ============================================================
+//      async handleSelcomCallback(payload: any) {
+//          try {
+//              // ========================================================
+//              // LOG CALLBACK
+//              // ========================================================
  
-                 throw new NotFoundException(
-                     'Subscription plan not found',
-                 );
+//              this.logger.log(
+//                  `SELCOM CALLBACK RECEIVED: ${JSON.stringify(payload)}`,
+//              );
  
-             }
+//              // ========================================================
+//              // GET OUR INTERNAL ORDER ID
+//              // ========================================================
  
+//              const orderId =
+//                  payload?.order_id ||
+//                  payload?.orderId ||
+//                  payload?.transid;
  
-             // ----------------------------------------------------
-             // DEACTIVATE OLD
-             // ----------------------------------------------------
+//              // ========================================================
+//              // GET SELCOM REFERENCE
+//              // ========================================================
  
-             await queryRunner.manager.update(
+//              const selcomReference =
+//                  payload?.reference ||
+//                  payload?.transaction_id;
  
-                 Subscription,
+//              this.logger.log(
+//                  `SELCOM order_id: ${orderId || 'N/A'}`,
+//              );
  
-                 {
+//              this.logger.log(
+//                  `SELCOM reference: ${selcomReference || 'N/A'}`,
+//              );
  
-                     user_id:
-                         payment.user_id,
+//              // ========================================================
+//              // VALIDATE REFERENCE
+//              // ========================================================
  
-                     is_active:
-                         true,
+//              if (!orderId && !selcomReference) {
+//                  throw new BadRequestException(
+//                      'Payment reference is required',
+//                  );
+//              }
  
-                 },
+//              // ========================================================
+//              // FIND PAYMENT
+//              // ========================================================
  
-                 {
+//              let payment: SubscriptionPayment | null = null;
  
-                     is_active:
-                         false,
+//              // 1. Try our internal transaction_id
+//              if (orderId) {
+//                  payment =
+//                      await this.subscriptionPaymentRepository.findOne({
+//                          where: {
+//                              transaction_id: orderId,
+//                          },
+//                      });
+//              }
  
-                 },
+//              // 2. Try SELCOM provider reference
+//              if (!payment && selcomReference) {
+//                  payment =
+//                      await this.subscriptionPaymentRepository.findOne({
+//                          where: {
+//                              provider_transaction_id:
+//                                  selcomReference,
+//                          },
+//                      });
+//              }
  
-             );
+//              if (!payment) {
+//                  this.logger.error(
+//                      `SELCOM PAYMENT NOT FOUND. ` +
+//                      `orderId=${orderId}, ` +
+//                      `reference=${selcomReference}`,
+//                  );
  
+//                  throw new NotFoundException(
+//                      `Payment not found. ` +
+//                      `order_id=${orderId}, ` +
+//                      `reference=${selcomReference}`,
+//                  );
+//              }
  
-             // ----------------------------------------------------
-             // DATES
-             // ----------------------------------------------------
+//              this.logger.log(
+//                  `SELCOM PAYMENT FOUND: ` +
+//                  `ID=${payment.id}, ` +
+//                  `transaction_id=${payment.transaction_id}, ` +
+//                  `provider_transaction_id=${payment.provider_transaction_id}`,
+//              );
  
-             const startDate =
-                 new Date();
+//              // ========================================================
+//              // ALREADY SUCCESSFUL
+//              // ========================================================
  
+//              if (
+//                  payment.status ===
+//                  PaymentStatus.SUCCESS
+//              ) {
+//                  return {
+//                      success: true,
+//                      message: 'Payment already processed',
+//                  };
+//              }
  
-             const endDate =
-                 new Date(
-                     startDate,
-                 );
+//              // ========================================================
+//              // SAVE SELCOM REFERENCE IF AVAILABLE
+//              // ========================================================
  
+//              if (
+//                  selcomReference &&
+//                  payment.provider_transaction_id !==
+//                  selcomReference
+//              ) {
+//                  payment.provider_transaction_id =
+//                      selcomReference;
  
-             endDate.setDate(
+//                  await this.subscriptionPaymentRepository.save(
+//                      payment,
+//                  );
+//              }
  
-                 endDate.getDate()
-                 +
-                 Number(
-                     plan.duration_days,
-                 ),
+//              // ========================================================
+//              // VERIFY WITH SELCOM
+//              // ========================================================
  
-             );
+//              const provider =
+//                  this.paymentProviderFactory.getSelcomProvider();
  
+//              // IMPORTANT:
+//              // SELCOM order-status should use OUR order_id
+//              // e.g. SUB_1788941754240_57D47C99D9
  
-             // ----------------------------------------------------
-             // CREATE SUBSCRIPTION
-             // ----------------------------------------------------
+//              const verification = await provider.verify({
+//                  reference: payment.transaction_id,
+//              });
  
-             const subscription =
-                 queryRunner.manager.create(
+//              this.logger.log(
+//                  `SELCOM VERIFICATION RESULT: ${JSON.stringify(
+//                      verification,
+//                  )}`,
+//              );
  
-                     Subscription,
+//              // ========================================================
+//              // GET VERIFIED STATUS
+//              // ========================================================
  
-                     {
+//              const verifiedStatus =
+//                  verification?.data?.status ||
+//                  verification?.raw?.result ||
+//                  verification?.raw?.status ||
+//                  'UNKNOWN';
  
-                         user_id:
-                             payment.user_id,
+//              this.logger.log(
+//                  `SELCOM VERIFIED STATUS: ${verifiedStatus}`,
+//              );
  
-                         subscription_plan_id:
-                             plan.id,
+//              // ========================================================
+//              // SUCCESS
+//              // ========================================================
  
-                         start_date:
-                             startDate,
+//              if (verification.success) {
  
-                         end_date:
-                             endDate,
+//                  const providerTransactionId =
+//                      verification.transactionId ||
+//                      verification?.raw?.reference ||
+//                      selcomReference;
  
-                         job_post_remaining:
-                             plan.job_post_limit ??
-                             -1,
+//                  if (providerTransactionId) {
+//                      payment.provider_transaction_id =
+//                          providerTransactionId;
+//                  }
  
-                         cv_download_remaining:
-                             plan.cv_download_limit ??
-                             -1,
-                             cv_builder_remaining:plan.cv_builder_limit??
-                             -1,
-                           
+//                  await this.subscriptionPaymentRepository.save(
+//                      payment,
+//                  );
  
-                         is_active:
-                             true,
+//                  await this.activateSubscription(
+//                      payment.id,
+//                  );
  
-                     },
+//                  this.logger.log(
+//                      `SELCOM PAYMENT SUCCESS. ` +
+//                      `Payment ID=${payment.id}`,
+//                  );
  
-                 );
+//                  return {
+//                      success: true,
+//                      message:
+//                          'Subscription activated successfully',
+//                  };
+//              }
  
+//              // ========================================================
+//              // PAYMENT STILL PENDING
+//              // ========================================================
  
-             await queryRunner.manager.save(
-                 Subscription,
-                 subscription,
-             );
+//              if (
+//                  verifiedStatus === 'PENDING' ||
+//                  verification?.raw?.resultcode === '111' ||
+//                  verification?.raw?.result === 'PENDING'
+//              ) {
  
+//                  await this.subscriptionPaymentRepository.update(
+//                      {
+//                          id: payment.id,
+//                      },
+//                      {
+//                          status:
+//                              PaymentStatus.PENDING,
+//                          failure_reason: null,
+//                      },
+//                  );
  
-             // ----------------------------------------------------
-             // SUCCESS
-             // ----------------------------------------------------
+//                  this.logger.log(
+//                      `SELCOM PAYMENT STILL PENDING. ` +
+//                      `Payment ID=${payment.id}`,
+//                  );
  
-             payment.status =
-                 PaymentStatus.SUCCESS;
+//                  return {
+//                      success: true,
+//                      message:
+//                          'Payment is still pending',
+//                  };
+//              }
  
+//              // ========================================================
+//              // PAYMENT REALLY FAILED
+//              // ========================================================
  
-             await queryRunner.manager.save(
-                 SubscriptionPayment,
-                 payment,
-             );
+//              await this.subscriptionPaymentRepository.update(
+//                  {
+//                      id: payment.id,
+//                  },
+//                  {
+//                      status:
+//                          PaymentStatus.FAILED,
  
+//                      failure_reason:
+//                          verification.message ||
+//                          'SELCOM payment failed',
+//                  },
+//              );
  
-             await queryRunner.commitTransaction();
+//              this.logger.warn(
+//                  `SELCOM PAYMENT FAILED. ` +
+//                  `Payment ID=${payment.id}`,
+//              );
  
-         } catch (error) {
+//              return {
+//                  success: false,
+//                  message:
+//                      verification.message ||
+//                      'Payment failed',
+//              };
  
-             await queryRunner.rollbackTransaction();
+//          } catch (error: any) {
  
+//              this.logger.error(
+//                  'SELCOM callback processing failed',
+//                  error?.stack || error,
+//              );
  
-             this.logger.error(
-                 'Subscription activation failed',
-                 error,
-             );
+//              throw error;
+//          }
+//      }
+//      // ============================================================
+//      // SNIPPE WEBHOOK
+//      // ============================================================
  
+//      async handleSnippeWebhook(
+//          event: any,
+//      ) {
+//          try {
  
-             throw new InternalServerErrorException(
-                 'Failed to activate subscription',
-             );
+//              // --------------------------------------------------------
+//              // LOG FULL WEBHOOK
+//              // --------------------------------------------------------
  
-         } finally {
+//              this.logger.log(
+//                  `Snippe webhook received: ${JSON.stringify(event)}`,
+//              );
  
-             await queryRunner.release();
+//              // --------------------------------------------------------
+//              // EVENT TYPE
+//              // --------------------------------------------------------
  
-         }
+//              const eventType =
+//                  event?.type ||
+//                  event?.event;
  
-     }
+//              this.logger.log(
+//                  `Snippe event type: ${eventType}`,
+//              );
  
+//              // --------------------------------------------------------
+//              // SNIPPE PAYMENT REFERENCE
+//              //
+//              // Example:
+//              // SN1787557846088555
+//              // --------------------------------------------------------
  
-     // ============================================================
-     // CURRENT SUBSCRIPTION
-     // ============================================================
+//              const snippeReference =
+//                  event?.data?.reference ||
+//                  event?.reference;
  
-     async currentSubscription(
-         user: Users,
-     ) {
+//              // --------------------------------------------------------
+//              // YOUR INTERNAL REFERENCE
+//              //
+//              // Example:
+//              // SUB_1787557845327_2D5AFCC55
+//              //
+//              // This is what you stored in:
+//              // subscription_payments.transaction_id
+//              // --------------------------------------------------------
  
-         const subscription =
-             await this.subscriptionRepository.findOne({
+//              const internalReference =
+//                  event?.data?.metadata?.order_id ||
+//                  event?.metadata?.order_id ||
+//                  event?.data?.order_id ||
+//                  event?.order_id;
  
-                 where: {
+//              this.logger.log(
+//                  `Snippe reference: ${snippeReference}`,
+//              );
  
-                     user_id:
-                         user.id,
+//              this.logger.log(
+//                  `Internal reference: ${internalReference}`,
+//              );
  
-                     is_active:
-                         true,
+//              // --------------------------------------------------------
+//              // REFERENCE REQUIRED
+//              // --------------------------------------------------------
  
-                 },
+//              if (!internalReference) {
  
-                 relations: [
-                     'plan',
-                 ],
+//                  this.logger.error(
+//                      `Internal payment reference missing from webhook: ${JSON.stringify(event)}`,
+//                  );
  
-                 order: {
+//                  throw new BadRequestException(
+//                      'Internal payment reference not found in Snippe webhook',
+//                  );
+//              }
  
-                     end_date:
-                         'DESC',
+//              // --------------------------------------------------------
+//              // FIND PAYMENT USING OUR REFERENCE
+//              // --------------------------------------------------------
  
-                 },
+//              const payment =
+//                  await this.subscriptionPaymentRepository.findOne({
  
-             });
+//                      where: {
  
+//                          transaction_id:
+//                              internalReference,
  
-         if (!subscription) {
+//                      },
  
-             return {
+//                  });
  
-                 success:
-                     false,
+//              if (!payment) {
  
-                 message:
-                     'No active subscription',
+//                  this.logger.error(
+//                      `Payment not found using internal reference: ${internalReference}`,
+//                  );
  
-                 data:
-                     null,
+//                  throw new NotFoundException(
+//                      `Payment not found: ${internalReference}`,
+//                  );
+//              }
  
-             };
+//              this.logger.log(
+//                  `Payment found: ID=${payment.id}, status=${payment.status}`,
+//              );
  
-         }
+//              // --------------------------------------------------------
+//              // ALREADY PROCESSED
+//              // --------------------------------------------------------
  
+//              if (
+//                  payment.status ===
+//                  PaymentStatus.SUCCESS
+//              ) {
  
-         if (
-             new Date(
-                 subscription.end_date,
-             ) < new Date()
-         ) {
+//                  return {
  
-             subscription.is_active =
-                 false;
+//                      success: true,
  
+//                      message:
+//                          'Payment already processed',
  
-             await this.subscriptionRepository.save(
-                 subscription,
-             );
+//                  };
+//              }
  
+//              // --------------------------------------------------------
+//              // HANDLE FAILED PAYMENT
+//              // --------------------------------------------------------
  
-             return {
+//              if (
+//                  eventType === 'payment.failed' ||
+//                  eventType === 'payment.expired' ||
+//                  eventType === 'payment.voided'
+//              ) {
  
-                 success:
-                     false,
+//                  await this.subscriptionPaymentRepository.update(
  
-                 message:
-                     'Subscription has expired',
+//                      {
+//                          id: payment.id,
+//                      },
  
-                 data:
-                     null,
+//                      {
+//                          status:
+//                              PaymentStatus.FAILED,
+//                      },
  
-             };
+//                  );
  
-         }
+//                  this.logger.warn(
+//                      `Payment marked as failed: ${internalReference}`,
+//                  );
  
+//                  return {
  
-         return {
+//                      success: true,
  
-             success:
-                 true,
+//                      message:
+//                          'Payment marked as failed',
  
-             message:
-                 'Current subscription retrieved successfully',
+//                  };
+//              }
  
-             data:
-                 subscription,
+//              // --------------------------------------------------------
+//              // ONLY PROCESS COMPLETED PAYMENT
+//              // --------------------------------------------------------
  
-         };
+//              if (
+//                  eventType !== 'payment.completed'
+//              ) {
  
-     }
+//                  this.logger.log(
+//                      `Ignoring Snippe event: ${eventType}`,
+//                  );
  
- }
+//                  return {
+ 
+//                      success: true,
+ 
+//                      message:
+//                          'Webhook event ignored',
+ 
+//                  };
+//              }
+ 
+//              // --------------------------------------------------------
+//              // CHECK SNIPPE REFERENCE
+//              // --------------------------------------------------------
+ 
+//              if (!snippeReference) {
+ 
+//                  this.logger.error(
+//                      `Snippe reference missing for payment: ${internalReference}`,
+//                  );
+ 
+//                  throw new BadRequestException(
+//                      'Snippe payment reference is missing',
+//                  );
+//              }
+ 
+//              // --------------------------------------------------------
+//              // CHECK WEBHOOK STATUS
+//              // --------------------------------------------------------
+ 
+//              const webhookStatus =
+//                  event?.data?.status;
+ 
+//              this.logger.log(
+//                  `Snippe webhook payment status: ${webhookStatus}`,
+//              );
+ 
+//              if (
+//                  webhookStatus !== 'completed'
+//              ) {
+ 
+//                  this.logger.warn(
+//                      `Payment webhook received but status is ${webhookStatus}`,
+//                  );
+ 
+//                  return {
+ 
+//                      success: false,
+ 
+//                      message:
+//                          `Payment is not completed. Current status: ${webhookStatus}`,
+ 
+//                  };
+//              }
+ 
+//              // --------------------------------------------------------
+//              // VERIFY PAYMENT WITH SNIPPE - FIXED: Pass provider name
+//              // --------------------------------------------------------
+ 
+//              const provider =
+//                  this.paymentProviderFactory.getProvider('snippe');
+ 
+//              const verification =
+//                  await provider.verify({
+ 
+//                      reference:
+//                          snippeReference,
+ 
+//                  });
+ 
+//              this.logger.log(
+//                  `Snippe verification result: ${JSON.stringify({
+//                      success: verification.success,
+//                      transactionId: verification.transactionId,
+//                      message: verification.message,
+//                  })}`,
+//              );
+ 
+//              if (
+//                  !verification.success
+//              ) {
+ 
+//                  this.logger.error(
+//                      `Snippe payment verification failed: ${snippeReference}`,
+//                  );
+ 
+//                  return {
+ 
+//                      success: false,
+ 
+//                      message:
+//                          'Payment verification failed',
+ 
+//                  };
+//              }
+ 
+//              // --------------------------------------------------------
+//              // ACTIVATE SUBSCRIPTION
+//              // --------------------------------------------------------
+ 
+//              await this.activateSubscription(
+//                  payment.id,
+//              );
+ 
+//              this.logger.log(
+//                  `Subscription successfully activated for payment ${payment.id}`,
+//              );
+ 
+//              return {
+ 
+//                  success: true,
+ 
+//                  message:
+//                      'Snippe payment processed successfully',
+ 
+//              };
+ 
+//          } catch (error) {
+ 
+//              this.logger.error(
+//                  'Snippe webhook processing failed',
+//                  error?.stack || error,
+//              );
+ 
+//              throw error;
+//          }
+//      }
+ 
+ 
+//      // ============================================================
+//      // ACTIVATE SUBSCRIPTION
+//      // ============================================================
+ 
+//      private async activateSubscription(
+//          paymentId: number,
+//      ) {
+ 
+//          const queryRunner =
+//              this.dataSource.createQueryRunner();
+ 
+ 
+//          await queryRunner.connect();
+ 
+//          await queryRunner.startTransaction();
+ 
+ 
+//          try {
+ 
+//              const payment =
+//                  await queryRunner.manager
+ 
+//                      .createQueryBuilder(
+//                          SubscriptionPayment,
+//                          'payment',
+//                      )
+ 
+//                      .setLock(
+//                          'pessimistic_write',
+//                      )
+ 
+//                      .where(
+//                          'payment.id = :paymentId',
+//                          {
+//                              paymentId,
+//                          },
+//                      )
+ 
+//                      .getOne();
+ 
+ 
+//              if (!payment) {
+ 
+//                  throw new NotFoundException(
+//                      'Payment not found',
+//                  );
+ 
+//              }
+ 
+ 
+//              if (
+//                  payment.status ===
+//                  PaymentStatus.SUCCESS
+//              ) {
+ 
+//                  await queryRunner.commitTransaction();
+ 
+//                  return;
+ 
+//              }
+ 
+ 
+//              const plan =
+//                  await queryRunner.manager.findOne(
+//                      SubscriptionPlan,
+//                      {
+ 
+//                          where: {
+ 
+//                              id:
+//                                  payment.subscription_plan_id,
+ 
+//                          },
+ 
+//                      },
+//                  );
+ 
+ 
+//              if (!plan) {
+ 
+//                  throw new NotFoundException(
+//                      'Subscription plan not found',
+//                  );
+ 
+//              }
+ 
+ 
+//              // ----------------------------------------------------
+//              // DEACTIVATE OLD
+//              // ----------------------------------------------------
+ 
+//              await queryRunner.manager.update(
+ 
+//                  Subscription,
+ 
+//                  {
+ 
+//                      user_id:
+//                          payment.user_id,
+ 
+//                      is_active:
+//                          true,
+ 
+//                  },
+ 
+//                  {
+ 
+//                      is_active:
+//                          false,
+ 
+//                  },
+ 
+//              );
+ 
+ 
+//              // ----------------------------------------------------
+//              // DATES
+//              // ----------------------------------------------------
+ 
+//              const startDate =
+//                  new Date();
+ 
+ 
+//              const endDate =
+//                  new Date(
+//                      startDate,
+//                  );
+ 
+ 
+//              endDate.setDate(
+ 
+//                  endDate.getDate()
+//                  +
+//                  Number(
+//                      plan.duration_days,
+//                  ),
+ 
+//              );
+ 
+ 
+//              // ----------------------------------------------------
+//              // CREATE SUBSCRIPTION
+//              // ----------------------------------------------------
+ 
+//              const subscription =
+//                  queryRunner.manager.create(
+ 
+//                      Subscription,
+ 
+//                      {
+ 
+//                          user_id:
+//                              payment.user_id,
+ 
+//                          subscription_plan_id:
+//                              plan.id,
+ 
+//                          start_date:
+//                              startDate,
+ 
+//                          end_date:
+//                              endDate,
+ 
+//                          job_post_remaining:
+//                              plan.job_post_limit ??
+//                              -1,
+ 
+//                          cv_download_remaining:
+//                              plan.cv_download_limit ??
+//                              -1,
+ 
+//                          cv_builder_remaining: plan.cv_builder_limit ??
+//                              -1,
+ 
+//                          is_active:
+//                              true,
+//                          subscription_payment_id: payment.id,
+ 
+//                      },
+ 
+//                  );
+ 
+ 
+//              await queryRunner.manager.save(
+//                  Subscription,
+//                  subscription,
+//              );
+ 
+ 
+//              // ----------------------------------------------------
+//              // SUCCESS
+//              // ----------------------------------------------------
+ 
+//              payment.status =
+//                  PaymentStatus.SUCCESS;
+ 
+ 
+//              await queryRunner.manager.save(
+//                  SubscriptionPayment,
+//                  payment,
+//              );
+ 
+ 
+//              await queryRunner.commitTransaction();
+ 
+//          } catch (error) {
+ 
+//              await queryRunner.rollbackTransaction();
+ 
+ 
+//              this.logger.error(
+//                  'Subscription activation failed',
+//                  error,
+//              );
+ 
+ 
+//              throw new InternalServerErrorException(
+//                  'Failed to activate subscription',
+//              );
+ 
+//          } finally {
+ 
+//              await queryRunner.release();
+ 
+//          }
+ 
+//      }
+ 
+//      // Add to PaymentService
+ 
+//      // ============================================================
+//      // LIST ALL PAYMENTS (with pagination)
+//      // ============================================================
+//      async listSnippePayments(
+//          limit: number = 20,
+//          offset: number = 0
+//      ) {
+//          const provider = this.paymentProviderFactory.getProvider('snippe');
+ 
+//          const response = await provider.listPayments({
+//              limit,
+//              offset
+//          });
+ 
+//          return response;
+//      }
+ 
+//      // ============================================================
+//      // GET ACCOUNT BALANCE
+//      // ============================================================
+//      async getSnippeBalance() {
+//          const provider = this.paymentProviderFactory.getProvider('snippe');
+ 
+//          const balance = await provider.getBalance();
+ 
+//          return {
+//              success: true,
+//              data: balance,
+//              message: 'Account balance retrieved successfully'
+//          };
+//      }
+ 
+//      // ============================================================
+//      // SEARCH PAYMENTS
+//      // ============================================================
+//      async searchSnippePayments(reference: string) {
+//          const provider = this.paymentProviderFactory.getProvider('snippe');
+ 
+//          const results = await provider.searchPayments({
+//              reference
+//          });
+ 
+//          return {
+//              success: true,
+//              data: results,
+//              message: 'Payment search completed'
+//          };
+//      }
+ 
+//      // ============================================================
+//      // TRIGGER USSD PUSH
+//      // ============================================================
+//      async triggerUssdPush(reference: string) {
+//          const provider = this.paymentProviderFactory.getProvider('snippe');
+ 
+//          const result = await provider.triggerUssdPush({
+//              reference
+//          });
+ 
+//          return {
+//              success: true,
+//              data: result,
+//              message: 'USSD push triggered successfully'
+//          };
+//      }
+ 
+//      // ============================================================
+//      // ALL SUBSCRIPTION PAYMENTS
+//      // SEARCH + PAGINATION
+//      // ============================================================
+ 
+//      async getSubscriptionPayments(
+//          user: Users,
+//          query: SubscriptionPaymentsQueryDto,
+//      ) {
+ 
+//          try {
+ 
+//              const page =
+//                  Number(query.page) || 1;
+ 
+//              const limit =
+//                  Number(query.limit) || 20;
+ 
+//              const skip =
+//                  (page - 1) * limit;
+ 
+//              const search =
+//                  query.search?.trim() || '';
+ 
+ 
+//              // ========================================================
+//              // QUERY BUILDER
+//              // ========================================================
+//              const queryBuilder =
+//                  this.subscriptionPaymentRepository
+//                      .createQueryBuilder('payment')
+ 
+//                      .leftJoinAndSelect(
+//                          'payment.subscriptionPlan',
+//                          'plan',
+//                      )
+ 
+//                      .where(
+//                          'payment.user_id = :userId',
+//                          {
+//                              userId: user.id,
+//                          },
+//                      )
+ 
+//                      // Client / Employer only
+//                      .andWhere(
+//                          'payment.role = :role',
+//                          {
+//                              role: PaymentRole.EMPLOYER,
+//                          },
+//                      )
+ 
+//                      // Only successful payments
+//                      .andWhere(
+//                          'payment.status = :status',
+//                          {
+//                              status: 'success',
+//                          },
+//                      );
+ 
+ 
+//              // ========================================================
+//              // SEARCH
+//              // ========================================================
+ 
+//              if (search) {
+ 
+//                  queryBuilder.andWhere(
+//                      `(
+//                      payment.transaction_id LIKE :search
+//                      OR payment.provider_transaction_id LIKE :search
+//                      OR payment.payment_type LIKE :search
+//                      OR payment.status LIKE :search
+//                      OR payment.provider LIKE :search
+//                      OR plan.name LIKE :search
+//                  )`,
+//                      {
+//                          search: `%${search}%`,
+//                      },
+//                  );
+ 
+//              }
+ 
+ 
+//              // ========================================================
+//              // PAGINATION
+//              // ========================================================
+ 
+//              queryBuilder
+//                  .orderBy(
+//                      'payment.created_at',
+//                      'DESC',
+//                  )
+ 
+//                  .skip(skip)
+ 
+//                  .take(limit);
+ 
+ 
+//              // ========================================================
+//              // EXECUTE
+//              // ========================================================
+ 
+//              const [
+//                  payments,
+//                  total,
+//              ] =
+//                  await queryBuilder.getManyAndCount();
+ 
+ 
+//              // ========================================================
+//              // RESPONSE
+//              // ========================================================
+ 
+//              return {
+ 
+//                  success: true,
+ 
+//                  message:
+//                      'Subscription payments retrieved successfully',
+ 
+//                  data: payments.map(
+//                      (payment) => ({
+ 
+//                          id:
+//                              payment.id,
+ 
+//                          subscription_plan_id:
+//                              payment.subscription_plan_id,
+ 
+//                          plan:
+//                              payment.subscriptionPlan,
+ 
+//                          amount:
+//                              Number(payment.amount),
+ 
+//                          transaction_id:
+//                              payment.transaction_id,
+ 
+//                          provider_transaction_id:
+//                              payment.provider_transaction_id,
+ 
+//                          provider:
+//                              payment.provider,
+ 
+//                          payment_type:
+//                              payment.payment_type,
+ 
+//                          status:
+//                              payment.status,
+ 
+//                          paid_at:
+//                              payment.paid_at,
+ 
+//                          failure_reason:
+//                              payment.failure_reason,
+ 
+//                          role:
+//                              payment.role,
+ 
+//                          created_at:
+//                              payment.created_at,
+ 
+//                          updated_at:
+//                              payment.updated_at,
+//                          meta: payment.meta,
+ 
+//                      }),
+//                  ),
+ 
+ 
+ 
+//                  page,
+ 
+//                  limit,
+ 
+//                  total,
+ 
+//                  totalPages:
+//                      Math.ceil(
+//                          total / limit,
+//                      ),
+ 
+ 
+ 
+//              };
+ 
+//          } catch (error) {
+ 
+//              this.logger.error(
+//                  'Error fetching subscription payments',
+//                  error,
+//              );
+ 
+//              throw new InternalServerErrorException(
+//                  'Failed to fetch subscription payments',
+//              );
+ 
+//          }
+ 
+//      }
+ 
+//      // ============================================================
+//      // CURRENT SUBSCRIPTION (With Full Payment Data)
+//      // ============================================================
+//      async currentSubscription(user: Users) {
+//          try {
+//              const subscription = await this.subscriptionRepository.findOne({
+//                  where: {
+//                      user_id: user.id,
+//                      is_active: true,
+//                  },
+//                  relations: ['plan'],
+//                  order: {
+//                      end_date: 'DESC',
+//                  },
+//              });
+ 
+//              if (!subscription) {
+//                  return {
+//                      success: false,
+//                      message: 'No active subscription',
+//                      data: [],
+//                  };
+//              }
+ 
+//              // Check expiration
+//              if (new Date(subscription.end_date) < new Date()) {
+//                  subscription.is_active = false;
+//                  await this.subscriptionRepository.save(subscription);
+ 
+//                  return {
+//                      success: false,
+//                      message: 'Subscription has expired',
+//                      data: [],
+//                  };
+//              }
+ 
+//              // ========================================================
+//              // FETCH PAYMENT DATA
+//              // ========================================================
+ 
+//              let paymentData: any = null;
+ 
+//              if (subscription.subscription_payment_id) {
+//                  const payment =
+//                      await this.subscriptionPaymentRepository.findOne({
+//                          where: {
+//                              id: subscription.subscription_payment_id,
+//                          },
+//                      });
+ 
+//                  if (payment) {
+//                      paymentData = {
+//                          id: payment.id,
+//                          amount: Number(payment.amount),
+//                          transaction_id: payment.transaction_id,
+//                          provider_transaction_id:
+//                              payment.provider_transaction_id,
+//                          provider: payment.provider,
+//                          status: payment.status,
+//                          role: payment.role,
+//                          paid_at: payment.paid_at,
+//                          failure_reason: payment.failure_reason,
+//                          meta: payment.meta,
+//                          created_at: payment.created_at,
+//                          updated_at: payment.updated_at,
+//                      };
+//                  }
+//              }
+ 
+//              // ========================================================
+//              // CALCULATE REMAINING DAYS
+//              // ========================================================
+ 
+//              const now = new Date();
+//              const endDate = new Date(subscription.end_date);
+ 
+//              const remainingDays = Math.max(
+//                  0,
+//                  Math.ceil(
+//                      (endDate.getTime() - now.getTime()) /
+//                      (1000 * 60 * 60 * 24),
+//                  ),
+//              );
+ 
+//              // ========================================================
+//              // RETURN ARRAY
+//              // ========================================================
+ 
+//              return {
+//                  success: true,
+//                  message: 'Current subscription retrieved successfully',
+ 
+//                  data: [
+//                      {
+//                          id: subscription.id,
+//                          user_id: subscription.user_id,
+//                          subscription_plan_id:
+//                              subscription.subscription_plan_id,
+ 
+//                          plan: subscription.plan,
+ 
+//                          start_date: subscription.start_date,
+//                          end_date: subscription.end_date,
+ 
+//                          remaining_days: remainingDays,
+ 
+//                          job_post_remaining:
+//                              subscription.job_post_remaining,
+ 
+//                          cv_download_remaining:
+//                              subscription.cv_download_remaining,
+ 
+//                          cv_builder_remaining:
+//                              subscription.cv_builder_remaining,
+ 
+//                          is_active: subscription.is_active,
+ 
+//                          subscription_payment_id:
+//                              subscription.subscription_payment_id,
+ 
+//                          payment: paymentData,
+ 
+//                          created_at: subscription.created_at,
+//                          updated_at: subscription.updated_at,
+//                      },
+//                  ],
+//              };
+//          } catch (error) {
+//              this.logger.error(
+//                  'Error fetching current subscription:',
+//                  error,
+//              );
+ 
+//              throw new InternalServerErrorException(
+//                  'Failed to fetch current subscription',
+//              );
+//          }
+//      }
+ 
+ 
+ 
+//  }
