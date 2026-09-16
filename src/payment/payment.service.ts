@@ -422,110 +422,8 @@ export class PaymentService {
         try {
 
             let providerResponse: any;
-
-            // ----------------------------------------------------
-            // REGISTRATION FLOW
-            // ----------------------------------------------------
-            // Create the order ONLY. Do NOT trigger wallet push.
-            // The user explicitly triggers USSD when ready
-            // (so they can enter their PIN).
-            //
-            // Only SELCOM supports this split. For other providers
-            // (e.g. Snippe) fall through to the default initiate().
-            // ----------------------------------------------------
-            if (
-                registrationPayment &&
-                provider === 'selcom'
-            ) {
-
-                const selcomProvider =
-                    this.paymentProviderFactory.getSelcomProvider();
-
-                const orderResponse =
-                    await selcomProvider.createOrder({
-
-                        // The provider fills vendor from its config.
-                        vendor: undefined as any,
-
-                        order_id: reference,
-
-                        buyer_email: customer.email || '',
-                        buyer_name: customer.name || '',
-                        buyer_phone: customer.phone,
-
-                        amount,
-                        currency: 'TZS',
-
-                        buyer_remarks:
-                            `eKazi subscription ${reference}`,
-
-                        merchant_remarks:
-                            'eKazi subscription payment',
-
-                        no_of_items: 1,
-
-                        ...(callbackUrl && {
-                            webhook: callbackUrl,
-                        }),
-                    });
-
-                if (!orderResponse.success) {
-
-                    await this.subscriptionPaymentRepository.update(
-                        { id: payment.id },
-                        {
-                            status: PaymentStatus.FAILED,
-                            failure_reason:
-                                orderResponse.message ||
-                                'SELCOM order creation failed',
-                        },
-                    );
-
-                    throw new BadRequestException({
-                        success: false,
-                        message:
-                            orderResponse.message ||
-                            'Payment initiation failed',
-                        data: orderResponse.raw,
-                    });
-                }
-
-                // Normalize into the same shape as initiate()
-                providerResponse = {
-                    success: true,
-
-                    transactionId:
-                        orderResponse.transactionId ||
-                        orderResponse?.raw?.reference ||
-                        reference,
-
-                    message:
-                        'Order created. Choose payment method.',
-
-                    raw: orderResponse.raw,
-
-                    data: {
-                        status: 'INITIATED',
-
-                        reference:
-                            orderResponse?.raw?.reference ||
-                            reference,
-
-                        order_id: reference,
-
-                        payment_token:
-                            orderResponse?.data?.payment_token,
-
-                        payment_gateway_url:
-                            orderResponse?.data?.payment_gateway_url,
-
-                        qr: orderResponse?.data?.qr,
-
-                        requires_wallet_push: true,
-                    },
-                };
-
-            } else {
+ 
+            
 
                 // ------------------------------------------------
                 // NORMAL FLOW (unchanged)
@@ -539,7 +437,7 @@ export class PaymentService {
                         callbackUrl,
                         customer,
                     });
-            }
+            
 
             // ====================================================
             // PROVIDER FAILED
