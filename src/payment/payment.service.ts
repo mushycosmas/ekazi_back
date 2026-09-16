@@ -422,22 +422,22 @@ export class PaymentService {
         try {
 
             let providerResponse: any;
- 
-            
 
-                // ------------------------------------------------
-                // NORMAL FLOW (unchanged)
-                // ------------------------------------------------
-                providerResponse =
-                    await paymentProvider.initiate({
-                        reference,
-                        amount,
-                        phone: customer.phone,
-                        currency: 'TZS',
-                        callbackUrl,
-                        customer,
-                    });
-            
+
+
+            // ------------------------------------------------
+            // NORMAL FLOW (unchanged)
+            // ------------------------------------------------
+            providerResponse =
+                await paymentProvider.initiate({
+                    reference,
+                    amount,
+                    phone: customer.phone,
+                    currency: 'TZS',
+                    callbackUrl,
+                    customer,
+                });
+
 
             // ====================================================
             // PROVIDER FAILED
@@ -1050,8 +1050,17 @@ export class PaymentService {
             const provider =
                 this.paymentProviderFactory.getSelcomProvider();
 
+            const verificationReference =
+                selcomReference ||
+                payment.provider_transaction_id ||
+                payment.transaction_id;
+
+            this.logger.log(
+                `SELCOM verification reference: ${verificationReference}`,
+            );
+
             const verification = await provider.verify({
-                reference: payment.transaction_id,
+                reference: verificationReference,
             });
 
             this.logger.log(
@@ -1782,4 +1791,39 @@ export class PaymentService {
             );
         }
     }
+    async recoverPendingSelcomPayments() {
+    const pending = await this.subscriptionPaymentRepository.find({
+        where: {
+            provider: 'selcom',
+            status: PaymentStatus.PENDING,
+        },
+    });
+
+    const results: any[] = [];
+
+    for (const p of pending) {
+        if (!p.provider_transaction_id) continue;
+
+        try {
+            const result = await this.handleSelcomCallback({
+                order_id: p.transaction_id,
+                reference: p.provider_transaction_id,
+            });
+
+            results.push({
+                id: p.id,
+                transaction_id: p.transaction_id,
+                provider_transaction_id: p.provider_transaction_id,
+                result,
+            });
+        } catch (err: any) {
+            results.push({
+                id: p.id,
+                error: err?.message || String(err),
+            });
+        }
+    }
+
+    return { success: true, processed: results.length, results };
+}
 }

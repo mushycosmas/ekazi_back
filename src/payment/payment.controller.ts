@@ -1,4 +1,4 @@
- import {
+import {
     Body,
     Controller,
     Get,
@@ -167,7 +167,12 @@ export class PaymentController {
         );
     }
 
-
+    @Post('admin/recover-pending-selcom')
+    @UseGuards(SanctumGuard, RolesGuard)
+    // @Roles(Role.ADMIN)
+    async recoverPendingSelcom() {
+        return this.paymentService.recoverPendingSelcomPayments();
+    }
     // ============================================================
     // TRIGGER SELCOM WALLET PUSH (USSD)
     // ------------------------------------------------------------
