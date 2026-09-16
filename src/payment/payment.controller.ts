@@ -1,4 +1,4 @@
-import {
+ import {
     Body,
     Controller,
     Get,
@@ -42,12 +42,12 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Role } from 'src/auth/role.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsString, IsNotEmpty } from 'class-validator';
 import { SelcomOrderDto, SelcomStatusDto, SelcomWalletPaymentDto } from './dto/selcom-order.dto';
 import { GuestInitiatePaymentDto } from './dto/guest-initiate-payment.dto';
 
 // ============================================================
-// DTOs for new endpoints (Fixed decorator usage)
+// DTOs for new endpoints
 // ============================================================
 
 export class ListPaymentsQueryDto {
@@ -82,6 +82,21 @@ export class SearchPaymentsQueryDto {
     reference: string;
 }
 
+// ============================================================
+// NEW: DTO for wallet push
+// ============================================================
+
+export class WalletPushDto {
+    @IsString()
+    @IsNotEmpty()
+    reference: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+}
+
+
 @Controller('payment')
 export class PaymentController {
 
@@ -92,6 +107,8 @@ export class PaymentController {
 
     // ============================================================
     // INITIATE PAYMENT (Protected)
+    // For already-verified users.
+    // Auto-triggers wallet push (unchanged behaviour).
     // ============================================================
 
     @Post('initiate')
@@ -110,9 +127,26 @@ export class PaymentController {
 
         return this.paymentService.initiatePayment(dto, user);
     }
+
+
     // ============================================================
-    // GUEST PAYMENT
+    // REGISTRATION PAYMENT (Protected, but unverified users)
+    // ------------------------------------------------------------
+    // Creates the SELCOM order ONLY. Does NOT push USSD.
+    //
+    // Response includes:
+    //   - reference
+    //   - payment_gateway_url   (card / bank redirect)
+    //   - payment_token         (gateway token)
+    //   - qr                    (QR code data)
+    //   - requires_wallet_push  (true)
+    //
+    // Frontend then either:
+    //   - redirects to payment_gateway_url  OR
+    //   - calls POST /payment/wallet-push { reference }
+    //     (this is what triggers the USSD PIN prompt)
     // ============================================================
+
     @Post('initiate-registration')
     @UseGuards(SanctumGuard)
     @HttpCode(200)
@@ -120,11 +154,54 @@ export class PaymentController {
         @Body() dto: InitiatePaymentDto,
         @CurrentUser() user: Users,
     ) {
+        if (!user) {
+            return {
+                success: false,
+                message: 'Authenticated user not found',
+            };
+        }
+
         return this.paymentService.initiateRegistrationPayment(
             dto,
             user,
         );
     }
+
+
+    // ============================================================
+    // TRIGGER SELCOM WALLET PUSH (USSD)
+    // ------------------------------------------------------------
+    // This is the endpoint the frontend calls when the user
+    // chooses "Pay with mobile money" during registration.
+    //
+    // Only at this point does the USSD PIN prompt appear on the
+    // customer's phone.
+    // ============================================================
+
+    @Post('wallet-push')
+    @UseGuards(SanctumGuard)
+    @HttpCode(200)
+    async walletPush(
+        @Body() dto: WalletPushDto,
+        @CurrentUser() user: Users,
+    ) {
+        if (!user) {
+            return {
+                success: false,
+                message: 'Authenticated user not found',
+            };
+        }
+
+        return this.paymentService.triggerSelcomWalletPush(
+            dto.reference,
+            dto.phone,
+        );
+    }
+
+
+    // ============================================================
+    // LIST SELCOM ORDERS
+    // ============================================================
 
     @Get('list-orders')
     @UseGuards(SanctumGuard)
@@ -132,12 +209,13 @@ export class PaymentController {
         @Query('fromdate') fromdate: string,
         @Query('todate') todate: string,
     ) {
-
         return this.paymentService.selcomListOrders(
             fromdate,
             todate,
         );
     }
+
+
     // ============================================================
     // CURRENT SUBSCRIPTION (Protected)
     // ============================================================
@@ -158,6 +236,7 @@ export class PaymentController {
         return this.paymentService.currentSubscription(user);
     }
 
+
     // ============================================================
     // SUBSCRIPTION PAYMENTS (Protected)
     // ============================================================
@@ -173,6 +252,7 @@ export class PaymentController {
             query,
         );
     }
+
 
     // ============================================================
     // SELCOM CREATE ORDER MINIMAL
@@ -247,6 +327,7 @@ export class PaymentController {
         );
     }
 
+
     // ============================================================
     // SELCOM CALLBACK (Public)
     // ============================================================
@@ -259,6 +340,7 @@ export class PaymentController {
     ) {
         return this.paymentService.handleSelcomCallback(payload);
     }
+
 
     // ============================================================
     // SNIPPE WEBHOOK (Public - NO AUTH)
@@ -273,9 +355,6 @@ export class PaymentController {
         @Headers('x-webhook-signature') signature: string,
     ) {
         try {
-            // ========================================================
-            // RAW BODY
-            // ========================================================
             const rawBody = req.rawBody;
 
             if (!rawBody) {
@@ -285,9 +364,6 @@ export class PaymentController {
                 };
             }
 
-            // ========================================================
-            // WEBHOOK SECRET
-            // ========================================================
             const secret = this.configService.get<string>('SNIPPE_WEBHOOK_SECRET');
 
             if (!secret) {
@@ -298,9 +374,6 @@ export class PaymentController {
                 };
             }
 
-            // ========================================================
-            // SIGNATURE HEADERS
-            // ========================================================
             if (!timestamp || !signature) {
                 return {
                     success: false,
@@ -308,9 +381,6 @@ export class PaymentController {
                 };
             }
 
-            // ========================================================
-            // TIMESTAMP VALIDATION
-            // ========================================================
             const eventTime = Number(timestamp);
 
             if (!Number.isFinite(eventTime)) {
@@ -329,21 +399,12 @@ export class PaymentController {
                 };
             }
 
-            // ========================================================
-            // CREATE HMAC MESSAGE
-            // ========================================================
             const message = `${timestamp}.${rawBody.toString('utf8')}`;
 
-            // ========================================================
-            // EXPECTED SIGNATURE
-            // ========================================================
             const expectedSignature = createHmac('sha256', secret)
                 .update(message)
                 .digest('hex');
 
-            // ========================================================
-            // SAFE COMPARISON
-            // ========================================================
             const signatureBuffer = Buffer.from(signature, 'utf8');
             const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
 
@@ -357,9 +418,6 @@ export class PaymentController {
                 };
             }
 
-            // ========================================================
-            // PARSE WEBHOOK JSON
-            // ========================================================
             let event: any;
 
             try {
@@ -371,14 +429,10 @@ export class PaymentController {
                 };
             }
 
-            // ========================================================
-            // PROCESS SNIPPE WEBHOOK
-            // ========================================================
             return this.paymentService.handleSnippeWebhook(event);
 
         } catch (error) {
             console.error('Webhook processing error:', error);
-            // Always return 200 for webhooks
             return {
                 success: false,
                 message: error.message || 'Webhook processing failed',
@@ -386,9 +440,11 @@ export class PaymentController {
         }
     }
 
+
     // ============================================================
     // TEST WEBHOOK ENDPOINT (Public)
     // ============================================================
+
     @Get('webhook/snippe/test')
     @Public()
     async testWebhook() {
@@ -402,9 +458,11 @@ export class PaymentController {
         };
     }
 
+
     // ============================================================
     // CONFIG TEST (Public)
     // ============================================================
+
     @Get('config-test')
     @Public()
     async configTest() {
