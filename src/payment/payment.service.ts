@@ -1050,10 +1050,7 @@ export class PaymentService {
             const provider =
                 this.paymentProviderFactory.getSelcomProvider();
 
-            const verificationReference =
-                selcomReference ||
-                payment.provider_transaction_id ||
-                payment.transaction_id;
+            const verificationReference = payment.transaction_id;
 
             this.logger.log(
                 `SELCOM verification reference: ${verificationReference}`,
@@ -1791,39 +1788,56 @@ export class PaymentService {
             );
         }
     }
+    
     async recoverPendingSelcomPayments() {
-    const pending = await this.subscriptionPaymentRepository.find({
-        where: {
-            provider: 'selcom',
-            status: PaymentStatus.PENDING,
-        },
-    });
+        const rows = await this.subscriptionPaymentRepository.find({
+            where: [
+                { provider: 'selcom', status: PaymentStatus.PENDING },
+                { provider: 'selcom', status: PaymentStatus.FAILED },
+            ],
+            order: { created_at: 'ASC' },
+        });
 
-    const results: any[] = [];
+        const results: any[] = [];
 
-    for (const p of pending) {
-        if (!p.provider_transaction_id) continue;
+        for (const p of rows) {
+            // No point retrying rows that don't even have a
+            // transaction_id — we can't verify them anyway.
+            if (!p.transaction_id) {
+                results.push({
+                    id: p.id,
+                    skipped: true,
+                    reason: 'no transaction_id',
+                });
+                continue;
+            }
 
-        try {
-            const result = await this.handleSelcomCallback({
-                order_id: p.transaction_id,
-                reference: p.provider_transaction_id,
-            });
+            try {
+              
+                const result = await this.handleSelcomCallback({
+                    order_id: p.transaction_id,
+                });
 
-            results.push({
-                id: p.id,
-                transaction_id: p.transaction_id,
-                provider_transaction_id: p.provider_transaction_id,
-                result,
-            });
-        } catch (err: any) {
-            results.push({
-                id: p.id,
-                error: err?.message || String(err),
-            });
+                results.push({
+                    id: p.id,
+                    transaction_id: p.transaction_id,
+                    provider_transaction_id:
+                        p.provider_transaction_id,
+                    result,
+                });
+            } catch (err: any) {
+                results.push({
+                    id: p.id,
+                    transaction_id: p.transaction_id,
+                    error: err?.message || String(err),
+                });
+            }
         }
-    }
 
-    return { success: true, processed: results.length, results };
-}
+        return {
+            success: true,
+            processed: results.length,
+            results,
+        };
+    }
 }
