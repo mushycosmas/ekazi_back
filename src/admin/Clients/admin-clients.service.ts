@@ -277,8 +277,7 @@ export class AdminClientsService {
     }
 
 
-
-  async totalEmpoyers(
+ async totalEmpoyers(
     page: number = 1,
     limit: number = 20,
     search?: string,
@@ -292,34 +291,20 @@ export class AdminClientsService {
 
         const query = this.clientRepository
             .createQueryBuilder('client')
-            .leftJoinAndSelect(
-                'client.addresses',
-                'addresses',
-            )
-            .leftJoinAndSelect(
-                'client.type',
-                'type',
-            )
-            .leftJoin(
-                'client.emails',
-                'emails',
-            )
-            .leftJoin(
-                'client.phones',
-                'phones',
-            );
+            .leftJoinAndSelect('client.addresses', 'addresses')
+            .leftJoinAndSelect('client.type', 'type')
+            .leftJoin('client.emails', 'emails')
+            .leftJoin('client.phones', 'phones');
 
         // ========================================================
         // EMPLOYER FILTER
         // ========================================================
-        //
-        // Match either "employer" (lowercase) or "Employer"
-        // in case the DB stores it capitalised.
-        // Adjust the column if your entity uses a different name
-        // (e.g. `type.client_type` or `type.name`).
+        // LOWER() so "Employer", "EMPLOYER", "employer" all match.
+        // Clients with client_type = NULL are excluded, which is
+        // correct — those are legacy rows without a classification.
         // ========================================================
         query.andWhere(
-            'LOWER(type.client_type) = :employerType',
+            'LOWER(client.client_type) = :employerType',
             { employerType: 'employer' },
         );
 
@@ -329,8 +314,7 @@ export class AdminClientsService {
                 'client.featured = :featured',
                 {
                     featured:
-                        featured === 'true' ||
-                        featured === '1'
+                        featured === 'true' || featured === '1'
                             ? true
                             : false,
                 },
@@ -349,9 +333,7 @@ export class AdminClientsService {
                     OR emails.client_email LIKE :keyword
                     OR phones.phone_number LIKE :keyword
                 )`,
-                {
-                    keyword,
-                },
+                { keyword },
             );
         }
 
@@ -360,34 +342,28 @@ export class AdminClientsService {
             .skip(skip)
             .take(limit);
 
-        const [clients, total] =
-            await query.getManyAndCount();
+        const [clients, total] = await query.getManyAndCount();
 
         // ========================================================
         // STATISTICS — employer-only
         // ========================================================
-
         const baseCount = () =>
             this.clientRepository
                 .createQueryBuilder('client')
-                .innerJoin('client.type', 'type')
                 .where(
-                    'LOWER(type.client_type) = :employerType',
+                    'LOWER(client.client_type) = :employerType',
                     { employerType: 'employer' },
                 );
 
-        const totalClients =
-            await baseCount().getCount();
+        const totalClients = await baseCount().getCount();
 
-        const verifiedClients =
-            await baseCount()
-                .andWhere('client.is_verified = :v', { v: 1 })
-                .getCount();
+        const verifiedClients = await baseCount()
+            .andWhere('client.is_verified = :v', { v: 1 })
+            .getCount();
 
-        const unverifiedClients =
-            await baseCount()
-                .andWhere('client.is_verified = :v', { v: 0 })
-                .getCount();
+        const unverifiedClients = await baseCount()
+            .andWhere('client.is_verified = :v', { v: 0 })
+            .getCount();
 
         // ========================================================
         // PER-CLIENT JOB COUNT + RESPONSE
@@ -408,6 +384,8 @@ export class AdminClientsService {
                     featured: client.featured,
 
                     is_verified: client.is_verified,
+
+                    client_type: client.client_type,
 
                     name: client.client_name,
 
@@ -446,8 +424,7 @@ export class AdminClientsService {
             }),
         );
 
-        const totalPages =
-            Math.ceil(total / limit);
+        const totalPages = Math.ceil(total / limit);
 
         return {
             success: true,
@@ -477,8 +454,7 @@ export class AdminClientsService {
 
         throw new InternalServerErrorException({
             success: false,
-            message:
-                'Failed to fetch company profiles',
+            message: 'Failed to fetch company profiles',
             error: error.message,
         });
     }
