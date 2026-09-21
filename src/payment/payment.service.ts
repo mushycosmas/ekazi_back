@@ -29,6 +29,8 @@ import { Clients } from 'src/client/clients.entity';
 import { Subscription } from './entities/subscription.entity';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { SubscriptionPaymentsQueryDto } from './dto/subscription-payments-query.dto';
+import { NotificationsService } from 'src/notifications/notifications.service';
+
 
 import {
     SubscriptionPayment,
@@ -84,6 +86,7 @@ export class PaymentService {
 
         private readonly authService:
             AuthService,
+        private readonly notifications: NotificationsService,
 
     ) { }
 
@@ -1472,6 +1475,28 @@ export class PaymentService {
             );
 
             await queryRunner.commitTransaction();
+            // ========================================================
+            // PUSH: subscription activated
+            // ========================================================
+            this.notifications.emitToUser(
+                payment.user_id!,
+                'subscription.activated',
+                {
+                    status: 'success',
+                    payment_id: payment.id,
+                    transaction_id: payment.transaction_id,
+                    provider: payment.provider,
+                    subscription_id: subscription.id,
+                    plan_id: subscription.subscription_plan_id,
+                    amount: Number(payment.amount),
+                    start_date: subscription.start_date,
+                    end_date: subscription.end_date,
+                    job_post_remaining: subscription.job_post_remaining,
+                    cv_download_remaining: subscription.cv_download_remaining,
+                    cv_builder_remaining: subscription.cv_builder_remaining,
+                    paid_at: payment.paid_at,
+                },
+            );
 
             return subscription;
 
@@ -1788,7 +1813,7 @@ export class PaymentService {
             );
         }
     }
-    
+
     async recoverPendingSelcomPayments() {
         const rows = await this.subscriptionPaymentRepository.find({
             where: [
@@ -1813,7 +1838,7 @@ export class PaymentService {
             }
 
             try {
-              
+
                 const result = await this.handleSelcomCallback({
                     order_id: p.transaction_id,
                 });

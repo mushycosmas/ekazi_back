@@ -52,6 +52,7 @@ import {
 import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { Clients } from 'src/client/clients.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 
 @Module({
@@ -76,6 +77,7 @@ import { AuthModule } from 'src/auth/auth.module';
 
         HttpModule,
         AuthModule,
+        NotificationsModule,
         
 
     ],

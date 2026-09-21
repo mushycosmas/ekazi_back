@@ -1571,7 +1571,7 @@
  
 //              return {
 //                  success: false,
-//                  message:
+//                  message: 
 //                      verification.message ||
 //                      'Payment failed',
 //              };

@@ -67,6 +67,7 @@ import { AdminSubscriptionModule } from './admin/subscription/admin-subscription
 import { AdminClientsModule } from './admin/Clients/admin-clients.module';
 import { AdminJobsModule } from './admin/job/admin-jobs.module';
 import { AdminApplicantsModule } from './admin/Applicants/admin-applicants.module';
+import { NotificationsModule } from './notifications/notifications.module';
  
 
  
@@ -91,7 +92,7 @@ import { AdminApplicantsModule } from './admin/Applicants/admin-applicants.modul
     SubscriptionPlansModule, TermConditionTypesModule,TermConditionModule,AdminSubscriptionModule,AdminClientsModule,
     
     //admin  moudel here
-    AdminModule,AdminJobsModule,AdminApplicantsModule,
+    AdminModule,AdminJobsModule,AdminApplicantsModule,NotificationsModule,
 
     // ... other modules
   ],

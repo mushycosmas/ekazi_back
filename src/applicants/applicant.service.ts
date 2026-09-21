@@ -817,7 +817,7 @@ END
     const data = await Promise.all(
       applicants.map(async (applicant) => {
         const applicant_position =
-          await this.getApplicantPosition(applicant.id);
+          await this.getJobSeekerApplicantPosition(applicant.id);
 
         const profile_completion =
           this.calculateProfileCompletion(applicant);
@@ -1061,7 +1061,7 @@ END
     };
   }
 
-  private async getApplicantPosition(
+  private async getJobSeekerApplicantPosition(
     applicantId: number,
   ): Promise<string | null> {
 
@@ -1091,6 +1091,23 @@ END
 
       .getRawOne();
 
+
+    return result?.position_name ?? null;
+  }
+  private async getApplicantPosition(
+    applicantId: number,
+  ): Promise<string | null> {
+
+    const result = await this.applicationRepository
+      .createQueryBuilder('aa')
+      .innerJoin('aa.job', 'job')
+      .leftJoin('job.position', 'position')
+      .select('position.position_name', 'position_name')
+      .where('aa.applicant_id = :applicantId', { applicantId })
+      .orderBy('aa.created_at', 'DESC')
+      .addOrderBy('aa.id', 'DESC')
+      .limit(1)
+      .getRawOne();
 
     return result?.position_name ?? null;
   }
