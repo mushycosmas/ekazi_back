@@ -278,250 +278,211 @@ export class AdminClientsService {
 
 
 
-    async totalEmpoyers(
-        page: number = 1,
-        limit: number = 20,
-        search?: string,
-        featured?: string,
-    ) {
-        try {
-            page = Math.max(1, Number(page) || 1);
-            limit = Math.min(100, Math.max(1, Number(limit) || 20));
+  async totalEmpoyers(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+    featured?: string,
+) {
+    try {
+        page = Math.max(1, Number(page) || 1);
+        limit = Math.min(100, Math.max(1, Number(limit) || 20));
 
-            const skip = (page - 1) * limit;
+        const skip = (page - 1) * limit;
 
-            // const query = this.clientRepository
-            //     .createQueryBuilder('client')
+        const query = this.clientRepository
+            .createQueryBuilder('client')
+            .leftJoinAndSelect(
+                'client.addresses',
+                'addresses',
+            )
+            .leftJoinAndSelect(
+                'client.type',
+                'type',
+            )
+            .leftJoin(
+                'client.emails',
+                'emails',
+            )
+            .leftJoin(
+                'client.phones',
+                'phones',
+            );
 
-            //     .leftJoinAndSelect(
-            //         'client.addresses',
-            //         'addresses',
-            //     )
+        // ========================================================
+        // EMPLOYER FILTER
+        // ========================================================
+        //
+        // Match either "employer" (lowercase) or "Employer"
+        // in case the DB stores it capitalised.
+        // Adjust the column if your entity uses a different name
+        // (e.g. `type.client_type` or `type.name`).
+        // ========================================================
+        query.andWhere(
+            'LOWER(type.client_type) = :employerType',
+            { employerType: 'employer' },
+        );
 
-            //     .leftJoinAndSelect(
-            //         'client.type',
-            //         'type',
-            //     )
+        // Featured filter
+        if (featured !== undefined) {
+            query.andWhere(
+                'client.featured = :featured',
+                {
+                    featured:
+                        featured === 'true' ||
+                        featured === '1'
+                            ? true
+                            : false,
+                },
+            );
+        }
 
-            //     // Search email
-            //     .leftJoin(
-            //         'client.emails',
-            //         'emails',
-            //     )
+        // Search
+        if (search?.trim()) {
+            const keyword = `%${search.trim()}%`;
 
-            //     // Search phone
-            //     .leftJoin(
-            //         'client.phones',
-            //         'phones',
-            //     );
-            const query = this.clientRepository
-                .createQueryBuilder('client')
-                .leftJoinAndSelect(
-                    'client.addresses',
-                    'addresses',
-                )
-                .leftJoinAndSelect(
-                    'client.type',
-                    'type',
-                )
-                .leftJoin(
-                    'client.emails',
-                    'emails',
-                )
-                .leftJoin(
-                    'client.phones',
-                    'phones',
-                );
-
-            // Featured filter
-            if (featured !== undefined) {
-                query.andWhere(
-                    'client.featured = :featured',
-                    {
-                        featured:
-                            featured === 'true' ||
-                                featured === '1'
-                                ? true
-                                : false,
-                    },
-                );
-            }
-
-            // Search
-            if (search?.trim()) {
-                const keyword = `%${search.trim()}%`;
-
-                query.andWhere(
-                    `(
+            query.andWhere(
+                `(
                     client.client_name LIKE :keyword
                     OR client.tin LIKE :keyword
                     OR client.business LIKE :keyword
                     OR emails.client_email LIKE :keyword
                     OR phones.phone_number LIKE :keyword
                 )`,
-                    {
-                        keyword,
-                    },
-                );
-            }
-
-            query
-                .orderBy('client.id', 'DESC')
-                .skip(skip)
-                .take(limit);
-
-            const [clients, total] =
-                await query.getManyAndCount();
-
-
-            /*
-|--------------------------------------------------------------------------
-| Statistics
-|--------------------------------------------------------------------------
-|
-| These are calculated from ALL clients,
-| not only the current page.
-|
-*/
-
-            const totalClients =
-                await this.clientRepository.count();
-
-            const verifiedClients =
-                await this.clientRepository.count({
-                    where: {
-                        is_verified: 1,
-                    },
-                });
-
-            const unverifiedClients =
-                await this.clientRepository.count({
-                    where: {
-                        is_verified: 0,
-                    },
-                });
-
-            // const activeClients =
-            //     await this.clientRepository.count({
-            //         where: {
-            //             active: 1,
-            //         },
-            //     });
-
-            // const inactiveClients =
-            //     await this.clientRepository.count({
-            //         where: {
-            //             active: 0,
-            //         },
-            //     });
-
-            /**
-             * Get total jobs for each client
-             */
-            const data = await Promise.all(
-                clients.map(async (client) => {
-
-                    const totalJobs =
-                        await this.jobsRepository.count({
-                            where: {
-                                client_id: client.id,
-                            },
-                        });
-
-                    return {
-                        id: client.id,
-
-                        featured: client.featured,
-
-                        is_verified: client.is_verified,
-
-                        name: client.client_name,
-
-                        tin: client.tin,
-
-                        business: client.business,
-
-                        description:
-                            client.descriptions?.[0]
-                                ? {
-                                    id:
-                                        client.descriptions[0].id,
-
-                                    text:
-                                        client.descriptions[0]
-                                            .description,
-
-                                    website:
-                                        client.descriptions[0]
-                                            .website,
-
-                                    attachment:
-                                        client.descriptions[0]
-                                            .attachment,
-                                }
-                                : null,
-
-                        founded_year:
-                            client.founded_year,
-
-                        logo:
-                            client.logo ?? null,
-
-                        // Total jobs
-                        total_jobs: totalJobs,
-                    };
-                }),
-            );
-
-            const totalPages =
-                Math.ceil(total / limit);
-
-            return {
-                success: true,
-
-                message:
-                    'Successfully retrieved company profiles',
-
-                data,
-
-                statistics: {
-                    total_clients: totalClients,
-
-                    verified_clients: verifiedClients,
-
-                    unverified_clients: unverifiedClients,
-
-                    // active_clients: activeClients,
-
-                    // inactive_clients: inactiveClients,
+                {
+                    keyword,
                 },
-
-                total,
-
-                page,
-
-                limit,
-
-                totalPages,
-
-            };
-
-        } catch (error) {
-
-            if (error instanceof HttpException) {
-                throw error;
-            }
-
-            throw new InternalServerErrorException({
-                success: false,
-
-                message:
-                    'Failed to fetch company profiles',
-
-                error: error.message,
-            });
+            );
         }
+
+        query
+            .orderBy('client.id', 'DESC')
+            .skip(skip)
+            .take(limit);
+
+        const [clients, total] =
+            await query.getManyAndCount();
+
+        // ========================================================
+        // STATISTICS — employer-only
+        // ========================================================
+
+        const baseCount = () =>
+            this.clientRepository
+                .createQueryBuilder('client')
+                .innerJoin('client.type', 'type')
+                .where(
+                    'LOWER(type.client_type) = :employerType',
+                    { employerType: 'employer' },
+                );
+
+        const totalClients =
+            await baseCount().getCount();
+
+        const verifiedClients =
+            await baseCount()
+                .andWhere('client.is_verified = :v', { v: 1 })
+                .getCount();
+
+        const unverifiedClients =
+            await baseCount()
+                .andWhere('client.is_verified = :v', { v: 0 })
+                .getCount();
+
+        // ========================================================
+        // PER-CLIENT JOB COUNT + RESPONSE
+        // ========================================================
+        const data = await Promise.all(
+            clients.map(async (client) => {
+
+                const totalJobs =
+                    await this.jobsRepository.count({
+                        where: {
+                            client_id: client.id,
+                        },
+                    });
+
+                return {
+                    id: client.id,
+
+                    featured: client.featured,
+
+                    is_verified: client.is_verified,
+
+                    name: client.client_name,
+
+                    tin: client.tin,
+
+                    business: client.business,
+
+                    description:
+                        client.descriptions?.[0]
+                            ? {
+                                id:
+                                    client.descriptions[0].id,
+
+                                text:
+                                    client.descriptions[0]
+                                        .description,
+
+                                website:
+                                    client.descriptions[0]
+                                        .website,
+
+                                attachment:
+                                    client.descriptions[0]
+                                        .attachment,
+                            }
+                            : null,
+
+                    founded_year:
+                        client.founded_year,
+
+                    logo:
+                        client.logo ?? null,
+
+                    total_jobs: totalJobs,
+                };
+            }),
+        );
+
+        const totalPages =
+            Math.ceil(total / limit);
+
+        return {
+            success: true,
+
+            message:
+                'Successfully retrieved company profiles',
+
+            data,
+
+            statistics: {
+                total_clients: totalClients,
+                verified_clients: verifiedClients,
+                unverified_clients: unverifiedClients,
+            },
+
+            total,
+            page,
+            limit,
+            totalPages,
+        };
+
+    } catch (error) {
+
+        if (error instanceof HttpException) {
+            throw error;
+        }
+
+        throw new InternalServerErrorException({
+            success: false,
+            message:
+                'Failed to fetch company profiles',
+            error: error.message,
+        });
     }
+}
  async CompanyProfilesDetail(clientId: number) {
     try {
         clientId = Number(clientId);
