@@ -871,7 +871,7 @@ export class AdminApplicantsService {
         };
     }
 
-    private async getApplicantPosition(
+    private async getJobSeekerApplicantPosition(
         applicantId: number,
     ): Promise<string | null> {
 
@@ -901,6 +901,23 @@ export class AdminApplicantsService {
 
             .getRawOne();
 
+
+        return result?.position_name ?? null;
+    }
+    private async getApplicantPosition(
+        applicantId: number,
+    ): Promise<string | null> {
+
+        const result = await this.applicationRepository
+            .createQueryBuilder('aa')
+            .innerJoin('aa.job', 'job')
+            .leftJoin('job.position', 'position')
+            .select('position.position_name', 'position_name')
+            .where('aa.applicant_id = :applicantId', { applicantId })
+            .orderBy('aa.created_at', 'DESC')
+            .addOrderBy('aa.id', 'DESC')
+            .limit(1)
+            .getRawOne();
 
         return result?.position_name ?? null;
     }
