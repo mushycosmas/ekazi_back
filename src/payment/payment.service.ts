@@ -30,6 +30,7 @@ import { Subscription } from './entities/subscription.entity';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { SubscriptionPaymentsQueryDto } from './dto/subscription-payments-query.dto';
 import { NotificationsService } from 'src/notifications/notifications.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 
 import {
@@ -1059,10 +1060,79 @@ export class PaymentService {
                 `SELCOM verification reference: ${verificationReference}`,
             );
 
-            const verification = await provider.verify({
+            let verification = await provider.verify({
                 reference: verificationReference,
             });
 
+            this.logger.log(
+                `SELCOM VERIFICATION RESULT (order): ${JSON.stringify(verification)}`,
+            );
+
+            // ====================================================
+            // FALLBACK: if order-status is inconclusive,
+            // ask SELCOM about the numeric wallet reference.
+            // ====================================================
+            // SELCOM's order-status often returns PENDING / 000 / empty
+            // for wallet-push payments even after they've settled.
+            // The numeric provider_transaction_id (e.g. 1898611909)
+            // usually resolves correctly.
+            // ====================================================
+
+            const isObjCompleted = (v: any) => {
+                const r = v?.raw || {};
+                const d = Array.isArray(r?.data) ? r.data[0] : r?.data;
+                const status = String(
+                    v?.data?.payment_status ||
+                    v?.data?.status ||
+                    d?.payment_status ||
+                    d?.status ||
+                    r?.payment_status ||
+                    r?.status ||
+                    '',
+                ).toUpperCase().trim();
+                return (
+                    [
+                        'COMPLETED',
+                        'COMPLETE',
+                        'SUCCESS',
+                        'SUCCESSFUL',
+                        'PAID',
+                    ].includes(status) ||
+                    v?.success === true
+                );
+            };
+
+            if (
+                !isObjCompleted(verification) &&
+                payment.provider_transaction_id &&
+                payment.provider_transaction_id !== payment.transaction_id
+            ) {
+                this.logger.log(
+                    `SELCOM order-status inconclusive, retrying with wallet ref: ${payment.provider_transaction_id}`,
+                );
+
+                try {
+                    const walletVerification = await provider.verify({
+                        reference: payment.provider_transaction_id,
+                    });
+
+                    this.logger.log(
+                        `SELCOM VERIFICATION RESULT (wallet): ${JSON.stringify(walletVerification)}`,
+                    );
+
+                    if (isObjCompleted(walletVerification)) {
+                        verification = walletVerification;
+
+                        this.logger.log(
+                            `SELCOM wallet verification confirmed COMPLETED for payment ${payment.id}`,
+                        );
+                    }
+                } catch (err: any) {
+                    this.logger.warn(
+                        `SELCOM wallet verification failed: ${err?.message || err}`,
+                    );
+                }
+            }
             this.logger.log(
                 `SELCOM VERIFICATION RESULT: ${JSON.stringify(
                     verification,
@@ -1130,12 +1200,19 @@ export class PaymentService {
                 (pendingStatuses.includes(rawPaymentStatus) ||
                     rawResult === 'PENDING' ||
                     rawResultCode === '111');
+                    
+            const isLikelySucceeded =
+                !isCompleted &&
+                !isPending &&
+                rawResultCode === '000' &&
+                !!payment.provider_transaction_id &&
+                /^\d+$/.test(payment.provider_transaction_id);
 
             // ====================================================
             // SUCCESS
             // ====================================================
 
-            if (isCompleted) {
+            if (isCompleted || isLikelySucceeded) {
 
                 const providerTransactionId =
                     verification?.transactionId ||
@@ -1841,6 +1918,7 @@ export class PaymentService {
 
                 const result = await this.handleSelcomCallback({
                     order_id: p.transaction_id,
+                    reference: p.provider_transaction_id ?? undefined,
                 });
 
                 results.push({
@@ -1864,5 +1942,48 @@ export class PaymentService {
             processed: results.length,
             results,
         };
+    }
+    // ============================================================
+    // RETRY PENDING SELCOM PAYMENTS
+    // ============================================================
+    // Runs every minute. Re-runs handleSelcomCallback for SELCOM
+    // payments that are still pending and younger than 30 minutes.
+    // SELCOM's order-status sometimes lags by a minute or two;
+    // this catches those without needing a manual replay.
+    // ============================================================
+
+    @Cron(CronExpression.EVERY_MINUTE)
+    async retryPendingSelcomPayments() {
+        const cutoff = new Date(
+            Date.now() - 30 * 60 * 1000,
+        );
+
+        const pending =
+            await this.subscriptionPaymentRepository.find({
+                where: {
+                    provider: 'selcom',
+                    status: PaymentStatus.PENDING,
+                },
+                order: { created_at: 'ASC' },
+                take: 50,
+            });
+
+        for (const p of pending) {
+
+            if (new Date(p.created_at) < cutoff) continue;
+
+            if (!p.provider_transaction_id) continue;
+
+            try {
+                await this.handleSelcomCallback({
+                    order_id: p.transaction_id,
+                    reference: p.provider_transaction_id,
+                });
+            } catch (err: any) {
+                this.logger.warn(
+                    `Retry failed for ${p.transaction_id}: ${err?.message || err}`,
+                );
+            }
+        }
     }
 }

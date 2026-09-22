@@ -68,9 +68,10 @@ import { AdminClientsModule } from './admin/Clients/admin-clients.module';
 import { AdminJobsModule } from './admin/job/admin-jobs.module';
 import { AdminApplicantsModule } from './admin/Applicants/admin-applicants.module';
 import { NotificationsModule } from './notifications/notifications.module';
- 
+import { ScheduleModule } from '@nestjs/schedule';
 
- 
+
+
 // ... other imports
 
 @Module({
@@ -78,21 +79,21 @@ import { NotificationsModule } from './notifications/notifications.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
- 
+    ScheduleModule.forRoot(),   // ← must be her
     DatabaseModule, // Use your database module instead of direct TypeOrmModule
 
-    CvbuilderModule, AuthModule,EmployerModule, CompanySizesModule,MetaKeywordsModule,JobSettingsModule,
-    RegionsModule, CountriesModule,CompanyTypeModule,StagesModule,PositionLevelsModule,TasksModule,ApplicantStagesModule,
+    CvbuilderModule, AuthModule, EmployerModule, CompanySizesModule, MetaKeywordsModule, JobSettingsModule,
+    RegionsModule, CountriesModule, CompanyTypeModule, StagesModule, PositionLevelsModule, TasksModule, ApplicantStagesModule,
     LanguagesModule, SoftwaresModule, ToolsModule, CulturesModule, SalaryRangesModule, EducationLevelsModule,
     CollegesModule, CoursesModule, GendersModule, IndustriesModule, KnowledgeModule, MajorsModule, OrganizationsModule,
     PersonalitiesModule, PositionsModule, ProficienciesModule, MalitalStatusesModule, LanguageReadsModule,
-    LanguageSpeaksModule, JobsModule, JobMetasModule,JobEducationModule,JobLanguagesModule, JobReportTosModule,
-    JobRequirementsModule,JobOtherRequirementsModule,JobUniversalTypesModule, LanguageWritesModule,LanguageUnderstandsModule, ClientStaffModule,
-    InterviewTypeModule ,ApplicantModule,JobMatchModule,UsersModule,ClientStaffModule,ClientStaffPositionsModule,PermissionModule,PaymentModule,SubscriptionPlanFeaturesModule,
-    SubscriptionPlansModule, TermConditionTypesModule,TermConditionModule,AdminSubscriptionModule,AdminClientsModule,
-    
+    LanguageSpeaksModule, JobsModule, JobMetasModule, JobEducationModule, JobLanguagesModule, JobReportTosModule,
+    JobRequirementsModule, JobOtherRequirementsModule, JobUniversalTypesModule, LanguageWritesModule, LanguageUnderstandsModule, ClientStaffModule,
+    InterviewTypeModule, ApplicantModule, JobMatchModule, UsersModule, ClientStaffModule, ClientStaffPositionsModule, PermissionModule, PaymentModule, SubscriptionPlanFeaturesModule,
+    SubscriptionPlansModule, TermConditionTypesModule, TermConditionModule, AdminSubscriptionModule, AdminClientsModule,
+
     //admin  moudel here
-    AdminModule,AdminJobsModule,AdminApplicantsModule,NotificationsModule,
+    AdminModule, AdminJobsModule, AdminApplicantsModule, NotificationsModule,
 
     // ... other modules
   ],
