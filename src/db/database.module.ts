@@ -142,6 +142,14 @@ import { SubscriptionFeature } from 'src/payment/entities/subscription-feature.e
 import { PlanFeature } from 'src/payment/entities/plan-feature.entity';
 import { TermConditionType } from 'src/entities/term-condition-type.entity';
 import { TermCondition } from 'src/entities/term-condition.entity';
+import { Evaluation } from 'src/entities/evaluation.entity';
+import { EvaluationCriteria } from 'src/entities/evaluation-criteria.entity';
+import { EvaluationRemark } from 'src/entities/evaluation-remark.entity';
+import { EvaluationForm } from 'src/entities/evaluation-form.entity';
+import { EvaluationResult } from 'src/entities/evaluation-result.entity';
+import { EvaluationSummary } from 'src/entities/evaluation-summary.entity';
+import { Remark } from 'src/entities/remark.entity';
+import { Benefit } from 'src/entities/benefit.entity';
  
  
 
@@ -286,6 +294,14 @@ const allEntities = [
   PlanFeature,
   TermConditionType,
   TermCondition,
+  Evaluation,
+  EvaluationCriteria,
+  EvaluationRemark,
+  EvaluationForm,
+  EvaluationResult,
+  EvaluationSummary,
+  Remark,
+  Benefit,
   // TaskAttachment,
   // TaskMessageAttachment,
   // TaskMessage,

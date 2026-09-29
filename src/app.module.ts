@@ -69,6 +69,12 @@ import { AdminJobsModule } from './admin/job/admin-jobs.module';
 import { AdminApplicantsModule } from './admin/Applicants/admin-applicants.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EvaluationModule } from './evaluation/evaluation.module';
+import { EvaluationSummaryModule } from './evaluation/evaluation-summary.module';
+import { RemarkModule } from './evaluation/remark.module';
+import { BenefitModule } from './benefit/benefit.module';
+import { InterviewActionModule } from './universals/interviewaction/interview-action.module';
+ 
 
 
 
@@ -91,9 +97,10 @@ import { ScheduleModule } from '@nestjs/schedule';
     JobRequirementsModule, JobOtherRequirementsModule, JobUniversalTypesModule, LanguageWritesModule, LanguageUnderstandsModule, ClientStaffModule,
     InterviewTypeModule, ApplicantModule, JobMatchModule, UsersModule, ClientStaffModule, ClientStaffPositionsModule, PermissionModule, PaymentModule, SubscriptionPlanFeaturesModule,
     SubscriptionPlansModule, TermConditionTypesModule, TermConditionModule, AdminSubscriptionModule, AdminClientsModule,
+    BenefitModule,InterviewActionModule,
 
     //admin  moudel here
-    AdminModule, AdminJobsModule, AdminApplicantsModule, NotificationsModule,
+    AdminModule, AdminJobsModule, AdminApplicantsModule, NotificationsModule, EvaluationModule,EvaluationSummaryModule,RemarkModule,
 
     // ... other modules
   ],
