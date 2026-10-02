@@ -9,7 +9,7 @@ import {
 export class CreateEvaluationDto {
 
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     @MaxLength(255)
     group: string;
 
@@ -23,7 +23,7 @@ export class CreateEvaluationDto {
     name: string;
 
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     description: string;
 
     @IsOptional()
@@ -33,4 +33,7 @@ export class CreateEvaluationDto {
     @IsOptional()
     @IsInt()
     user_id?: number | null;
+
+    
+ 
 }

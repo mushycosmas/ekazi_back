@@ -15,6 +15,8 @@ import { EvaluationSummaryModule } from './evaluation-summary.module';
 import { EvaluationSummary } from 'src/entities/evaluation-summary.entity';
 import { EvaluationResultController } from './evaluation-result.controller';
 import { EvaluationResultService } from './evaluation-result.service';
+import { Benefit } from 'src/entities/benefit.entity';
+import { InterviewAction } from 'src/jobs/entities/interview/interview-action.entity';
 
 @Module({
     imports: [
@@ -27,6 +29,8 @@ import { EvaluationResultService } from './evaluation-result.service';
             EvaluationRemark,
             Remark,
             EvaluationSummary,
+            Benefit,
+            InterviewAction,
         ]),
         EvaluationSummaryModule,
     

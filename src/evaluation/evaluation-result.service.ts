@@ -1,20 +1,59 @@
- import {
+import {
     BadRequestException,
     Injectable,
-    NotFoundException,
 } from '@nestjs/common';
 
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+
 import { SaveEvaluationResultDto } from './dto/save-evaluation-result.dto';
 import { PreparedBulkInterviewDto } from './dto/bulk-prepared-interview.dto';
 import { PanelCommentDto } from './dto/panel-comment.dto';
 import { PreparedInterviewDto } from './dto/prepared-interview.dto';
 
+import { Evaluation } from 'src/entities/evaluation.entity';
+import { EvaluationForm } from 'src/entities/evaluation-form.entity';
+import { EvaluationRemark } from 'src/entities/evaluation-remark.entity';
+import { Remark } from 'src/entities/remark.entity';
+import { Benefit } from 'src/entities/benefit.entity';
+import { EvaluationSummary } from 'src/entities/evaluation-summary.entity';
+import { InterviewAction } from 'src/jobs/entities/interview/interview-action.entity';
+import { EvaluationCriteria } from 'src/entities/evaluation-criteria.entity';
+
 @Injectable()
 export class EvaluationResultService {
     constructor(
+        @InjectRepository(Evaluation)
+        private readonly evaluationRepository:
+            Repository<Evaluation>,
+
+        @InjectRepository(EvaluationCriteria)
+        private readonly evaluationCreteriaRepository:
+            Repository<EvaluationForm>,
+
+        @InjectRepository(EvaluationRemark)
+        private readonly evaluationRemarkRepository:
+            Repository<EvaluationRemark>,
+
+        @InjectRepository(Remark)
+        private readonly remarkRepository:
+            Repository<Remark>,
+
+        @InjectRepository(Benefit)
+        private readonly benefitRepository:
+            Repository<Benefit>,
+
+        @InjectRepository(EvaluationSummary)
+        private readonly evaluationSummaryRepository:
+            Repository<EvaluationSummary>,
+
+        @InjectRepository(InterviewAction)
+        private readonly interviewActionRepository:
+            Repository<InterviewAction>,
+
+
         private readonly dataSource: DataSource,
-    ) {}
+    ) { }
 
     /**
      * SAVE COMPLETE EVALUATION
@@ -35,19 +74,20 @@ export class EvaluationResultService {
             /**
              * 1. Verify job/applicant relationship
              */
-            const application = await queryRunner.manager.query(
-                `
-                SELECT id
-                FROM applicant_applications
-                WHERE job_id = ?
-                  AND applicant_id = ?
-                LIMIT 1
-                `,
-                [
-                    dto.job_id,
-                    dto.applicant_id,
-                ],
-            );
+            const application =
+                await queryRunner.manager.query(
+                    `
+                    SELECT id
+                    FROM applicant_applications
+                    WHERE job_id = ?
+                      AND applicant_id = ?
+                    LIMIT 1
+                    `,
+                    [
+                        dto.job_id,
+                        dto.applicant_id,
+                    ],
+                );
 
             if (!application.length) {
                 throw new BadRequestException(
@@ -112,10 +152,12 @@ export class EvaluationResultService {
              * 4. Availability
              */
             let availability: string | number | null = null;
-            let availabilityDate: Date = new Date();
+
+            let availabilityDate: Date | null = null;
 
             if (dto.availability === 'ASAP') {
                 availability = '';
+
                 availabilityDate = new Date();
             } else {
                 availability =
@@ -125,17 +167,23 @@ export class EvaluationResultService {
                     availabilityDate =
                         new Date(
                             Date.now() +
-                                dto.number_days *
-                                    24 *
-                                    60 *
-                                    60 *
-                                    1000,
+                            dto.number_days *
+                            24 *
+                            60 *
+                            60 *
+                            1000,
                         );
                 }
             }
 
             /**
              * 5. Applicant Evaluation
+             *
+             * NOTE:
+             * applicant_evaluations table has
+             * evaluation_action_id.
+             *
+             * It does NOT have interview_action_id.
              */
             const existingEvaluation =
                 await queryRunner.manager.query(
@@ -155,6 +203,9 @@ export class EvaluationResultService {
             let applicantEvaluationId: number;
 
             if (existingEvaluation.length) {
+                /**
+                 * UPDATE EXISTING EVALUATION
+                 */
                 applicantEvaluationId =
                     existingEvaluation[0].id;
 
@@ -166,7 +217,6 @@ export class EvaluationResultService {
                         salary_expectation = ?,
                         availability = ?,
                         recomandation = ?,
-                        interview_action_id = ?,
                         availability_date = ?,
                         evaluation_summary_id = ?,
                         evaluation_action_id = ?,
@@ -179,15 +229,29 @@ export class EvaluationResultService {
                         dto.salary_expectation ?? null,
                         availability,
                         dto.recomandation ?? null,
-                        dto.interview_action_id ?? null,
-                        availabilityDate,
+
+                        /**
+                         * MySQL column is DATE
+                         */
+                        availabilityDate
+                            ? availabilityDate
+                                .toISOString()
+                                .slice(0, 10)
+                            : null,
+
                         dto.summary_id ?? null,
+
                         dto.evaluation_action_id ?? null,
+
                         userId,
+
                         applicantEvaluationId,
                     ],
                 );
             } else {
+                /**
+                 * CREATE NEW EVALUATION
+                 */
                 const result =
                     await queryRunner.manager.query(
                         `
@@ -199,7 +263,6 @@ export class EvaluationResultService {
                             salary_expectation,
                             availability,
                             recomandation,
-                            interview_action_id,
                             availability_date,
                             evaluation_summary_id,
                             evaluation_action_id,
@@ -208,20 +271,49 @@ export class EvaluationResultService {
                             created_at,
                             updated_at
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                        VALUES (
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            NOW(),
+                            NOW()
+                        )
                         `,
                         [
                             dto.applicant_id,
                             dto.job_id,
+
                             dto.relevant_experience ?? null,
+
                             dto.salary_expectation ?? null,
+
                             availability,
+
                             dto.recomandation ?? null,
-                            dto.interview_action_id ?? null,
-                            availabilityDate,
+
+                            /**
+                             * MySQL DATE
+                             */
+                            availabilityDate
+                                ? availabilityDate
+                                    .toISOString()
+                                    .slice(0, 10)
+                                : null,
+
                             dto.summary_id ?? null,
+
                             dto.evaluation_action_id ?? null,
+
                             userId,
+
                             userId,
                         ],
                     );
@@ -234,8 +326,12 @@ export class EvaluationResultService {
              * 6. Relevant Experience
              */
             if (dto.position_id?.length) {
-                for (const positionId of dto.position_id) {
-                    if (!positionId) continue;
+                for (
+                    const positionId of dto.position_id
+                ) {
+                    if (!positionId) {
+                        continue;
+                    }
 
                     const existing =
                         await queryRunner.manager.query(
@@ -276,32 +372,41 @@ export class EvaluationResultService {
             /**
              * 7. Delete applicant benefits
              */
-            await queryRunner.manager.query(
-                `
-                DELETE FROM applicant_job_benefits
-                WHERE job_id = ?
-                  AND applicant_id = ?
-                `,
-                [
-                    dto.job_id,
-                    dto.applicant_id,
-                ],
-            );
+            // await queryRunner.manager.query(
+            //     `
+            //     DELETE FROM applicant_job_benefits
+            //     WHERE job_id = ?
+            //       AND applicant_id = ?
+            //     `,
+            //     [
+            //         dto.job_id,
+            //         dto.applicant_id,
+            //     ],
+            // );
 
             /**
              * 8. Save benefits
              */
             if (dto.benefit_id?.length) {
-                for (const item of dto.benefit_id) {
+                for (
+                    const item of dto.benefit_id
+                ) {
                     let benefitId: number;
 
+                    /**
+                     * Existing benefit ID
+                     */
                     if (
                         !Number.isNaN(
                             Number(item),
                         )
                     ) {
-                        benefitId = Number(item);
+                        benefitId =
+                            Number(item);
                     } else {
+                        /**
+                         * Find benefit by name
+                         */
                         const existingBenefit =
                             await queryRunner.manager.query(
                                 `
@@ -313,10 +418,16 @@ export class EvaluationResultService {
                                 [item],
                             );
 
-                        if (existingBenefit.length) {
+                        if (
+                            existingBenefit.length
+                        ) {
                             benefitId =
-                                existingBenefit[0].id;
+                                existingBenefit[0]
+                                    .id;
                         } else {
+                            /**
+                             * Create new benefit
+                             */
                             const newBenefit =
                                 await queryRunner.manager.query(
                                     `
@@ -336,6 +447,9 @@ export class EvaluationResultService {
                         }
                     }
 
+                    /**
+                     * Attach benefit to applicant/job
+                     */
                     await queryRunner.manager.query(
                         `
                         INSERT INTO applicant_job_benefits
@@ -456,7 +570,18 @@ export class EvaluationResultService {
                             created_at,
                             updated_at
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                        VALUES (
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            ?,
+                            NOW(),
+                            NOW()
+                        )
                         `,
                         [
                             dto.recomandation ?? null,
@@ -472,23 +597,101 @@ export class EvaluationResultService {
                 }
             }
 
+            /**
+             * 11. Commit
+             */
             await queryRunner.commitTransaction();
 
             return {
                 status: true,
-                message: 'Evaluation submitted successfully',
+                message:
+                    'Evaluation submitted successfully',
+
                 data: {
                     job_id: dto.job_id,
-                    applicant_id: dto.applicant_id,
+                    applicant_id:
+                        dto.applicant_id,
                     applicant_evaluation_id:
                         applicantEvaluationId,
                 },
             };
         } catch (error) {
             await queryRunner.rollbackTransaction();
+
             throw error;
         } finally {
             await queryRunner.release();
         }
+    }
+    async getInterviewForm(
+        clientId: number,
+        applicantId: number,
+        jobId: number,
+        roundId: number,
+    ) {
+        const evaluations = await this.evaluationRepository
+            .createQueryBuilder('evaluation')
+
+            // Evaluation -> Criteria
+            .leftJoinAndMapMany(
+                'evaluation.criterias',
+                EvaluationCriteria,
+                'criteria',
+                'criteria.evaluation_id = evaluation.id',
+            )
+
+            // Evaluation -> Evaluation Remarks
+            .leftJoinAndMapMany(
+                'evaluation.evaluation_remarks',
+                EvaluationRemark,
+                'evaluationRemark',
+                'evaluationRemark.evaluation_id = evaluation.id',
+            )
+
+            // EvaluationRemark -> Remark
+            .leftJoinAndMapOne(
+                'evaluationRemark.remark',
+                Remark,
+                'remark',
+                'remark.id = evaluationRemark.remark_id',
+            )
+
+            // .where('evaluation.hide = :hide', {
+            //     hide: 0,
+            // })
+
+            .orderBy(
+                'evaluation.priority',
+                'ASC',
+            )
+
+            .addOrderBy(
+                'evaluation.id',
+                'ASC',
+            )
+
+            .addOrderBy(
+                'criteria.id',
+                'ASC',
+            )
+
+            .addOrderBy(
+                'remark.score',
+                'ASC',
+            )
+
+            .getMany();
+
+        return {
+            status: true,
+            message: 'Evaluations retrieved successfully',
+
+            data: {
+                applicant_id: applicantId,
+                job_id: jobId,
+                round_id: roundId,
+                evaluations,
+            },
+        };
     }
 }

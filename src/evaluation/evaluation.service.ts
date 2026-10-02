@@ -44,71 +44,71 @@ export class EvaluationService {
 
 
 
-    async evaluationIndex(
-        userId?: number,
-        page: number = 1,
-        limit: number = 20,
-        search: string = '',
-    ) {
-        const skip = (page - 1) * limit;
+   async evaluationIndex(
+    clientId: number,
+    page: number = 1,
+    limit: number = 20,
+    search: string = '',
+) {
+    const skip = (page - 1) * limit;
 
-        const query = this.evaluationRepository
-            .createQueryBuilder('evaluation');
+    const query = this.evaluationRepository
+        .createQueryBuilder('evaluation')
+        .where(
+            'evaluation.client_id = :clientId',
+            { clientId },
+        );
 
-
-
-        if (userId) {
-            query.andWhere(
-                '(evaluation.user_id = :userId OR evaluation.user_id IS NULL)',
-                { userId },
-            );
-        }
-
-        if (search.trim()) {
-            query.andWhere(
-                new Brackets((qb) => {
-                    qb.where(
-                        'evaluation.name LIKE :search',
+    if (search.trim()) {
+        query.andWhere(
+            new Brackets((qb) => {
+                qb.where(
+                    'evaluation.name LIKE :search',
+                    {
+                        search: `%${search.trim()}%`,
+                    },
+                )
+                    .orWhere(
+                        'evaluation.group LIKE :search',
                         {
                             search: `%${search.trim()}%`,
                         },
                     )
-                        .orWhere(
-                            'evaluation.group LIKE :search',
-                            {
-                                search: `%${search.trim()}%`,
-                            },
-                        )
-                        .orWhere(
-                            'evaluation.description LIKE :search',
-                            {
-                                search: `%${search.trim()}%`,
-                            },
-                        );
-                }),
-            );
-        }
-
-
-        query
-            .orderBy('evaluation.created_at', 'DESC')
-            .skip(skip)
-            .take(limit);
-
-        const [evaluations, total] =
-            await query.getManyAndCount();
-
-        return {
-            status: true,
-            message: 'Evaluations retrieved successfully',
-            data: evaluations,
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-        };
+                    .orWhere(
+                        'evaluation.description LIKE :search',
+                        {
+                            search: `%${search.trim()}%`,
+                        },
+                    );
+            }),
+        );
     }
 
+    query
+        .orderBy(
+            'evaluation.priority',
+            'ASC',
+        )
+        .addOrderBy(
+            'evaluation.created_at',
+            'DESC',
+        )
+        .skip(skip)
+        .take(limit);
+
+    const [evaluations, total] =
+        await query.getManyAndCount();
+
+    return {
+        status: true,
+        message: 'Evaluations retrieved successfully',
+        data: evaluations,
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+    };
+}
     /**
      * ============================================================
      * CREATE EVALUATION
@@ -116,27 +116,26 @@ export class EvaluationService {
      * ============================================================
      */
     async evaluationStore(
+        clientId: number,
         userId: number,
         dto: CreateEvaluationDto,
     ) {
-        const evaluation =
-            this.evaluationRepository.create({
-                group: dto.group,
-                priority: dto.priority ?? null,
-                name: dto.name,
-                description: dto.description,
-                hide: dto.hide ?? 0,
-                user_id: dto.user_id ?? userId,
-                creator_id: userId,
-                updator_id: userId,
-                created_at: new Date(),
-                updated_at: new Date(),
-            });
+        const evaluation = this.evaluationRepository.create({
+            client_id: clientId,
 
-        const saved =
-            await this.evaluationRepository.save(
-                evaluation,
-            );
+            group: dto.group ?? null,
+            priority: dto.priority ?? null,
+            name: dto.name,
+            description: dto.description ?? null,
+            hide: dto.hide ?? 0,
+
+            user_id: dto.user_id ?? userId,
+
+            creator_id: userId,
+            updator_id: userId,
+        });
+
+        const saved = await this.evaluationRepository.save(evaluation);
 
         return {
             status: true,
@@ -151,38 +150,22 @@ export class EvaluationService {
      * ============================================================
      */
     async evaluationShow(
+        clientId: number,
         id: number,
-        userId?: number,
     ) {
-        const query =
-            this.evaluationRepository
-                .createQueryBuilder('evaluation')
-                .leftJoinAndSelect(
-                    'evaluation.criterias',
-                    'criteria',
-                )
-                .leftJoinAndSelect(
-                    'evaluation.evaluation_remarks',
-                    'evaluationRemark',
-                )
-                .leftJoinAndSelect(
-                    'evaluationRemark.remark',
-                    'remark',
-                )
-                .where(
-                    'evaluation.id = :id',
-                    { id },
-                );
-
-        if (userId) {
-            query.andWhere(
-                '(evaluation.user_id = :userId OR evaluation.user_id IS NULL)',
-                { userId },
-            );
-        }
-
-        const evaluation =
-            await query.getOne();
+        const evaluation = await this.evaluationRepository
+            .createQueryBuilder('evaluation')
+          
+            .where(
+                'evaluation.id = :id',
+                { id },
+            )
+            .andWhere(
+                'evaluation.client_id = :clientId',
+                { clientId },
+            )
+         
+            .getOne();
 
         if (!evaluation) {
             throw new NotFoundException(
@@ -204,32 +187,21 @@ export class EvaluationService {
  * ============================================================
  */
     async evaluationUpdate(
+        clientId: number,
         id: number,
         userId: number,
         dto: UpdateEvaluationDto,
     ) {
-        const evaluation =
-            await this.evaluationRepository.findOne({
-                where: {
-                    id,
-                },
-            });
+        const evaluation = await this.evaluationRepository.findOne({
+            where: {
+                id,
+                client_id: clientId,
+            },
+        });
 
         if (!evaluation) {
             throw new NotFoundException(
                 'Evaluation not found.',
-            );
-        }
-
-        /*
-         * Prevent editing another user's evaluation
-         */
-        if (
-            evaluation.user_id !== null &&
-            evaluation.user_id !== userId
-        ) {
-            throw new BadRequestException(
-                'You are not allowed to update this evaluation.',
             );
         }
 
@@ -259,10 +231,9 @@ export class EvaluationService {
 
         evaluation.updator_id = userId;
 
-        const saved =
-            await this.evaluationRepository.save(
-                evaluation,
-            );
+        const saved = await this.evaluationRepository.save(
+            evaluation,
+        );
 
         return {
             status: true,
@@ -276,60 +247,39 @@ export class EvaluationService {
  * DELETE /api/employer/evaluations/:id
  * ============================================================
  */
-    async evaluationDestroy(
-        id: number,
-        userId: number,
-    ) {
-        return await this.dataSource.transaction(
-            async (manager) => {
+ async evaluationDestroy(
+    clientId: number,
+    id: number,
+    userId: number,
+) {
+    return await this.dataSource.transaction(
+        async (manager) => {
+            const evaluationRepository =
+                manager.getRepository(Evaluation);
 
-                const evaluationRepository =
-                    manager.getRepository(Evaluation);
-
-                const evaluationRemarkRepository =
-                    manager.getRepository(EvaluationRemark);
-
-                const evaluation =
-                    await evaluationRepository.findOne({
-                        where: {
-                            id,
-                        },
-                    });
-
-                if (!evaluation) {
-                    throw new NotFoundException(
-                        'Evaluation not found.',
-                    );
-                }
-
-                if (
-                    evaluation.user_id !== null &&
-                    evaluation.user_id !== userId
-                ) {
-                    throw new BadRequestException(
-                        'You are not allowed to delete this evaluation.',
-                    );
-                }
-
-                /*
-                 * Delete evaluation remarks
-                 */
-                await evaluationRemarkRepository.delete({
-                    evaluation_id: id,
+            const evaluation =
+                await evaluationRepository.findOne({
+                    where: {
+                        id,
+                        client_id: clientId,
+                    },
                 });
 
-                /*
-                 * Delete evaluation
-                 */
-                await evaluationRepository.delete(id);
+            if (!evaluation) {
+                throw new NotFoundException(
+                    'Evaluation not found.',
+                );
+            }
 
-                return {
-                    status: true,
-                    message: 'Evaluation deleted successfully',
-                };
-            },
-        );
-    }
+            await evaluationRepository.delete(id);
+
+            return {
+                status: true,
+                message: 'Evaluation deleted successfully',
+            };
+        },
+    );
+}
     /**
      * ============================================================
      * INDEX

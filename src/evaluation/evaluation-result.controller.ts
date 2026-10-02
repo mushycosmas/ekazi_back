@@ -1,10 +1,12 @@
- import {
+import {
+    BadRequestException,
     Body,
     Controller,
     Get,
     Param,
     ParseIntPipe,
     Post,
+    Query,
     UseGuards,
 } from '@nestjs/common';
 
@@ -16,13 +18,13 @@ import { SanctumGuard } from '../auth/guards/sanctum.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Users } from '../entities/users.entity';
 
-@Controller('evaluation-results')
+@Controller('client-evaluation')
 @UseGuards(SanctumGuard)
 export class EvaluationResultController {
     constructor(
         private readonly evaluationResultService:
             EvaluationResultService,
-    ) {}
+    ) { }
 
     @Post()
     async store(
@@ -32,6 +34,51 @@ export class EvaluationResultController {
         return this.evaluationResultService.store(
             user.id,
             dto,
+        );
+    }
+    @Get('interview-form')
+    @UseGuards(SanctumGuard)
+    async getInterviewForm(
+        @CurrentUser() user: Users,
+
+        @Query('applicant_id')
+        applicantId: number,
+
+        @Query('job_id')
+        jobId: number,
+
+        @Query('round_id')
+        roundId: number,
+    ) {
+        if (!applicantId) {
+            throw new BadRequestException(
+                'applicant_id is required',
+            );
+        }
+
+        if (!jobId) {
+            throw new BadRequestException(
+                'job_id is required',
+            );
+        }
+
+        if (!roundId) {
+            throw new BadRequestException(
+                'round_id is required',
+            );
+        }
+
+        if (!user.client_id) {
+            throw new BadRequestException(
+                'User is not associated with a client',
+            );
+        }
+
+        return this.evaluationResultService.getInterviewForm(
+            user.id,
+            Number(applicantId),
+            Number(jobId),
+            Number(roundId),
         );
     }
 }
