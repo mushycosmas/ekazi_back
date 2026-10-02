@@ -74,6 +74,7 @@ import { EvaluationSummaryModule } from './evaluation/evaluation-summary.module'
 import { RemarkModule } from './evaluation/remark.module';
 import { BenefitModule } from './benefit/benefit.module';
 import { InterviewActionModule } from './universals/interviewaction/interview-action.module';
+import { EvaluationCriteriaModule } from './evaluation/evaluation-criteria.module';
  
 
 
@@ -97,7 +98,7 @@ import { InterviewActionModule } from './universals/interviewaction/interview-ac
     JobRequirementsModule, JobOtherRequirementsModule, JobUniversalTypesModule, LanguageWritesModule, LanguageUnderstandsModule, ClientStaffModule,
     InterviewTypeModule, ApplicantModule, JobMatchModule, UsersModule, ClientStaffModule, ClientStaffPositionsModule, PermissionModule, PaymentModule, SubscriptionPlanFeaturesModule,
     SubscriptionPlansModule, TermConditionTypesModule, TermConditionModule, AdminSubscriptionModule, AdminClientsModule,
-    BenefitModule,InterviewActionModule,
+    BenefitModule,InterviewActionModule,EvaluationCriteriaModule,
 
     //admin  moudel here
     AdminModule, AdminJobsModule, AdminApplicantsModule, NotificationsModule, EvaluationModule,EvaluationSummaryModule,RemarkModule,

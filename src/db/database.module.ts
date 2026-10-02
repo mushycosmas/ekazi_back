@@ -150,6 +150,7 @@ import { EvaluationResult } from 'src/entities/evaluation-result.entity';
 import { EvaluationSummary } from 'src/entities/evaluation-summary.entity';
 import { Remark } from 'src/entities/remark.entity';
 import { Benefit } from 'src/entities/benefit.entity';
+import { ApplicantJobOffer } from 'src/entities/applicants/applicant-job-offer.entity';
  
  
 
@@ -302,6 +303,7 @@ const allEntities = [
   EvaluationSummary,
   Remark,
   Benefit,
+  ApplicantJobOffer,
   // TaskAttachment,
   // TaskMessageAttachment,
   // TaskMessage,

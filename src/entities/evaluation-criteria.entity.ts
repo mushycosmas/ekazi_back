@@ -1,4 +1,4 @@
-import {
+ import {
     Column,
     CreateDateColumn,
     Entity,
@@ -12,8 +12,10 @@ import { Evaluation } from './evaluation.entity';
 
 @Entity('evaluation_criterias')
 export class EvaluationCriteria {
+
     @PrimaryGeneratedColumn({
         type: 'int',
+        unsigned: true,
     })
     id: number;
 
@@ -23,31 +25,29 @@ export class EvaluationCriteria {
     })
     evaluation_id: number;
 
+    /**
+     * Example:
+     *
+     * Dress
+     * Grooming
+     * Body Language
+     * Eye Contact
+     */
     @Column({
         type: 'varchar',
-        length: 50,
+        length: 255,
     })
     name: string;
 
+ 
+
     @Column({
         type: 'tinyint',
-        width: 1,
         default: 0,
     })
     hide: number;
 
-    @CreateDateColumn({
-        type: 'timestamp',
-        default: () => 'CURRENT_TIMESTAMP',
-    })
-    created_at: Date;
-
-    @UpdateDateColumn({
-        type: 'timestamp',
-        default: () => 'CURRENT_TIMESTAMP',
-        onUpdate: 'CURRENT_TIMESTAMP',
-    })
-    updated_at: Date;
+ 
 
     @Column({
         type: 'int',
@@ -62,6 +62,18 @@ export class EvaluationCriteria {
         nullable: true,
     })
     updator_id: number | null;
+
+    @CreateDateColumn({
+        type: 'datetime',
+        nullable: true,
+    })
+    created_at: Date | null;
+
+    @UpdateDateColumn({
+        type: 'datetime',
+        nullable: true,
+    })
+    updated_at: Date | null;
 
     @ManyToOne(
         () => Evaluation,

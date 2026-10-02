@@ -12,16 +12,21 @@ import { Remark } from './remark.entity';
 @Entity('evaluation_remarks')
 export class EvaluationRemark {
 
-    @PrimaryGeneratedColumn()
+    @PrimaryGeneratedColumn({
+        type: 'int',
+        unsigned: true,
+    })
     id: number;
 
     @Column({
         type: 'int',
+        unsigned: true,
     })
     evaluation_id: number;
 
     @Column({
         type: 'int',
+        unsigned: true,
     })
     remark_id: number;
 
@@ -31,17 +36,18 @@ export class EvaluationRemark {
         scale: 2,
         nullable: true,
     })
-    score: number;
+    score: number | null;
 
-    @ManyToOne(
-        () => Evaluation,
-        evaluation => evaluation.evaluation_remarks,
-        {
-            onDelete: 'CASCADE',
-        },
-    )
+    // @ManyToOne(
+    //     () => Evaluation,
+    //     evaluation => evaluation.evaluation_remarks,
+    //     {
+    //         onDelete: 'CASCADE',
+    //     },
+    // )
     @JoinColumn({
         name: 'evaluation_id',
+        referencedColumnName: 'id',
     })
     evaluation: Evaluation;
 
@@ -54,6 +60,7 @@ export class EvaluationRemark {
     )
     @JoinColumn({
         name: 'remark_id',
+        referencedColumnName: 'id',
     })
     remark: Remark;
 }
