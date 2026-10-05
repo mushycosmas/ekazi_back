@@ -149,36 +149,56 @@ export class EvaluationService {
      * GET /api/employer/evaluations/:id
      * ============================================================
      */
-    async evaluationShow(
-        clientId: number,
-        id: number,
-    ) {
-        const evaluation = await this.evaluationRepository
-            .createQueryBuilder('evaluation')
-          
-            .where(
-                'evaluation.id = :id',
-                { id },
-            )
-            .andWhere(
-                'evaluation.client_id = :clientId',
-                { clientId },
-            )
-         
-            .getOne();
+async evaluationShow(
+    clientId: number,
+    id: number,
+) {
+    const evaluation = await this.evaluationRepository
+        .createQueryBuilder('evaluation')
+        .leftJoinAndSelect(
+            'evaluation.criterias',
+            'criteria',
+        )
+        .where(
+            'evaluation.id = :id',
+            { id },
+        )
+        .andWhere(
+            'evaluation.client_id = :clientId',
+            { clientId },
+        )
+        .orderBy(
+            'criteria.created_at',
+            'ASC',
+        )
+        .getOne();
 
-        if (!evaluation) {
-            throw new NotFoundException(
-                'Evaluation not found.',
-            );
-        }
-
-        return {
-            status: true,
-            message: 'Evaluation retrieved successfully',
-            data: evaluation,
-        };
+    if (!evaluation) {
+        throw new NotFoundException(
+            'Evaluation not found.',
+        );
     }
+
+    return {
+        status: true,
+        message: 'Evaluation retrieved successfully',
+        data: {
+            id: evaluation.id,
+            name: evaluation.name,
+            group: evaluation.group,
+            priority: evaluation.priority,
+            description: evaluation.description,
+
+            criteria: evaluation.criterias
+                ?.filter(criteria => criteria.hide === 0)
+                .map(criteria => ({
+                    id: criteria.id,
+                    name: criteria.name,
+                    
+                })) ?? [],
+        },
+    };
+}
 
     /**
  * ============================================================
