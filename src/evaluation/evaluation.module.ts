@@ -17,6 +17,7 @@ import { EvaluationResultController } from './evaluation-result.controller';
 import { EvaluationResultService } from './evaluation-result.service';
 import { Benefit } from 'src/entities/benefit.entity';
 import { InterviewAction } from 'src/jobs/entities/interview/interview-action.entity';
+import { EvaluationResult } from 'src/entities/evaluation-result.entity';
 
 @Module({
     imports: [
@@ -31,9 +32,10 @@ import { InterviewAction } from 'src/jobs/entities/interview/interview-action.en
             EvaluationSummary,
             Benefit,
             InterviewAction,
+            EvaluationResult,
         ]),
         EvaluationSummaryModule,
-    
+
     ],
     controllers: [
         EvaluationController,
@@ -44,12 +46,12 @@ import { InterviewAction } from 'src/jobs/entities/interview/interview-action.en
     providers: [
         EvaluationService,
         EvaluationSummaryService, // ✅ must be here
-         EvaluationResultService,
+        EvaluationResultService,
     ],
     exports: [
         EvaluationService,
         TypeOrmModule,
-           EvaluationResultService,
+        EvaluationResultService,
     ],
 })
 export class EvaluationModule { }

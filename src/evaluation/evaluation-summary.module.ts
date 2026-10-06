@@ -28,6 +28,7 @@ import { RemarkService } from './remark.service';
 import { EvaluationCriteriaService } from './evaluation-criteria.service';
 import { EvaluationCriteriaController } from './evaluation-criteria.controller';
 import { EvaluationCriteriaModule } from './evaluation-criteria.module';
+import { EvaluationResult } from 'src/entities/evaluation-result.entity';
 
 @Module({
     imports: [
@@ -41,7 +42,7 @@ import { EvaluationCriteriaModule } from './evaluation-criteria.module';
             EvaluationCriteria,
             EvaluationRemark,
             Remark,
-
+            EvaluationResult,
             // Summary
             EvaluationSummary,
 

@@ -19,6 +19,9 @@ import { Benefit } from 'src/entities/benefit.entity';
 import { EvaluationSummary } from 'src/entities/evaluation-summary.entity';
 import { InterviewAction } from 'src/jobs/entities/interview/interview-action.entity';
 import { EvaluationCriteria } from 'src/entities/evaluation-criteria.entity';
+import { CreateEvaluationInterviewDto } from './dto/create-evaluation-interview.dto';
+import { EvaluationResult } from 'src/entities/evaluation-result.entity';
+import { Users } from 'src/entities/users.entity';
 
 @Injectable()
 export class EvaluationResultService {
@@ -27,9 +30,13 @@ export class EvaluationResultService {
         private readonly evaluationRepository:
             Repository<Evaluation>,
 
+        @InjectRepository(EvaluationResult)
+        private readonly evaluationresultRepository:
+            Repository<EvaluationResult>,
+
         @InjectRepository(EvaluationCriteria)
         private readonly evaluationCreteriaRepository:
-            Repository<EvaluationForm>,
+            Repository<EvaluationCriteria>,
 
         @InjectRepository(EvaluationRemark)
         private readonly evaluationRemarkRepository:
@@ -51,10 +58,333 @@ export class EvaluationResultService {
         private readonly interviewActionRepository:
             Repository<InterviewAction>,
 
-
         private readonly dataSource: DataSource,
     ) { }
 
+
+    async create(
+        userId: number,
+        dto: CreateEvaluationInterviewDto,
+    ) {
+        const queryRunner =
+            this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const results = dto.evaluations.map((evaluation) =>
+                queryRunner.manager.create(EvaluationResult, {
+                    evaluation_id: evaluation.evaluation_id,
+
+                    applicant_id: dto.applicant_id,
+                    job_id: dto.job_id,
+
+                    evaluator_id: userId,
+
+                    score: evaluation.total_score,
+
+                    comment: dto.comment ?? '',
+
+                    creator_id: userId,
+                    updator_id: userId,
+                }),
+            );
+
+            const saved = await queryRunner.manager.save(
+                EvaluationResult,
+                results,
+            );
+
+            await queryRunner.commitTransaction();
+
+            // Calculate overall percentage
+            const totalPercentage =
+                dto.evaluations.reduce(
+                    (total, evaluation) =>
+                        total + Number(evaluation.total_score),
+                    0,
+                );
+
+            const totalEvaluations =
+                dto.evaluations.length;
+
+            const overallPercentage =
+                totalEvaluations > 0
+                    ? Number(
+                        (
+                            totalPercentage /
+                            totalEvaluations
+                        ).toFixed(2),
+                    )
+                    : 0;
+
+            return {
+                status: true,
+                message:
+                    'Interview evaluation saved successfully',
+
+                data: {
+                    applicant_id: dto.applicant_id,
+                    job_id: dto.job_id,
+                    evaluator_id: userId,
+
+                    evaluations: saved,
+
+                    total_evaluations: totalEvaluations,
+
+                    total_percentage: overallPercentage,
+                },
+            };
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
+    }
+    async getEvaluatorResults(
+        applicantId: number,
+        jobId: number,
+    ) {
+        const results = await this.evaluationresultRepository
+            .createQueryBuilder('result')
+            .select('result.evaluator_id', 'evaluator_id')
+            .addSelect(
+                'ROUND(AVG(result.score), 2)',
+                'average_percentage',
+            )
+            .addSelect(
+                'COUNT(result.id)',
+                'total_evaluations',
+            )
+            .where('result.applicant_id = :applicantId', {
+                applicantId,
+            })
+            .andWhere('result.job_id = :jobId', {
+                jobId,
+            })
+            .groupBy('result.evaluator_id')
+            .getRawMany();
+
+        if (!results.length) {
+            return {
+                status: true,
+                message: 'No evaluation results found',
+                data: {
+                    applicant_id: applicantId,
+                    job_id: jobId,
+                    evaluators: [],
+                    total_percentage: 0,
+                },
+            };
+        }
+
+        const evaluators = results.map((item) => ({
+            evaluator_id: Number(item.evaluator_id),
+            average_percentage: Number(
+                item.average_percentage,
+            ),
+            total_evaluations: Number(
+                item.total_evaluations,
+            ),
+        }));
+
+        // Average of each evaluator's percentage
+        const totalPercentage =
+            evaluators.reduce(
+                (total, evaluator) =>
+                    total +
+                    evaluator.average_percentage,
+                0,
+            ) / evaluators.length;
+
+        return {
+            status: true,
+            message: 'Evaluation results retrieved successfully',
+            data: {
+                applicant_id: applicantId,
+                job_id: jobId,
+
+                evaluators,
+
+                total_evaluators: evaluators.length,
+
+                total_percentage: Number(
+                    totalPercentage.toFixed(2),
+                ),
+            },
+        };
+    }
+async getAllApplicantsReport(jobId: number) {
+    const query = this.evaluationresultRepository
+        .createQueryBuilder('result')
+        .leftJoin(
+            Users,
+            'user',
+            'user.id = result.evaluator_id',
+        )
+        .leftJoin(
+            'applicants',
+            'applicant',
+            'applicant.id = result.applicant_id',
+        )
+        .leftJoin(
+            'jobs',
+            'job',
+            'job.id = result.job_id',
+        )
+        .where('result.job_id = :jobId', {
+            jobId,
+        })
+        .andWhere('result.applicant_id IS NOT NULL');
+
+    const results = await query
+        .select([
+            'result.id AS result_id',
+            'result.evaluation_id AS evaluation_id',
+            'result.applicant_id AS applicant_id',
+            'result.job_id AS job_id',
+            'result.evaluator_id AS evaluator_id',
+            'result.score AS score',
+            'result.comment AS comment',
+
+            'user.id AS evaluator_user_id',
+            'user.name AS evaluator_name',
+            'user.email AS evaluator_email',
+
+            'job.id AS job_id',
+            'job.title AS job_title',
+        ])
+        .orderBy('result.applicant_id', 'ASC')
+        .addOrderBy('result.evaluator_id', 'ASC')
+        .addOrderBy('result.evaluation_id', 'ASC')
+        .getRawMany();
+
+    const applicantsMap = new Map<number, any>();
+
+    for (const row of results) {
+        const applicantId = Number(row.applicant_id);
+        const evaluatorId = Number(row.evaluator_id);
+        const score = Number(row.score ?? 0);
+
+        if (!applicantsMap.has(applicantId)) {
+            applicantsMap.set(applicantId, {
+                applicant_id: applicantId,
+                job_id: Number(row.job_id),
+                job_title: row.job_title,
+                evaluators: new Map<number, any>(),
+            });
+        }
+
+        const applicant =
+            applicantsMap.get(applicantId);
+
+        if (!applicant.evaluators.has(evaluatorId)) {
+            applicant.evaluators.set(evaluatorId, {
+                evaluator_id: evaluatorId,
+                evaluator_name:
+                    row.evaluator_name ?? null,
+                evaluator_email:
+                    row.evaluator_email ?? null,
+                evaluations: [],
+            });
+        }
+
+        const evaluator =
+            applicant.evaluators.get(evaluatorId);
+
+        evaluator.evaluations.push({
+            result_id: Number(row.result_id),
+            evaluation_id: Number(row.evaluation_id),
+            score,
+            comment: row.comment ?? null,
+        });
+    }
+
+    const applicants = Array.from(
+        applicantsMap.values(),
+    ).map((applicant) => {
+
+        const evaluators = Array.from(
+            applicant.evaluators.values(),
+        ).map((evaluator: any) => {
+
+            const total = evaluator.evaluations.reduce(
+                (sum: number, evaluation: any) =>
+                    sum + Number(evaluation.score),
+                0,
+            );
+
+            const totalEvaluations =
+                evaluator.evaluations.length;
+
+            const average =
+                totalEvaluations > 0
+                    ? total / totalEvaluations
+                    : 0;
+
+            return {
+                evaluator_id:
+                    evaluator.evaluator_id,
+
+                evaluator_name:
+                    evaluator.evaluator_name,
+
+                evaluator_email:
+                    evaluator.evaluator_email,
+
+                total_evaluations:
+                    totalEvaluations,
+
+                average_percentage:
+                    Number(average.toFixed(2)),
+
+                evaluations:
+                    evaluator.evaluations,
+            };
+        });
+
+        const finalPercentage =
+            evaluators.length > 0
+                ? evaluators.reduce(
+                    (
+                        sum: number,
+                        evaluator: any,
+                    ) =>
+                        sum +
+                        evaluator.average_percentage,
+                    0,
+                ) / evaluators.length
+                : 0;
+
+        return {
+            applicant_id:
+                applicant.applicant_id,
+
+            job_id:
+                applicant.job_id,
+
+            job_title:
+                applicant.job_title,
+
+            total_evaluators:
+                evaluators.length,
+
+            evaluators,
+
+            final_percentage:
+                Number(finalPercentage.toFixed(2)),
+        };
+    });
+
+    return {
+        status: true,
+        message:
+            'Job applicant evaluation report generated successfully',
+        data: applicants,
+    };
+}
     /**
      * SAVE COMPLETE EVALUATION
      *

@@ -44,71 +44,153 @@ export class EvaluationService {
 
 
 
-   async evaluationIndex(
-    clientId: number,
-    page: number = 1,
-    limit: number = 20,
-    search: string = '',
-) {
-    const skip = (page - 1) * limit;
+    async evaluationIndex(
+        clientId: number,
+        page: number = 1,
+        limit: number = 20,
+        search: string = '',
+    ) {
+        const skip = (page - 1) * limit;
 
-    const query = this.evaluationRepository
-        .createQueryBuilder('evaluation')
-        .where(
-            'evaluation.client_id = :clientId',
-            { clientId },
-        );
+        const query = this.evaluationRepository
+            .createQueryBuilder('evaluation')
+            .leftJoinAndSelect(
+                'evaluation.criterias',
+                'criteria',
+            )
+            .where(
+                'evaluation.client_id = :clientId',
+                { clientId },
+            );
 
-    if (search.trim()) {
-        query.andWhere(
-            new Brackets((qb) => {
-                qb.where(
-                    'evaluation.name LIKE :search',
-                    {
-                        search: `%${search.trim()}%`,
-                    },
-                )
-                    .orWhere(
-                        'evaluation.group LIKE :search',
+        if (search.trim()) {
+            query.andWhere(
+                new Brackets((qb) => {
+                    qb.where(
+                        'evaluation.name LIKE :search',
                         {
                             search: `%${search.trim()}%`,
                         },
                     )
-                    .orWhere(
-                        'evaluation.description LIKE :search',
-                        {
-                            search: `%${search.trim()}%`,
-                        },
-                    );
+                        .orWhere(
+                            'evaluation.group LIKE :search',
+                            {
+                                search: `%${search.trim()}%`,
+                            },
+                        )
+                        .orWhere(
+                            'evaluation.description LIKE :search',
+                            {
+                                search: `%${search.trim()}%`,
+                            },
+                        )
+                        .orWhere(
+                            'criteria.name LIKE :search',
+                            {
+                                search: `%${search.trim()}%`,
+                            },
+                        )
+                        .orWhere(
+                            'criteria.description LIKE :search',
+                            {
+                                search: `%${search.trim()}%`,
+                            },
+                        );
+                }),
+            );
+        }
+
+        query
+            .orderBy(
+                'evaluation.priority',
+                'ASC',
+            )
+            .addOrderBy(
+                'evaluation.created_at',
+                'DESC',
+            )
+            .addOrderBy(
+                'criteria.created_at',
+                'ASC',
+            )
+            .skip(skip)
+            .take(limit);
+
+        const [
+            evaluations,
+            total,
+        ] = await query.getManyAndCount();
+
+        const data = evaluations.map(
+            (evaluation) => ({
+                id: evaluation.id,
+
+                name: evaluation.name,
+
+                group: evaluation.group,
+
+                priority: evaluation.priority,
+
+                description:
+                    evaluation.description,
+
+                hide: evaluation.hide,
+
+                criteria:
+                    evaluation.criterias
+                        ?.filter(
+                            (criteria) =>
+                                criteria.hide === 0,
+                        )
+                        .map(
+                            (criteria) => ({
+                                id: criteria.id,
+
+                                evaluation_id:
+                                    criteria.evaluation_id,
+
+                                name:
+                                    criteria.name,
+
+                                hide:
+                                    criteria.hide,
+
+                                created_at:
+                                    criteria.created_at,
+
+                                updated_at:
+                                    criteria.updated_at,
+                            }),
+                        ) ?? [],
+
+                created_at:
+                    evaluation.created_at,
+
+                updated_at:
+                    evaluation.updated_at,
             }),
         );
+
+        return {
+            status: true,
+
+            message:
+                'Evaluations retrieved successfully',
+
+            data,
+
+            page,
+
+            limit,
+
+            total,
+
+            totalPages:
+                Math.ceil(
+                    total / limit,
+                ),
+        };
     }
-
-    query
-        .orderBy(
-            'evaluation.priority',
-            'ASC',
-        )
-        .addOrderBy(
-            'evaluation.created_at',
-            'DESC',
-        )
-        .skip(skip)
-        .take(limit);
-
-    const [evaluations, total] =
-        await query.getManyAndCount();
-
-    return {
-        status: true,
-        message: 'Evaluations retrieved successfully',
-        data: evaluations,
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-    };
-}
     /**
      * ============================================================
      * CREATE EVALUATION
@@ -149,56 +231,56 @@ export class EvaluationService {
      * GET /api/employer/evaluations/:id
      * ============================================================
      */
-async evaluationShow(
-    clientId: number,
-    id: number,
-) {
-    const evaluation = await this.evaluationRepository
-        .createQueryBuilder('evaluation')
-        .leftJoinAndSelect(
-            'evaluation.criterias',
-            'criteria',
-        )
-        .where(
-            'evaluation.id = :id',
-            { id },
-        )
-        .andWhere(
-            'evaluation.client_id = :clientId',
-            { clientId },
-        )
-        .orderBy(
-            'criteria.created_at',
-            'ASC',
-        )
-        .getOne();
+    async evaluationShow(
+        clientId: number,
+        id: number,
+    ) {
+        const evaluation = await this.evaluationRepository
+            .createQueryBuilder('evaluation')
+            .leftJoinAndSelect(
+                'evaluation.criterias',
+                'criteria',
+            )
+            .where(
+                'evaluation.id = :id',
+                { id },
+            )
+            .andWhere(
+                'evaluation.client_id = :clientId',
+                { clientId },
+            )
+            .orderBy(
+                'criteria.created_at',
+                'ASC',
+            )
+            .getOne();
 
-    if (!evaluation) {
-        throw new NotFoundException(
-            'Evaluation not found.',
-        );
+        if (!evaluation) {
+            throw new NotFoundException(
+                'Evaluation not found.',
+            );
+        }
+
+        return {
+            status: true,
+            message: 'Evaluation retrieved successfully',
+            data: {
+                id: evaluation.id,
+                name: evaluation.name,
+                group: evaluation.group,
+                priority: evaluation.priority,
+                description: evaluation.description,
+
+                criteria: evaluation.criterias
+                    ?.filter(criteria => criteria.hide === 0)
+                    .map(criteria => ({
+                        id: criteria.id,
+                        name: criteria.name,
+
+                    })) ?? [],
+            },
+        };
     }
-
-    return {
-        status: true,
-        message: 'Evaluation retrieved successfully',
-        data: {
-            id: evaluation.id,
-            name: evaluation.name,
-            group: evaluation.group,
-            priority: evaluation.priority,
-            description: evaluation.description,
-
-            criteria: evaluation.criterias
-                ?.filter(criteria => criteria.hide === 0)
-                .map(criteria => ({
-                    id: criteria.id,
-                    name: criteria.name,
-                    
-                })) ?? [],
-        },
-    };
-}
 
     /**
  * ============================================================
@@ -267,39 +349,39 @@ async evaluationShow(
  * DELETE /api/employer/evaluations/:id
  * ============================================================
  */
- async evaluationDestroy(
-    clientId: number,
-    id: number,
-    userId: number,
-) {
-    return await this.dataSource.transaction(
-        async (manager) => {
-            const evaluationRepository =
-                manager.getRepository(Evaluation);
+    async evaluationDestroy(
+        clientId: number,
+        id: number,
+        userId: number,
+    ) {
+        return await this.dataSource.transaction(
+            async (manager) => {
+                const evaluationRepository =
+                    manager.getRepository(Evaluation);
 
-            const evaluation =
-                await evaluationRepository.findOne({
-                    where: {
-                        id,
-                        client_id: clientId,
-                    },
-                });
+                const evaluation =
+                    await evaluationRepository.findOne({
+                        where: {
+                            id,
+                            client_id: clientId,
+                        },
+                    });
 
-            if (!evaluation) {
-                throw new NotFoundException(
-                    'Evaluation not found.',
-                );
-            }
+                if (!evaluation) {
+                    throw new NotFoundException(
+                        'Evaluation not found.',
+                    );
+                }
 
-            await evaluationRepository.delete(id);
+                await evaluationRepository.delete(id);
 
-            return {
-                status: true,
-                message: 'Evaluation deleted successfully',
-            };
-        },
-    );
-}
+                return {
+                    status: true,
+                    message: 'Evaluation deleted successfully',
+                };
+            },
+        );
+    }
     /**
      * ============================================================
      * INDEX

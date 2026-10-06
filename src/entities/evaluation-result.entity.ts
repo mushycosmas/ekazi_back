@@ -1,4 +1,4 @@
-import {
+ import {
     Column,
     CreateDateColumn,
     Entity,
@@ -16,8 +16,9 @@ export class EvaluationResult {
 
     @Column({
         type: 'int',
+        unsigned: true,
     })
-    evaluation_remark_id: number;
+    evaluation_id: number;
 
     @Column({
         type: 'int',
@@ -25,16 +26,6 @@ export class EvaluationResult {
         nullable: true,
     })
     job_id: number | null;
-
-    @Column({
-        type: 'int',
-    })
-    updator_id: number;
-
-    @Column({
-        type: 'int',
-    })
-    creator_id: number;
 
     @Column({
         type: 'int',
@@ -49,6 +40,15 @@ export class EvaluationResult {
         nullable: true,
     })
     applicant_id: number | null;
+
+    /**
+     * User currently performing the evaluation.
+     */
+    @Column({
+        type: 'int',
+        unsigned: true,
+    })
+    evaluator_id: number;
 
     @Column({
         type: 'int',
@@ -73,6 +73,18 @@ export class EvaluationResult {
         type: 'text',
     })
     comment: string;
+
+    @Column({
+        type: 'int',
+        unsigned: true,
+    })
+    creator_id: number;
+
+    @Column({
+        type: 'int',
+        unsigned: true,
+    })
+    updator_id: number;
 
     @CreateDateColumn({
         type: 'timestamp',

@@ -17,8 +17,9 @@ import { SaveEvaluationResultDto } from './dto/save-evaluation-result.dto';
 import { SanctumGuard } from '../auth/guards/sanctum.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Users } from '../entities/users.entity';
+import { CreateEvaluationInterviewDto } from './dto/create-evaluation-interview.dto';
 
-@Controller('client-evaluation')
+@Controller('evaluations')
 @UseGuards(SanctumGuard)
 export class EvaluationResultController {
     constructor(
@@ -34,6 +35,44 @@ export class EvaluationResultController {
         return this.evaluationResultService.store(
             user.id,
             dto,
+        );
+    }
+
+    @Post('results')
+    async create(
+        @CurrentUser() user: Users,
+        @Body() dto: CreateEvaluationInterviewDto,
+    ) {
+        return this.evaluationResultService.create(
+            user.id,
+            dto,
+        );
+    }
+    @Get('/results/:applicantId/:jobId')
+    @UseGuards(SanctumGuard)
+    async getEvaluatorResults(
+        @Param('applicantId', ParseIntPipe) applicantId: number,
+        @Param('jobId', ParseIntPipe) jobId: number,
+    ) {
+        return this.evaluationResultService.getEvaluatorResults(
+            applicantId,
+            jobId,
+        );
+    }
+    @Get('report/:jobId')
+    @UseGuards(SanctumGuard)
+    async getAllApplicantsReport(
+        @Param('jobId', ParseIntPipe) jobId: number,
+        @CurrentUser() user: Users,
+    ) {
+        if (user.client_id === null) {
+            throw new BadRequestException(
+                'User is not associated with a client.',
+            );
+        }
+
+        return this.evaluationResultService.getAllApplicantsReport(
+            jobId,
         );
     }
     @Get('interview-form')
