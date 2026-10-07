@@ -1,10 +1,13 @@
- import {
+import {
     Column,
     CreateDateColumn,
     Entity,
+    JoinColumn,
+    ManyToOne,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
+import { Applicants } from './applicants/applicants.entity';
 
 @Entity('evaluation_results')
 export class EvaluationResult {
@@ -98,4 +101,14 @@ export class EvaluationResult {
         onUpdate: 'CURRENT_TIMESTAMP',
     })
     updated_at: Date;
+
+    @ManyToOne(
+        () => Applicants,
+        { nullable: true },
+    )
+    @JoinColumn({
+        name: 'applicant_id',
+        referencedColumnName: 'id',
+    })
+    applicant: Applicants | null;
 }

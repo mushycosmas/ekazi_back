@@ -1,5 +1,6 @@
 import {
     BadRequestException,
+    ConflictException,
     Injectable,
 } from '@nestjs/common';
 
@@ -73,36 +74,191 @@ export class EvaluationResultService {
         await queryRunner.startTransaction();
 
         try {
-            const results = dto.evaluations.map((evaluation) =>
-                queryRunner.manager.create(EvaluationResult, {
-                    evaluation_id: evaluation.evaluation_id,
+            // =========================================
+            // Validate evaluations
+            // =========================================
 
-                    applicant_id: dto.applicant_id,
-                    job_id: dto.job_id,
+            if (
+                !dto.evaluations ||
+                dto.evaluations.length === 0
+            ) {
+                throw new BadRequestException(
+                    'At least one evaluation is required.',
+                );
+            }
 
-                    evaluator_id: userId,
+            // =========================================
+            // Check if evaluator already evaluated
+            // =========================================
 
-                    score: evaluation.total_score,
+            const existingResults =
+                await queryRunner.manager
+                    .getRepository(EvaluationResult)
+                    .createQueryBuilder('result')
+                    .where(
+                        'result.job_id = :jobId',
+                        {
+                            jobId: dto.job_id,
+                        },
+                    )
+                    .andWhere(
+                        'result.applicant_id = :applicantId',
+                        {
+                            applicantId:
+                                dto.applicant_id,
+                        },
+                    )
+                    .andWhere(
+                        'result.evaluator_id = :evaluatorId',
+                        {
+                            evaluatorId: userId,
+                        },
+                    )
+                    .getMany();
 
-                    comment: dto.comment ?? '',
+            // =========================================
+            // Check completed evaluations
+            // =========================================
 
-                    creator_id: userId,
-                    updator_id: userId,
-                }),
-            );
+            const existingEvaluationIds =
+                new Set(
+                    existingResults.map(
+                        (result) =>
+                            Number(
+                                result.evaluation_id,
+                            ),
+                    ),
+                );
 
-            const saved = await queryRunner.manager.save(
-                EvaluationResult,
-                results,
-            );
+            const submittedEvaluationIds =
+                dto.evaluations.map(
+                    (evaluation) =>
+                        Number(
+                            evaluation.evaluation_id,
+                        ),
+                );
 
-            await queryRunner.commitTransaction();
+            const uniqueSubmittedIds =
+                new Set(
+                    submittedEvaluationIds,
+                );
 
-            // Calculate overall percentage
+            // =========================================
+            // Check duplicate evaluation IDs
+            // =========================================
+
+            if (
+                uniqueSubmittedIds.size !==
+                submittedEvaluationIds.length
+            ) {
+                throw new BadRequestException(
+                    'Duplicate evaluation IDs were submitted.',
+                );
+            }
+
+            // =========================================
+            // Check already completed
+            // =========================================
+
+            const alreadyEvaluated =
+                submittedEvaluationIds.filter(
+                    (evaluationId) =>
+                        existingEvaluationIds.has(
+                            evaluationId,
+                        ),
+                );
+
+            if (
+                alreadyEvaluated.length > 0
+            ) {
+                throw new ConflictException({
+                    status: false,
+
+                    message:
+                        'You have already evaluated this applicant.',
+
+                    error_code:
+                        'ALREADY_EVALUATED',
+
+                    data: {
+                        applicant_id:
+                            dto.applicant_id,
+
+                        job_id:
+                            dto.job_id,
+
+                        evaluator_id:
+                            userId,
+
+                        already_evaluated:
+                            true,
+
+                        can_evaluate:
+                            false,
+
+                        completed_evaluation_ids:
+                            alreadyEvaluated,
+                    },
+                });
+            }
+
+            // =========================================
+            // Create Results
+            // =========================================
+
+            const results =
+                dto.evaluations.map(
+                    (evaluation) =>
+                        queryRunner.manager.create(
+                            EvaluationResult,
+                            {
+                                evaluation_id:
+                                    evaluation.evaluation_id,
+
+                                applicant_id:
+                                    dto.applicant_id,
+
+                                job_id:
+                                    dto.job_id,
+
+                                evaluator_id:
+                                    userId,
+
+                                score:
+                                    evaluation.total_score,
+
+                                comment:
+                                    dto.comment ?? '',
+
+                                creator_id:
+                                    userId,
+
+                                updator_id:
+                                    userId,
+                            },
+                        ),
+                );
+
+            const saved =
+                await queryRunner.manager.save(
+                    EvaluationResult,
+                    results,
+                );
+
+            // =========================================
+            // Calculate Overall Percentage
+            // =========================================
+
             const totalPercentage =
                 dto.evaluations.reduce(
-                    (total, evaluation) =>
-                        total + Number(evaluation.total_score),
+                    (
+                        total,
+                        evaluation,
+                    ) =>
+                        total +
+                        Number(
+                            evaluation.total_score,
+                        ),
                     0,
                 );
 
@@ -119,30 +275,130 @@ export class EvaluationResultService {
                     )
                     : 0;
 
+            // =========================================
+            // Commit
+            // =========================================
+
+            await queryRunner.commitTransaction();
+
             return {
                 status: true,
+
                 message:
                     'Interview evaluation saved successfully',
 
                 data: {
-                    applicant_id: dto.applicant_id,
-                    job_id: dto.job_id,
-                    evaluator_id: userId,
+                    applicant_id:
+                        dto.applicant_id,
 
-                    evaluations: saved,
+                    job_id:
+                        dto.job_id,
 
-                    total_evaluations: totalEvaluations,
+                    evaluator_id:
+                        userId,
 
-                    total_percentage: overallPercentage,
+                    evaluations:
+                        saved,
+
+                    total_evaluations:
+                        totalEvaluations,
+
+                    total_percentage:
+                        overallPercentage,
+
+                    evaluation_status:
+                        'completed',
+
+                    already_evaluated:
+                        true,
+
+                    can_evaluate:
+                        false,
                 },
             };
+
         } catch (error) {
+
             await queryRunner.rollbackTransaction();
+
             throw error;
+
         } finally {
+
             await queryRunner.release();
         }
     }
+
+
+    async getEvaluationStatus(
+        evaluatorId: number,
+        jobId: number,
+        applicantId: number,
+    ) {
+        const results =
+            await this.evaluationresultRepository
+                .createQueryBuilder('result')
+                .where(
+                    'result.job_id = :jobId',
+                    { jobId },
+                )
+                .andWhere(
+                    'result.applicant_id = :applicantId',
+                    { applicantId },
+                )
+                .andWhere(
+                    'result.evaluator_id = :evaluatorId',
+                    { evaluatorId },
+                )
+                .getMany();
+
+        const totalEvaluated =
+            results.length;
+
+        if (totalEvaluated === 0) {
+            return {
+                status: true,
+
+                data: {
+                    job_id: jobId,
+                    applicant_id: applicantId,
+                    evaluator_id: evaluatorId,
+
+                    evaluation_status:
+                        'not_started',
+
+                    already_evaluated:
+                        false,
+
+                    can_evaluate:
+                        true,
+
+                    total_evaluated:
+                        0,
+                },
+            };
+        }
+
+        const totalScore =
+            results.reduce(
+                (sum, result) =>
+                    sum +
+                    Number(
+                        result.score ?? 0,
+                    ),
+                0,
+            );
+
+        const average =
+            totalScore /
+            totalEvaluated;
+
+        return {
+            status: true,
+             message: 'Evaluation results completed',
+        };
+    }
+
     async getEvaluatorResults(
         applicantId: number,
         jobId: number,
@@ -216,175 +472,456 @@ export class EvaluationResultService {
             },
         };
     }
-async getAllApplicantsReport(jobId: number) {
-    const query = this.evaluationresultRepository
-        .createQueryBuilder('result')
-        .leftJoin(
-            Users,
-            'user',
-            'user.id = result.evaluator_id',
-        )
-        .leftJoin(
-            'applicants',
-            'applicant',
-            'applicant.id = result.applicant_id',
-        )
-        .leftJoin(
-            'jobs',
-            'job',
-            'job.id = result.job_id',
-        )
-        .where('result.job_id = :jobId', {
-            jobId,
-        })
-        .andWhere('result.applicant_id IS NOT NULL');
 
-    const results = await query
-        .select([
-            'result.id AS result_id',
-            'result.evaluation_id AS evaluation_id',
-            'result.applicant_id AS applicant_id',
-            'result.job_id AS job_id',
-            'result.evaluator_id AS evaluator_id',
-            'result.score AS score',
-            'result.comment AS comment',
+    async getAllApplicantsReport(
+        jobId: number,
+        page: number = 1,
+        limit: number = 20,
+        search: string = '',
+    ) {
+        if (!Number.isInteger(jobId) || jobId <= 0) {
+            throw new BadRequestException('Invalid job ID.');
+        }
 
-            'user.id AS evaluator_user_id',
-            'user.name AS evaluator_name',
-            'user.email AS evaluator_email',
+        page = Math.max(1, Number(page) || 1);
+        limit = Math.max(1, Number(limit) || 20);
 
-            'job.id AS job_id',
-            'job.title AS job_title',
-        ])
-        .orderBy('result.applicant_id', 'ASC')
-        .addOrderBy('result.evaluator_id', 'ASC')
-        .addOrderBy('result.evaluation_id', 'ASC')
-        .getRawMany();
+        // Prevent very large requests
+        limit = Math.min(limit, 100);
 
-    const applicantsMap = new Map<number, any>();
+        const skip = (page - 1) * limit;
 
-    for (const row of results) {
-        const applicantId = Number(row.applicant_id);
-        const evaluatorId = Number(row.evaluator_id);
-        const score = Number(row.score ?? 0);
+        const searchTerm = search?.trim() || '';
 
-        if (!applicantsMap.has(applicantId)) {
-            applicantsMap.set(applicantId, {
-                applicant_id: applicantId,
-                job_id: Number(row.job_id),
-                job_title: row.job_title,
-                evaluators: new Map<number, any>(),
+        // =========================================
+        // Base Query
+        // =========================================
+
+        const query =
+            this.evaluationresultRepository
+                .createQueryBuilder('result')
+
+                // Applicant relation
+                .leftJoin(
+                    'result.applicant',
+                    'applicant',
+                )
+
+                // Evaluator
+                .leftJoin(
+                    Users,
+                    'user',
+                    'user.id = result.evaluator_id',
+                )
+
+                // Job
+                .leftJoin(
+                    'jobs',
+                    'job',
+                    'job.id = result.job_id',
+                )
+
+                .where(
+                    'result.job_id = :jobId',
+                    { jobId },
+                )
+
+                .andWhere(
+                    'result.applicant_id IS NOT NULL',
+                );
+
+        // =========================================
+        // Search
+        // =========================================
+
+        if (searchTerm) {
+            query.andWhere(
+                `(
+                applicant.first_name LIKE :search
+                OR applicant.middle_name LIKE :search
+                OR applicant.last_name LIKE :search
+                OR CONCAT(
+                    COALESCE(applicant.first_name, ''),
+                    ' ',
+                    COALESCE(applicant.middle_name, ''),
+                    ' ',
+                    COALESCE(applicant.last_name, '')
+                ) LIKE :search
+                OR user.username LIKE :search
+                OR user.email LIKE :search
+            )`,
+                {
+                    search: `%${searchTerm}%`,
+                },
+            );
+        }
+
+        // =========================================
+        // Get All Results
+        // =========================================
+
+        const results = await query
+            .select([
+                // Evaluation result
+                'result.id AS result_id',
+                'result.evaluation_id AS evaluation_id',
+                'result.applicant_id AS applicant_id',
+                'result.job_id AS result_job_id',
+                'result.evaluator_id AS evaluator_id',
+                'result.score AS score',
+                'result.comment AS comment',
+
+                // Applicant
+                'applicant.id AS applicant_id',
+                'applicant.first_name AS applicant_first_name',
+                'applicant.middle_name AS applicant_middle_name',
+                'applicant.last_name AS applicant_last_name',
+
+                // Evaluator
+                'user.id AS evaluator_user_id',
+                'user.username AS evaluator_name',
+                'user.email AS evaluator_email',
+
+                // Job
+                'job.id AS job_id',
+                'job.title AS job_title',
+            ])
+            .orderBy(
+                'result.applicant_id',
+                'ASC',
+            )
+            .addOrderBy(
+                'result.evaluator_id',
+                'ASC',
+            )
+            .addOrderBy(
+                'result.evaluation_id',
+                'ASC',
+            )
+            .getRawMany();
+
+        // =========================================
+        // No Results
+        // =========================================
+
+        if (!results.length) {
+            return {
+                status: true,
+                message:
+                    searchTerm
+                        ? 'No applicants found matching the search.'
+                        : 'No evaluation results found for this job.',
+
+                data: {
+                    job_id: jobId,
+                    search: searchTerm,
+                    total_applicants: 0,
+                    applicants: [],
+                },
+
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    total_pages: 0,
+                    has_next_page: false,
+                    has_previous_page: false,
+                },
+            };
+        }
+
+        // =========================================
+        // Group Results By Applicant
+        // =========================================
+
+        const applicantsMap =
+            new Map<number, any>();
+
+        for (const row of results) {
+            const applicantId =
+                Number(row.applicant_id);
+
+            const evaluatorId =
+                Number(row.evaluator_id);
+
+            const score =
+                Number(row.score ?? 0);
+
+            // Applicant full name
+            const applicantName = [
+                row.applicant_first_name,
+                row.applicant_middle_name,
+                row.applicant_last_name,
+            ]
+                .filter(
+                    (name) =>
+                        name !== null &&
+                        name !== undefined &&
+                        String(name).trim() !== '',
+                )
+                .join(' ');
+
+            // =====================================
+            // Create Applicant
+            // =====================================
+
+            if (!applicantsMap.has(applicantId)) {
+                applicantsMap.set(
+                    applicantId,
+                    {
+                        applicant_id:
+                            applicantId,
+
+                        applicant_name:
+                            applicantName || null,
+
+                        job_id:
+                            Number(row.job_id),
+
+                        job_title:
+                            row.job_title ?? null,
+
+                        evaluators:
+                            new Map<number, any>(),
+                    },
+                );
+            }
+
+            const applicant =
+                applicantsMap.get(
+                    applicantId,
+                );
+
+            // =====================================
+            // Create Evaluator
+            // =====================================
+
+            if (
+                !applicant.evaluators.has(
+                    evaluatorId,
+                )
+            ) {
+                applicant.evaluators.set(
+                    evaluatorId,
+                    {
+                        evaluator_id:
+                            evaluatorId,
+
+                        evaluator_name:
+                            row.evaluator_name ??
+                            null,
+
+                        evaluator_email:
+                            row.evaluator_email ??
+                            null,
+
+                        evaluations: [],
+                    },
+                );
+            }
+
+            const evaluator =
+                applicant.evaluators.get(
+                    evaluatorId,
+                );
+
+            // =====================================
+            // Add Evaluation
+            // =====================================
+
+            evaluator.evaluations.push({
+                result_id:
+                    Number(row.result_id),
+
+                evaluation_id:
+                    Number(row.evaluation_id),
+
+                score,
+
+                comment:
+                    row.comment ?? null,
             });
         }
 
-        const applicant =
-            applicantsMap.get(applicantId);
+        // =========================================
+        // Convert Map To Array
+        // =========================================
 
-        if (!applicant.evaluators.has(evaluatorId)) {
-            applicant.evaluators.set(evaluatorId, {
-                evaluator_id: evaluatorId,
-                evaluator_name:
-                    row.evaluator_name ?? null,
-                evaluator_email:
-                    row.evaluator_email ?? null,
-                evaluations: [],
-            });
-        }
-
-        const evaluator =
-            applicant.evaluators.get(evaluatorId);
-
-        evaluator.evaluations.push({
-            result_id: Number(row.result_id),
-            evaluation_id: Number(row.evaluation_id),
-            score,
-            comment: row.comment ?? null,
-        });
-    }
-
-    const applicants = Array.from(
-        applicantsMap.values(),
-    ).map((applicant) => {
-
-        const evaluators = Array.from(
-            applicant.evaluators.values(),
-        ).map((evaluator: any) => {
-
-            const total = evaluator.evaluations.reduce(
-                (sum: number, evaluation: any) =>
-                    sum + Number(evaluation.score),
-                0,
+        let applicants =
+            Array.from(
+                applicantsMap.values(),
             );
 
-            const totalEvaluations =
-                evaluator.evaluations.length;
+        // =========================================
+        // Calculate Evaluators
+        // =========================================
 
-            const average =
-                totalEvaluations > 0
-                    ? total / totalEvaluations
-                    : 0;
+        applicants =
+            applicants.map(
+                (applicant) => {
 
-            return {
-                evaluator_id:
-                    evaluator.evaluator_id,
+                    const evaluators =
+                        Array.from(
+                            applicant.evaluators.values(),
+                        ).map(
+                            (evaluator: any) => {
 
-                evaluator_name:
-                    evaluator.evaluator_name,
+                                const total =
+                                    evaluator.evaluations.reduce(
+                                        (
+                                            sum: number,
+                                            evaluation: any,
+                                        ) =>
+                                            sum +
+                                            Number(
+                                                evaluation.score ??
+                                                0,
+                                            ),
+                                        0,
+                                    );
 
-                evaluator_email:
-                    evaluator.evaluator_email,
+                                const totalEvaluations =
+                                    evaluator.evaluations.length;
 
-                total_evaluations:
-                    totalEvaluations,
+                                const averagePercentage =
+                                    totalEvaluations > 0
+                                        ? total /
+                                        totalEvaluations
+                                        : 0;
 
-                average_percentage:
-                    Number(average.toFixed(2)),
+                                return {
+                                    evaluator_id:
+                                        evaluator.evaluator_id,
 
-                evaluations:
-                    evaluator.evaluations,
-            };
-        });
+                                    evaluator_name:
+                                        evaluator.evaluator_name,
 
-        const finalPercentage =
-            evaluators.length > 0
-                ? evaluators.reduce(
-                    (
-                        sum: number,
-                        evaluator: any,
-                    ) =>
-                        sum +
-                        evaluator.average_percentage,
-                    0,
-                ) / evaluators.length
-                : 0;
+                                    evaluator_email:
+                                        evaluator.evaluator_email,
+
+                                    total_evaluations:
+                                        totalEvaluations,
+
+                                    total_score:
+                                        Number(
+                                            total.toFixed(2),
+                                        ),
+
+                                    average_percentage:
+                                        Number(
+                                            averagePercentage.toFixed(
+                                                2,
+                                            ),
+                                        ),
+
+                                    evaluations:
+                                        evaluator.evaluations,
+                                };
+                            },
+                        );
+
+                    // =================================
+                    // Final Applicant Percentage
+                    // =================================
+
+                    const finalPercentage =
+                        evaluators.length > 0
+                            ? evaluators.reduce(
+                                (
+                                    sum: number,
+                                    evaluator: any,
+                                ) =>
+                                    sum +
+                                    Number(
+                                        evaluator.average_percentage,
+                                    ),
+                                0,
+                            ) /
+                            evaluators.length
+                            : 0;
+
+                    return {
+                        applicant_id:
+                            applicant.applicant_id,
+
+                        applicant_name:
+                            applicant.applicant_name,
+
+                        job_id:
+                            applicant.job_id,
+
+                        job_title:
+                            applicant.job_title,
+
+                        total_evaluators:
+                            evaluators.length,
+
+                        evaluators,
+
+                        final_percentage:
+                            Number(
+                                finalPercentage.toFixed(
+                                    2,
+                                ),
+                            ),
+                    };
+                },
+            );
+
+        // =========================================
+        // Total Applicants
+        // =========================================
+
+        const total =
+            applicants.length;
+
+        const totalPages =
+            Math.ceil(total / limit);
+
+        // =========================================
+        // Pagination
+        // =========================================
+
+        const paginatedApplicants =
+            applicants.slice(
+                skip,
+                skip + limit,
+            );
+
+        // =========================================
+        // Response
+        // =========================================
 
         return {
-            applicant_id:
-                applicant.applicant_id,
+            status: true,
 
-            job_id:
-                applicant.job_id,
+            message:
+                'Job applicant evaluation report generated successfully',
 
-            job_title:
-                applicant.job_title,
+            data: {
+                job_id: jobId,
 
-            total_evaluators:
-                evaluators.length,
+                search: searchTerm,
 
-            evaluators,
+                total_applicants:
+                    total,
 
-            final_percentage:
-                Number(finalPercentage.toFixed(2)),
+                applicants:
+                    paginatedApplicants,
+            },
+
+
+            page,
+
+            limit,
+
+            total,
+            totalPages,
+
+
+
         };
-    });
-
-    return {
-        status: true,
-        message:
-            'Job applicant evaluation report generated successfully',
-        data: applicants,
-    };
-}
+    }
     /**
      * SAVE COMPLETE EVALUATION
      *

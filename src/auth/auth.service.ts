@@ -925,4 +925,289 @@ export class AuthService {
         }
     }
 
+    /**
+ * Get users with verification statistics
+ */
+    async getUsersWithStatistics(
+        page: number = 1,
+        limit: number = 20,
+        search: string = '',
+        verified?: boolean,
+    ) {
+        /*
+        |--------------------------------------------------------------------------
+        | Pagination
+        |--------------------------------------------------------------------------
+        */
+
+        page = Math.max(1, Number(page) || 1);
+        limit = Math.max(1, Number(limit) || 20);
+
+        const skip = (page - 1) * limit;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Base Query
+        |--------------------------------------------------------------------------
+        */
+
+        const query = this.usersRepository
+            .createQueryBuilder('user');
+
+ 
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search
+        |--------------------------------------------------------------------------
+        */
+
+        if (search.trim()) {
+            query.andWhere(
+                `(
+                user.username LIKE :search
+                OR user.email LIKE :search
+                OR user.temp_email LIKE :search
+            )`,
+                {
+                    search: `%${search.trim()}%`,
+                },
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Verified Filter
+        |--------------------------------------------------------------------------
+        */
+
+        if (verified !== undefined) {
+            query.andWhere(
+                'user.verified = :verified',
+                {
+                    verified: verified ? 1 : 0,
+                },
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get Users
+        |--------------------------------------------------------------------------
+        */
+
+        query
+            .orderBy(
+                'user.created_at',
+                'DESC',
+            )
+            .skip(skip)
+            .take(limit);
+
+        const [
+            users,
+            total,
+        ] = await query.getManyAndCount();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        const statisticsQuery =
+            this.usersRepository
+                .createQueryBuilder('user');
+
+ 
+
+
+        const statistics =
+            await statisticsQuery
+                .select([
+                    'COUNT(user.id) AS total_users',
+
+                    `
+                SUM(
+                    CASE
+                        WHEN user.verified = 1
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS verified_users
+                `,
+
+                    `
+                SUM(
+                    CASE
+                        WHEN user.verified = 0
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS unverified_users
+                `,
+
+                    `
+                SUM(
+                    CASE
+                        WHEN user.hide = 0
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS active_users
+                `,
+
+                    `
+                SUM(
+                    CASE
+                        WHEN user.hide = 1
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS hidden_users
+                `,
+                ])
+                .getRawOne();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Convert Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        const totalUsers =
+            Number(
+                statistics?.total_users ?? 0,
+            );
+
+        const verifiedUsers =
+            Number(
+                statistics?.verified_users ?? 0,
+            );
+
+        const unverifiedUsers =
+            Number(
+                statistics?.unverified_users ?? 0,
+            );
+
+        const activeUsers =
+            Number(
+                statistics?.active_users ?? 0,
+            );
+
+        const hiddenUsers =
+            Number(
+                statistics?.hidden_users ?? 0,
+            );
+
+
+        const verificationPercentage =
+            totalUsers > 0
+                ? (
+                    verifiedUsers /
+                    totalUsers
+                ) * 100
+                : 0;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Format Users
+        |--------------------------------------------------------------------------
+        */
+
+        const data = users.map(
+            (user) => ({
+                id: user.id,
+
+                client_id:
+                    user.client_id,
+
+                username:
+                    user.username,
+
+                email:
+                    user.email,
+
+                role_id:
+                    user.role_id,
+
+                hide:
+                    user.hide,
+
+                verified:
+                    user.verified,
+
+                email_verified_at:
+                    user.email_verified_at,
+
+                created_at:
+                    user.created_at,
+
+                updated_at:
+                    user.updated_at,
+
+                last_activity_at:
+                    user.last_activity_at,
+            }),
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response
+        |--------------------------------------------------------------------------
+        */
+
+        return {
+            success: true,
+
+            message:
+                'Users and verification statistics retrieved successfully',
+
+            statistics: {
+                total_users:
+                    totalUsers,
+
+                verified_users:
+                    verifiedUsers,
+
+                unverified_users:
+                    unverifiedUsers,
+
+                active_users:
+                    activeUsers,
+
+                hidden_users:
+                    hiddenUsers,
+
+                verification_percentage:
+                    Number(
+                        verificationPercentage.toFixed(2),
+                    ),
+            },
+
+            data,
+
+            pagination: {
+                page,
+
+                limit,
+
+                total,
+
+                total_pages:
+                    Math.ceil(
+                        total / limit,
+                    ),
+            },
+        };
+    }
+
 }

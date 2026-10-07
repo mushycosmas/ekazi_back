@@ -59,21 +59,50 @@ export class EvaluationResultController {
             jobId,
         );
     }
-    @Get('report/:jobId')
+
+
+    @Get('results/:jobId')
     @UseGuards(SanctumGuard)
     async getAllApplicantsReport(
         @Param('jobId', ParseIntPipe) jobId: number,
-        @CurrentUser() user: Users,
-    ) {
-        if (user.client_id === null) {
-            throw new BadRequestException(
-                'User is not associated with a client.',
-            );
-        }
 
-        return this.evaluationResultService.getAllApplicantsReport(
-            jobId,
-        );
+        @Query('page') page?: string,
+
+        @Query('limit') limit?: string,
+
+        @Query('search') search: string = '',
+    ) {
+        const parsedPage =
+            page ? Number(page) : 1;
+
+        const parsedLimit =
+            limit ? Number(limit) : 20;
+
+        return this.evaluationResultService
+            .getAllApplicantsReport(
+                jobId,
+                parsedPage,
+                parsedLimit,
+                search,
+            );
+    }
+    @Get('status/:jobId/:applicantId')
+    @UseGuards(SanctumGuard)
+    async getEvaluationStatus(
+        @CurrentUser() user: Users,
+
+        @Param('jobId', ParseIntPipe)
+        jobId: number,
+
+        @Param('applicantId', ParseIntPipe)
+        applicantId: number,
+    ) {
+        return this.evaluationResultService
+            .getEvaluationStatus(
+                user.id,
+                jobId,
+                applicantId,
+            );
     }
     @Get('interview-form')
     @UseGuards(SanctumGuard)

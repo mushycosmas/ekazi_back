@@ -84,4 +84,72 @@ export class AuthController {
     ) {
         return this.authService.resendVerificationEmail(email);
     }
+
+    @Get('users')
+    @UseGuards(SanctumGuard)
+    async getUsers(
+        @CurrentUser() user: Users,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+        @Query('search') search: string = '',
+        @Query('verified') verified?: string,
+    ) {
+        /*
+        |--------------------------------------------------------------------------
+        | Parse Pagination
+        |--------------------------------------------------------------------------
+        */
+
+        const parsedPage =
+            page ? Number(page) : 1;
+
+        const parsedLimit =
+            limit ? Number(limit) : 20;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Parse Verified Filter
+        |--------------------------------------------------------------------------
+        */
+
+        let verifiedFilter:
+            | boolean
+            | undefined;
+
+        if (
+            verified !== undefined &&
+            verified !== ''
+        ) {
+            if (
+                verified !== '0' &&
+                verified !== '1' &&
+                verified !== 'true' &&
+                verified !== 'false'
+            ) {
+                throw new BadRequestException(
+                    'verified must be 0, 1, true or false.',
+                );
+            }
+
+            verifiedFilter =
+                verified === '1' ||
+                verified === 'true';
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get Users
+        |--------------------------------------------------------------------------
+        */
+
+        return this.authService.getUsersWithStatistics(
+         
+            parsedPage,
+            parsedLimit,
+            search,
+            verifiedFilter,
+        );
+    }
 }
