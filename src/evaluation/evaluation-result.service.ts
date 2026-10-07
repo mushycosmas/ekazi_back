@@ -399,79 +399,166 @@ export class EvaluationResultService {
         };
     }
 
-    async getEvaluatorResults(
-        applicantId: number,
-        jobId: number,
-    ) {
-        const results = await this.evaluationresultRepository
+ async getEvaluatorResults(
+    applicantId: number,
+    jobId: number,
+) {
+    const results =
+        await this.evaluationresultRepository
             .createQueryBuilder('result')
-            .select('result.evaluator_id', 'evaluator_id')
+
+            // Evaluator/User
+            .leftJoin(
+                Users,
+                'user',
+                'user.id = result.evaluator_id',
+            )
+
+            .select(
+                'result.evaluator_id',
+                'evaluator_id',
+            )
+
+            .addSelect(
+                'user.username',
+                'evaluator_username',
+            )
+
             .addSelect(
                 'ROUND(AVG(result.score), 2)',
                 'average_percentage',
             )
+
             .addSelect(
                 'COUNT(result.id)',
                 'total_evaluations',
             )
-            .where('result.applicant_id = :applicantId', {
-                applicantId,
-            })
-            .andWhere('result.job_id = :jobId', {
-                jobId,
-            })
-            .groupBy('result.evaluator_id')
+
+            .where(
+                'result.applicant_id = :applicantId',
+                {
+                    applicantId,
+                },
+            )
+
+            .andWhere(
+                'result.job_id = :jobId',
+                {
+                    jobId,
+                },
+            )
+
+            .groupBy(
+                'result.evaluator_id',
+            )
+
+            .addGroupBy(
+                'user.username',
+            )
+
             .getRawMany();
 
-        if (!results.length) {
-            return {
-                status: true,
-                message: 'No evaluation results found',
-                data: {
-                    applicant_id: applicantId,
-                    job_id: jobId,
-                    evaluators: [],
-                    total_percentage: 0,
-                },
-            };
-        }
+    // =========================================
+    // No Results
+    // =========================================
 
-        const evaluators = results.map((item) => ({
-            evaluator_id: Number(item.evaluator_id),
-            average_percentage: Number(
-                item.average_percentage,
-            ),
-            total_evaluations: Number(
-                item.total_evaluations,
-            ),
-        }));
-
-        // Average of each evaluator's percentage
-        const totalPercentage =
-            evaluators.reduce(
-                (total, evaluator) =>
-                    total +
-                    evaluator.average_percentage,
-                0,
-            ) / evaluators.length;
-
+    if (!results.length) {
         return {
             status: true,
-            message: 'Evaluation results retrieved successfully',
+
+            message:
+                'No evaluation results found',
+
             data: {
-                applicant_id: applicantId,
-                job_id: jobId,
+                applicant_id:
+                    applicantId,
 
-                evaluators,
+                job_id:
+                    jobId,
 
-                total_evaluators: evaluators.length,
+                evaluators: [],
 
-                total_percentage: Number(
-                    totalPercentage.toFixed(2),
-                ),
+                total_evaluators: 0,
+
+                total_percentage: 0,
             },
         };
     }
+
+    // =========================================
+    // Format Evaluators
+    // =========================================
+
+    const evaluators = results.map(
+        (item) => ({
+            evaluator_id:
+                Number(
+                    item.evaluator_id,
+                ),
+
+            evaluator_username:
+                item.evaluator_username ??
+                null,
+
+            average_percentage:
+                Number(
+                    item.average_percentage ??
+                    0,
+                ),
+
+            total_evaluations:
+                Number(
+                    item.total_evaluations ??
+                    0,
+                ),
+        }),
+    );
+
+    // =========================================
+    // Calculate Overall Percentage
+    // =========================================
+
+    const totalPercentage =
+        evaluators.reduce(
+            (
+                total,
+                evaluator,
+            ) =>
+                total +
+                evaluator.average_percentage,
+            0,
+        ) /
+        evaluators.length;
+
+    // =========================================
+    // Response
+    // =========================================
+
+    return {
+        status: true,
+
+        message:
+            'Evaluation results retrieved successfully',
+
+        data: {
+            applicant_id:
+                applicantId,
+
+            job_id:
+                jobId,
+
+            evaluators,
+
+            total_evaluators:
+                evaluators.length,
+
+            total_percentage:
+                Number(
+                    totalPercentage.toFixed(2),
+                ),
+        },
+    };
+}
 
     async getAllApplicantsReport(
         jobId: number,
