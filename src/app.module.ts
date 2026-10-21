@@ -94,6 +94,7 @@ import { ApplicantJobsModule } from './applicants/jobs/applicant-jobs.module';
 import { ApplicantDashboardModule } from './applicants/dashboard/applicant-dashboard.module';
 import { BookmarksModule } from './applicants/cv-builder/Bookmark/bookmarks.module';
 import { ApplicantSavedResumesModule } from './applicants/cv-builder/cv/applicant-saved-resumes.module';
+import { TaxCalculationModule } from './tax-calculation/tax-calculation.module';
  
 
 
@@ -126,7 +127,7 @@ import { ApplicantSavedResumesModule } from './applicants/cv-builder/cv/applican
     ApplicantLanguagesModule,ApplicantRefereesModule,ApplicantToolsModule,ApplicantSoftwareModule,ApplicantCulturesModule,
     ApplicantPersonalitiesModule,ApplicantKnowledgeModule,ApplicantCareersModule, ApplicantObjectivesModule,ApplicantEducationModule,
     ApplicantTrainingsModule,ApplicantProficienciesModule,ApplicantPositionsModule,ApplicantAddressesModule,ApplicantIndustryTagsModule,
-    ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule,
+    ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule, TaxCalculationModule,
 
   ],
   // controllers: [EmployerController,

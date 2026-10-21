@@ -59,12 +59,12 @@ export class ApplicantAddressesController {
     findAll(@CurrentUser() user: Users) {
         return this.applicantAddressesService.findAll(user.id);
     }
-      @Patch('picture')
+    @Patch('picture')
     @UseInterceptors(
         FileInterceptor('picture', multerConfig('picture')),
     )
     async updatePicture(
-         @CurrentUser() user: Users,
+        @CurrentUser() user: Users,
         @UploadedFile() file?: Express.Multer.File,
     ) {
         if (!file) {
@@ -97,7 +97,7 @@ export class ApplicantAddressesController {
         ),
     )
     async updateBackgroundPicture(
-          @CurrentUser() user: Users,
+        @CurrentUser() user: Users,
         @UploadedFile() file?: Express.Multer.File,
     ) {
         if (!file) {
@@ -163,5 +163,5 @@ export class ApplicantAddressesController {
         }
     }
 
-  
+
 }

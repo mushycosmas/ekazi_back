@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-@Entity('payroll_reductions') // Replace with your actual table name
+@Entity('pay_calculators') // Replace with your actual table name
 export class PayrollReduction {
   @PrimaryGeneratedColumn({ type: 'int' })
   id: number;
