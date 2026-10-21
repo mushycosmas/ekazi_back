@@ -1578,4 +1578,158 @@ END
       totalPages: Math.ceil(total / limit),
     };
   }
+
+
+  async getMyApplicantProfileCompletion(userId: number) {
+    const applicant = await this.applicantsRepo.findOne({
+      where: { user_id: userId },
+      select: ['id'],
+    });
+
+    if (!applicant) {
+      throw new NotFoundException('Applicant profile was not found.');
+    }
+
+    const profile = await this.getApplicant(applicant.id);
+
+    // Check whether the profile exists before accessing profile.data.
+    if (!profile) {
+      throw new NotFoundException('Applicant profile was not found.');
+    }
+
+    const completion = await this.getApplicantProfileCompletion(
+      applicant.id,
+    );
+
+    return {
+      success: true,
+      message: 'Applicant profile and completion retrieved successfully',
+      data: {
+        applicant_id: applicant.id,
+        profile: profile.data,
+        profile_completion: completion.data.profile_completion,
+      },
+    };
+  }
+
+
+  async checkJobApplicationEligibility(userId: number) {
+    // Find the applicant linked to the authenticated user.
+    const applicant = await this.applicantsRepo.findOne({
+      where: { user_id: userId },
+      select: ['id'],
+    });
+
+    if (!applicant) {
+      throw new NotFoundException('Applicant profile was not found.');
+    }
+
+    // Reuse the existing profile completion calculation.
+    const completion = await this.getApplicantProfileCompletion(
+      applicant.id,
+    );
+
+    const profileCompletion = completion.data.profile_completion;
+    const sections = profileCompletion.sections;
+
+    // Required sections. Training and proficiency are optional.
+    const requiredSections = [
+      {
+        key: 'basic_information',
+        label: 'Basic information',
+        message: 'Please complete your basic personal information.',
+      },
+      {
+        key: 'contact_information',
+        label: 'Contact information',
+        message: 'Please add your phone number and address.',
+      },
+      {
+        key: 'career_summary',
+        label: 'Career summary',
+        message: 'Please add your career summary.',
+      },
+      {
+        key: 'objective',
+        label: 'Career objective',
+        message: 'Please add your career objective.',
+      },
+      {
+        key: 'education',
+        label: 'Education',
+        message: 'Education is required. Please add your education details before applying for a job.',
+      },
+      {
+        key: 'experience',
+        label: 'Work experience',
+        message: 'Please add your work experience.',
+      },
+      {
+        key: 'tools',
+        label: 'Tools',
+        message: 'Please add your professional tools.',
+      },
+      {
+        key: 'software',
+        label: 'Software skills',
+        message: 'Please add your software skills.',
+      },
+      {
+        key: 'knowledge',
+        label: 'Knowledge',
+        message: 'Please add your professional knowledge.',
+      },
+      {
+        key: 'languages',
+        label: 'Languages',
+        message: 'Please add your language proficiency.',
+      },
+      {
+        key: 'culture',
+        label: 'Culture',
+        message: 'Please complete your cultural profile.',
+      },
+      {
+        key: 'referees',
+        label: 'Referees',
+        message: 'Referees are required. Please add at least one referee before applying for a job.',
+      },
+    ] as const;
+
+    const missingRequirements = requiredSections
+      .filter(({ key }) => Number(sections[key] ?? 0) === 0)
+      .map(({ key, label, message }) => ({
+        section: key,
+        label,
+        message,
+      }));
+
+    const canApply = missingRequirements.length === 0;
+
+    return {
+      success: true,
+      message: canApply
+        ? 'Your profile meets the requirements. You can apply for a job.'
+        : 'Please complete the required profile sections before applying.',
+      data: {
+        applicant_id: applicant.id,
+        can_apply: canApply,
+        profile_completion: profileCompletion,
+        missing_requirements: missingRequirements,
+        optional_sections: [
+          {
+            section: 'training',
+            completed: Number(sections.training ?? 0) > 0,
+            required: false,
+          },
+          {
+            section: 'proficiency',
+            completed: Number(sections.proficiency ?? 0) > 0,
+            required: false,
+          },
+        ],
+      },
+    };
+  }
+
 }

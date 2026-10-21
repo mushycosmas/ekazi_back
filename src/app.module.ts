@@ -75,6 +75,25 @@ import { RemarkModule } from './evaluation/remark.module';
 import { BenefitModule } from './benefit/benefit.module';
 import { InterviewActionModule } from './universals/interviewaction/interview-action.module';
 import { EvaluationCriteriaModule } from './evaluation/evaluation-criteria.module';
+import { ApplicantLanguagesModule } from './applicants/languages/applicant-languages.module';
+import { ApplicantRefereesModule } from './applicants/referee/applicant-referees.module';
+import { ApplicantToolsModule } from './applicants/tools/applicant-tools.module';
+import { ApplicantSoftwareModule } from './applicants/softwares/applicant-software.module';
+import { ApplicantCulturesModule } from './applicants/cultures/applicant-cultures.module';
+import { ApplicantPersonalitiesModule } from './applicants/personalities/applicant-personalities.module';
+import { ApplicantKnowledgeModule } from './applicants/skills/applicant-knowledge.module';
+import { ApplicantCareersModule } from './applicants/about/applicant-career-profile.module';
+import { ApplicantObjectivesModule } from './applicants/objective/applicant-objective.module';
+import { ApplicantEducationModule } from './applicants/educations/applicant-education.module';
+import { ApplicantTrainingsModule } from './applicants/training/applicant-trainings.module';
+import { ApplicantProficienciesModule } from './applicants/proficiencies/applicant-proficiencies.module';
+import { ApplicantPositionsModule } from './applicants/positions/applicant-positions.module';
+import { ApplicantAddressesModule } from './applicants/addresses/applicant-addresses.module';
+import { ApplicantIndustryTagsModule } from './applicants/industry-tags/applicant-industry-tags.module';
+import { ApplicantJobsModule } from './applicants/jobs/applicant-jobs.module';
+import { ApplicantDashboardModule } from './applicants/dashboard/applicant-dashboard.module';
+import { BookmarksModule } from './applicants/cv-builder/Bookmark/bookmarks.module';
+import { ApplicantSavedResumesModule } from './applicants/cv-builder/cv/applicant-saved-resumes.module';
  
 
 
@@ -103,7 +122,12 @@ import { EvaluationCriteriaModule } from './evaluation/evaluation-criteria.modul
     //admin  moudel here
     AdminModule, AdminJobsModule, AdminApplicantsModule, NotificationsModule, EvaluationModule,EvaluationSummaryModule,RemarkModule,
 
-    // ... other modules
+    // APPLICANT
+    ApplicantLanguagesModule,ApplicantRefereesModule,ApplicantToolsModule,ApplicantSoftwareModule,ApplicantCulturesModule,
+    ApplicantPersonalitiesModule,ApplicantKnowledgeModule,ApplicantCareersModule, ApplicantObjectivesModule,ApplicantEducationModule,
+    ApplicantTrainingsModule,ApplicantProficienciesModule,ApplicantPositionsModule,ApplicantAddressesModule,ApplicantIndustryTagsModule,
+    ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule,
+
   ],
   // controllers: [EmployerController,
   //   RegionsController, CountriesController],

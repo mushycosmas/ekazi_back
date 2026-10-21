@@ -465,172 +465,424 @@ export class JobMatchService {
 
 
     async findJobsByApplicant(
-        applicantId: number,
+        userId: number,
         page = 1,
-        limit = 20
+        limit = 20,
+        search?: string,
     ) {
 
+
+        const MIN_MATCH = 50;
+        const MAX_SCORE = 13;
+
+        const currentPage = Math.max(1, Number(page) || 1);
+        const perPage = Math.min(100, Math.max(1, Number(limit) || 20));
+
+        // Verify that the applicant exists.
         const applicant = await this.applicantRepo.findOne({
-            where: {
-                id: applicantId
-            },
-            relations: [
-                'positions',
-                'applicant_education'
-            ]
+            where: { user_id: userId },
         });
 
-
         if (!applicant) {
-            throw new NotFoundException(
-                'Applicant not found'
-            );
+            throw new NotFoundException('Applicant profile not found');
         }
 
+        const applicantId = applicant.id;
 
-        const positionIds =
-            applicant.positions.map(
-                p => p.position_id
-            );
+        if (!applicant) {
+            throw new NotFoundException('Applicant profile not found');
+        }
 
+        // Calculate the applicant's total experience in years.
+        const experienceYearsExpr = `
+    (
+      SELECT COALESCE(
+        SUM(
+          TIMESTAMPDIFF(
+            MONTH,
+            ap.start_date,
+            COALESCE(ap.end_date, NOW())
+          )
+        ),
+        0
+      ) / 12.0
+      FROM applicant_positions ap
+      WHERE ap.applicant_id = :applicantId
+        AND ap.start_date IS NOT NULL
+        AND (
+          ap.end_date IS NULL
+          OR ap.end_date >= ap.start_date
+        )
+    )
+  `;
 
-        const industryIds =
-            applicant.positions
-                .map(
-                    p => p.industry_id
-                )
-                .filter(Boolean);
+        // One point for each matching requirement.
+        const scoreExpressions = [
+            `CASE WHEN EXISTS (
+      SELECT 1 FROM applicant_positions ap
+      WHERE ap.applicant_id = :applicantId
+        AND ap.position_id = job.position_id
+    ) THEN 1 ELSE 0 END`,
 
+            `CASE WHEN EXISTS (
+      SELECT 1 FROM applicant_positions ap
+      WHERE ap.applicant_id = :applicantId
+        AND ap.position_level_id = job.position_level_id
+    ) THEN 1 ELSE 0 END`,
 
+            `CASE WHEN EXISTS (
+      SELECT 1 FROM applicant_positions ap
+      WHERE ap.applicant_id = :applicantId
+        AND ap.industry_id = job.industry_id
+    ) THEN 1 ELSE 0 END`,
 
-        const educationIds =
-            applicant.applicant_education
-                .map(
-                    e => e.education_level_id
-                );
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_education ed
+      INNER JOIN job_education je
+        ON je.education_level_id = ed.education_level_id
+      WHERE ed.applicant_id = :applicantId
+        AND je.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
 
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_education ed
+      INNER JOIN job_majors jm ON jm.major_id = ed.major_id
+      WHERE ed.applicant_id = :applicantId
+        AND jm.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
 
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_education ed
+      INNER JOIN job_courses jc ON jc.course_id = ed.course_id
+      WHERE ed.applicant_id = :applicantId
+        AND jc.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
 
-        const qb =
-            this.jobRepo
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_knowledge ak
+      INNER JOIN job_knowledge jk
+        ON jk.knowledge_id = ak.knowledge_id
+      WHERE ak.applicant_id = :applicantId
+        AND jk.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
+
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_personalities ap
+      INNER JOIN job_personalities jp
+        ON jp.personality_id = ap.personality_id
+      WHERE ap.applicant_id = :applicantId
+        AND jp.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
+
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_cultures ac
+      INNER JOIN job_cultures jc
+        ON jc.culture_id = ac.culture_id
+      WHERE ac.applicant_id = :applicantId
+        AND jc.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
+
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_languages al
+      INNER JOIN job_languages jl
+        ON jl.language_id = al.language_id
+      WHERE al.applicant_id = :applicantId
+        AND jl.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
+
+            `CASE WHEN EXISTS (
+      SELECT 1
+      FROM applicant_tools at
+      INNER JOIN job_tools jt ON jt.tool_id = at.tool_id
+      WHERE at.applicant_id = :applicantId
+        AND jt.job_id = job.id
+    ) THEN 1 ELSE 0 END`,
+
+            `  CASE WHEN EXISTS (
+    SELECT 1
+    FROM applicant_software asw
+    INNER JOIN job_software js
+      ON js.software_id = asw.software_id
+    WHERE asw.applicant_id = :applicantId
+      AND js.job_id = job.id
+  ) THEN 1 ELSE 0 END`,
+
+            `CASE
+      WHEN COALESCE(job.years_experience, 0) <= 0 THEN 1
+      WHEN ${experienceYearsExpr} >= job.years_experience THEN 1
+      ELSE 0
+    END`,
+        ];
+
+        const totalScoreExpr = `(${scoreExpressions.join(' + ')})`;
+        const percentageExpr =
+            `ROUND((${totalScoreExpr} * 100.0) / ${MAX_SCORE})`;
+
+        const buildQuery = () => {
+            const qb = this.jobRepo
                 .createQueryBuilder('job')
+                .leftJoinAndSelect('job.position', 'position')
+                .leftJoinAndSelect('job.positionLevel', 'positionLevel')
+                .leftJoinAndSelect('job.industry', 'industry')
+                .leftJoinAndSelect('job.client', 'client')
+                .where('job.published = :published', { published: 1 })
+                .andWhere(`${percentageExpr} >= :minMatch`)
+                .setParameters({
+                    applicantId,
+                    minMatch: MIN_MATCH,
+                });
 
-
-                .leftJoinAndSelect(
-                    'job.position',
-                    'position'
-                )
-
-                .leftJoinAndSelect(
-                    'job.industry',
-                    'industry'
-                )
-
-                .leftJoinAndSelect(
-                    'job.positionLevel',
-                    'positionLevel'
-                )
-
-
-                .leftJoin(
-                    'job.jobEducation',
-                    'education'
-                )
-
-
-                .where(
-                    'job.published = :published',
-                    {
-                        published: '1'
-                    }
-                )
-
-                .andWhere(
-                    'job.hide = false'
-                )
-
-
-
-                .andWhere(
-                    `
-(
-job.position_id IN (:...positionIds)
-
-OR
-
-job.industry_id IN (:...industryIds)
-
-OR
-
-education.education_level_id IN (:...educationIds)
-
-)
-`,
-                    {
-                        positionIds:
-                            positionIds.length ? positionIds : [0],
-
-                        industryIds:
-                            industryIds.length ? industryIds : [0],
-
-                        educationIds:
-                            educationIds.length ? educationIds : [0]
-                    }
-
+            if (search?.trim()) {
+                qb.andWhere(
+                    `(job.title LIKE :search
+          OR position.position_name LIKE :search
+          OR client.client_name LIKE :search)`,
+                    { search: `%${search.trim()}%` },
                 );
-
-
-
-        const [jobs, total] =
-            await qb
-
-                .orderBy(
-                    'job.created_at',
-                    'DESC'
-                )
-
-                .skip(
-                    (page - 1) * limit
-                )
-
-                .take(limit)
-
-                .getManyAndCount();
-
-
-
-        return {
-
-            success: true,
-
-            data: jobs.map(job => ({
-
-                job_id: job.id,
-
-                title: job.title,
-
-                position:
-                    job.position?.position_name,
-
-                industry:
-                    job.industry?.industry_name,
-
-                position_level:
-                    job.positionLevel?.position_name,
-
-
-            })),
-
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages:
-                    Math.ceil(total / limit)
             }
 
+            return qb;
         };
 
+        // Count matching jobs before pagination.
+        const total = await buildQuery().getCount();
 
+        // Retrieve ranked jobs.
+        const qb = buildQuery()
+            .select([
+                'job.id',
+                'job.title',
+                'job.position_id',
+                'job.position_level_id',
+                'job.industry_id',
+                'job.years_experience',
+                'job.publish_date',
+                'job.created_at',
+                'job.dead_line',
+                'job.published',
+                'position.id',
+                'position.position_name',
+                'positionLevel.id',
+                'industry.id',
+                'client.id',
+                'client.client_name',
+                'client.logo',
+            ])
+            .addSelect(totalScoreExpr, 'total_score')
+            .addSelect(percentageExpr, 'match_percentage')
+            .addSelect(experienceYearsExpr, 'experience_years')
+            .orderBy('match_percentage', 'DESC')
+            .addOrderBy('job.id', 'DESC')
+            .skip((currentPage - 1) * perPage)
+            .take(perPage);
+
+        const result = await qb.getRawAndEntities();
+
+        const data = result.entities.map((job, index) => {
+            const raw = result.raw[index];
+
+            return {
+                job_id: job.id,
+                title: job.title,
+                position: job.position?.position_name ?? null,
+                company: job.client?.client_name ?? null,
+                company_logo: job.client?.logo ?? null,
+                posted_on: job.publish_date ?? job.created_at ?? null,
+                deadline: job.dead_line,
+                years_experience_required: job.years_experience ?? 0,
+                applicant_experience_years:
+                    Math.round(Number(raw.experience_years ?? 0) * 100) / 100,
+                match_percentage: Number(raw.match_percentage ?? 0),
+                matched_criteria: Number(raw.total_score ?? 0),
+            };
+        });
+
+        return {
+            success: true,
+            message: 'Matching jobs retrieved successfully',
+            applicant_id: applicantId,
+            total,
+            current_page: currentPage,
+            per_page: perPage,
+            total_pages: Math.ceil(total / perPage),
+            data,
+        };
     }
+
+    //     async findJobsByApplicant(
+    //         applicantId: number,
+    //         page = 1,
+    //         limit = 20
+    //     ) {
+
+    //         const applicant = await this.applicantRepo.findOne({
+    //             where: {
+    //                 id: applicantId
+    //             },
+    //             relations: [
+    //                 'positions',
+    //                 'applicant_education'
+    //             ]
+    //         });
+
+
+    //         if (!applicant) {
+    //             throw new NotFoundException(
+    //                 'Applicant not found'
+    //             );
+    //         }
+
+
+    //         const positionIds =
+    //             applicant.positions.map(
+    //                 p => p.position_id
+    //             );
+
+
+    //         const industryIds =
+    //             applicant.positions
+    //                 .map(
+    //                     p => p.industry_id
+    //                 )
+    //                 .filter(Boolean);
+
+
+
+    //         const educationIds =
+    //             applicant.applicant_education
+    //                 .map(
+    //                     e => e.education_level_id
+    //                 );
+
+
+
+    //         const qb =
+    //             this.jobRepo
+    //                 .createQueryBuilder('job')
+
+
+    //                 .leftJoinAndSelect(
+    //                     'job.position',
+    //                     'position'
+    //                 )
+
+    //                 .leftJoinAndSelect(
+    //                     'job.industry',
+    //                     'industry'
+    //                 )
+
+    //                 .leftJoinAndSelect(
+    //                     'job.positionLevel',
+    //                     'positionLevel'
+    //                 )
+
+
+    //                 .leftJoin(
+    //                     'job.jobEducation',
+    //                     'education'
+    //                 )
+
+
+    //                 .where(
+    //                     'job.published = :published',
+    //                     {
+    //                         published: '1'
+    //                     }
+    //                 )
+
+    //                 .andWhere(
+    //                     'job.hide = false'
+    //                 )
+
+
+
+    //                 .andWhere(
+    //                     `
+    // (
+    // job.position_id IN (:...positionIds)
+
+    // OR
+
+    // job.industry_id IN (:...industryIds)
+
+    // OR
+
+    // education.education_level_id IN (:...educationIds)
+
+    // )
+    // `,
+    //                     {
+    //                         positionIds:
+    //                             positionIds.length ? positionIds : [0],
+
+    //                         industryIds:
+    //                             industryIds.length ? industryIds : [0],
+
+    //                         educationIds:
+    //                             educationIds.length ? educationIds : [0]
+    //                     }
+
+    //                 );
+
+
+
+    //         const [jobs, total] =
+    //             await qb
+
+    //                 .orderBy(
+    //                     'job.created_at',
+    //                     'DESC'
+    //                 )
+
+    //                 .skip(
+    //                     (page - 1) * limit
+    //                 )
+
+    //                 .take(limit)
+
+    //                 .getManyAndCount();
+
+
+
+    //         return {
+
+    //             success: true,
+
+    //             data: jobs.map(job => ({
+
+    //                 job_id: job.id,
+
+    //                 title: job.title,
+
+    //                 position:
+    //                     job.position?.position_name,
+
+    //                 industry:
+    //                     job.industry?.industry_name,
+
+    //                 position_level:
+    //                     job.positionLevel?.position_name,
+
+
+    //             })),
+
+    //             pagination: {
+    //                 total,
+    //                 page,
+    //                 limit,
+    //                 totalPages:
+    //                     Math.ceil(total / limit)
+    //             }
+
+    //         };
+
+
+    //     }
 }

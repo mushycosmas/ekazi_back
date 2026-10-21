@@ -5,10 +5,11 @@ import {
 import {
     AppModule,
 } from './app.module';
-
 import {
     ValidationPipe,
+    BadRequestException,
 } from '@nestjs/common';
+ 
 
 import {
     join,
@@ -99,21 +100,59 @@ async function bootstrap() {
     );
 
 
+    // app.useGlobalPipes(
+
+    //     new ValidationPipe({
+
+    //         whitelist:
+    //             true,
+
+    //         forbidNonWhitelisted:
+    //             true,
+
+    //         transform:
+    //             true,
+
+    //     }),
+
+    // );
     app.useGlobalPipes(
-
         new ValidationPipe({
+            whitelist: true,
+            forbidNonWhitelisted: true,
+            transform: true,
 
-            whitelist:
-                true,
+            exceptionFactory: (errors) => {
+                console.error(
+                    '\n========== DTO VALIDATION ERRORS ==========',
+                );
 
-            forbidNonWhitelisted:
-                true,
+                console.error(
+                    JSON.stringify(
+                        errors.map((error) => ({
+                            property: error.property,
+                            receivedValue: error.value,
+                            receivedType: typeof error.value,
+                            constraints: error.constraints,
+                        })),
+                        null,
+                        2,
+                    ),
+                );
 
-            transform:
-                true,
+                console.error(
+                    '===========================================\n',
+                );
 
+                return new BadRequestException(
+                    errors.map((error) => ({
+                        property: error.property,
+                        value: error.value,
+                        constraints: error.constraints,
+                    })),
+                );
+            },
         }),
-
     );
 
 

@@ -22,11 +22,18 @@ export class ApplicantSoftware {
   @Column({ type: 'int', unsigned: true })
   software_id: number;
 
-  @Column({ type: 'timestamp', nullable: true })
-  created_at: Date | null;
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  created_at: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
-  updated_at: Date | null;
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
+  updated_at: Date;
 
   // ----------------------
   // Relations

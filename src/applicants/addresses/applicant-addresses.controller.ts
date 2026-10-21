@@ -1,5 +1,6 @@
 
 import {
+    BadRequestException,
     Body,
     Controller,
     Delete,
@@ -8,8 +9,13 @@ import {
     ParseIntPipe,
     Patch,
     Post,
+    Req,
+    UploadedFile,
     UseGuards,
+    UseInterceptors,
 } from '@nestjs/common';
+import { unlink } from 'fs/promises';
+import * as path from 'path';
 
 import { ApplicantAddressesService } from './applicant-addresses.service';
 import { CreateApplicantAddressDto } from './dto/create-applicant-address.dto';
@@ -18,43 +24,14 @@ import { UpdateApplicantAddressDto } from './dto/update-applicant-address.dto';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Users } from 'src/entities/users.entity';
+import { multerConfig } from 'src/common/upload/multer.config';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { promises as fs } from 'fs';
 
 
 
-function imageUploadOptions(folder: string, prefix: string) {
-  const destination = join(
-    process.cwd(),
-    'uploads',
-    folder,
-  );
 
-  mkdirSync(destination, { recursive: true });
 
-  return {
-    storage: diskStorage({
-      destination,
-      filename: (_req, file, callback) => {
-        callback(
-          null,
-          `${prefix}_${Date.now()}_${randomUUID()}${extname(file.originalname).toLowerCase()}`,
-        );
-      },
-    }),
-    fileFilter: (_req, file, callback) => {
-      if (!file.mimetype.startsWith('image/')) {
-        return callback(
-          new BadRequestException('Only image files are allowed'),
-          false,
-        );
-      }
-
-      callback(null, true);
-    },
-    limits: {
-      fileSize: 5 * 1024 * 1024,
-    },
-  };
-}
 
 @Controller('applicant/addresses')
 @UseGuards(SanctumGuard)
@@ -81,6 +58,69 @@ export class ApplicantAddressesController {
     @Get()
     findAll(@CurrentUser() user: Users) {
         return this.applicantAddressesService.findAll(user.id);
+    }
+      @Patch('picture')
+    @UseInterceptors(
+        FileInterceptor('picture', multerConfig('picture')),
+    )
+    async updatePicture(
+         @CurrentUser() user: Users,
+        @UploadedFile() file?: Express.Multer.File,
+    ) {
+        if (!file) {
+            throw new BadRequestException(
+                'Please upload an image using the picture field',
+            );
+        }
+
+        const picture = path
+            .relative(process.cwd(), file.path)
+            .split(path.sep)
+            .join('/');
+
+        try {
+            return await this.applicantAddressesService.updatePicture(
+                user.id,
+                picture,
+            );
+        } catch (error) {
+            await this.removeUploadedFile(file);
+            throw error;
+        }
+    }
+
+    @Patch('background-picture')
+    @UseInterceptors(
+        FileInterceptor(
+            'background_picture',
+            multerConfig('background'),
+        ),
+    )
+    async updateBackgroundPicture(
+          @CurrentUser() user: Users,
+        @UploadedFile() file?: Express.Multer.File,
+    ) {
+        if (!file) {
+            throw new BadRequestException(
+                'Please upload an image using the background_picture field',
+            );
+        }
+
+        const backgroundPicture = path
+            .relative(process.cwd(), file.path)
+            .split(path.sep)
+            .join('/');
+
+        try {
+            return await this.applicantAddressesService
+                .updateBackgroundPicture(
+                    user.id,
+                    backgroundPicture,
+                );
+        } catch (error) {
+            await this.removeUploadedFile(file);
+            throw error;
+        }
     }
 
     @Get(':id')
@@ -111,4 +151,17 @@ export class ApplicantAddressesController {
     ) {
         return this.applicantAddressesService.remove(user.id, id);
     }
+    private async removeUploadedFile(
+        file?: Express.Multer.File,
+    ) {
+        if (!file?.path) return;
+
+        try {
+            await fs.unlink(file.path);
+        } catch {
+            // Preserve the original request error.
+        }
+    }
+
+  
 }

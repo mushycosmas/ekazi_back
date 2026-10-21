@@ -4,12 +4,32 @@ import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Users } from 'src/entities/users.entity';
 
-@Controller('jobseekers')
+@Controller()
 export class ApplicantController {
     constructor(private readonly applicantService: ApplicantService) { }
 
 
-    @Get()
+    @Get('applicant/my-profile')
+    @UseGuards(SanctumGuard)
+    async getMyApplicantProfileCompletion(
+        @CurrentUser() user: Users,
+    ) {
+        return this.applicantService.getMyApplicantProfileCompletion(
+            user.id,
+        );
+    }
+
+    @Get('applicant/apply-job-check')
+    @UseGuards(SanctumGuard)
+    async checkJobApplicationEligibility(
+        @CurrentUser() user: Users,
+    ) {
+        return this.applicantService.checkJobApplicationEligibility(
+            user.id,
+        );
+    }
+
+    @Get('jobseekers')
     @UseGuards(SanctumGuard)
     async getApplicants(
         @Query('page') page = 1,
@@ -40,7 +60,7 @@ export class ApplicantController {
                 : undefined,
         );
     }
-    @Get(':id')
+    @Get('jobseekers/:id')
     @UseGuards(SanctumGuard)
     async getApplicant(@Param('id') id: string) {
         const applicant = await this.applicantService.getApplicant(+id);
@@ -55,7 +75,7 @@ export class ApplicantController {
         }
         return applicant;
     }
-    @Get('applicant')
+    @Get('jobseekers/applicant')
     @UseGuards(SanctumGuard)
     async getClientApplicants(
         @CurrentUser() user: Users,
@@ -78,7 +98,7 @@ export class ApplicantController {
             position_level_id ? Number(position_level_id) : undefined,
         );
     }
-    @Get(':id/profile-completion')
+    @Get('jobseekers/:id/profile-completion')
     @UseGuards(SanctumGuard)
     async profileCompletion(
         @Param('id') id: number

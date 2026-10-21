@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { ApplicantAddresses } from 'src/entities/applicants/applicant-addresses.entity';
 import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { Regions } from 'src/entities/regions.entity';
+import { ApplicantPhones } from 'src/entities/applicants/applicant-phones.entity';
 
 import { CreateApplicantAddressDto } from './dto/create-applicant-address.dto';
 import { UpdateApplicantAddressDto } from './dto/update-applicant-address.dto';
@@ -167,7 +168,7 @@ export class ApplicantAddressesService {
             applicant.id,
         );
 
-        // Update applicant profile fields only when provided.
+        // Update applicant profile fields.
         const profileFields = [
             'first_name',
             'middle_name',
@@ -184,7 +185,7 @@ export class ApplicantAddressesService {
             }
         }
 
-        // Update address fields only when provided.
+        // Update address fields.
         if (dto.region_id !== undefined && dto.region_id !== null) {
             await this.validateRegion(dto.region_id);
             address.region_id = dto.region_id;
@@ -198,19 +199,67 @@ export class ApplicantAddressesService {
             address.postal = dto.postal;
         }
 
-        // Save both updates in a transaction.
-        await this.applicantsRepo.manager.transaction(async (manager) => {
-            await manager.save(applicant);
-            address.updated_at = new Date();
-            await manager.save(address);
-        });
+        // Update applicant, address, and phone in one transaction.
+        const result = await this.applicantsRepo.manager.transaction(
+            async (manager) => {
+                await manager.save(applicant);
+
+                address.updated_at = new Date();
+                const savedAddress = await manager.save(address);
+
+                let savedPhone: ApplicantPhones | null = null;
+
+                if (
+                    dto.phone_number !== undefined &&
+                    dto.phone_number !== null
+                ) {
+                    const phoneRepo = manager.getRepository(ApplicantPhones);
+
+                    // Find the latest phone record belonging to this applicant.
+                    let phone = await phoneRepo.findOne({
+                        where: {
+                            applicant_id: applicant.id,
+                        },
+                        order: {
+                            id: 'DESC',
+                        },
+                    });
+
+                    if (phone) {
+                        phone.phone_number = dto.phone_number;
+                        phone.updated_at = new Date();
+                    } else {
+                        phone = phoneRepo.create({
+                            applicant_id: applicant.id,
+                            phone_number: dto.phone_number,
+                        });
+                    }
+
+                    savedPhone = await phoneRepo.save(phone);
+                }
+
+                return {
+                    address: savedAddress,
+                    phone: savedPhone,
+                };
+            },
+        );
 
         return {
             success: true,
-            message: 'Applicant profile and address updated successfully',
+            message: 'Applicant profile, address and phone updated successfully',
             data: {
                 applicant,
-                address: this.format(address),
+                address: this.format(result.address),
+                phone: result.phone
+                    ? {
+                        id: result.phone.id,
+                        applicant_id: result.phone.applicant_id,
+                        phone_number: result.phone.phone_number,
+                        created_at: result.phone.created_at,
+                        updated_at: result.phone.updated_at,
+                    }
+                    : null,
             },
         };
     }
@@ -224,6 +273,58 @@ export class ApplicantAddressesService {
         return {
             success: true,
             message: 'Applicant address deleted successfully.',
+        };
+    }
+
+    async updatePicture(
+        userId: number,
+        picture: string,
+    ) {
+        const applicant = await this.getApplicant(userId);
+
+        if (!applicant) {
+            throw new NotFoundException(
+                'Applicant profile not found',
+            );
+        }
+
+        applicant.picture = picture;
+
+        await this.applicantsRepo.save(applicant);
+
+        return {
+            success: true,
+            message: 'Applicant profile picture updated successfully',
+            data: {
+                applicant_id: applicant.id,
+                picture: applicant.picture,
+            },
+        };
+    }
+
+    async updateBackgroundPicture(
+        userId: number,
+        backgroundPicture: string,
+    ) {
+        const applicant = await this.getApplicant(userId);
+
+        if (!applicant) {
+            throw new NotFoundException(
+                'Applicant profile not found',
+            );
+        }
+
+        applicant.background_picture = backgroundPicture;
+
+        await this.applicantsRepo.save(applicant);
+
+        return {
+            success: true,
+            message: 'Applicant background picture updated successfully',
+            data: {
+                applicant_id: applicant.id,
+                background_picture: applicant.background_picture,
+            },
         };
     }
 }

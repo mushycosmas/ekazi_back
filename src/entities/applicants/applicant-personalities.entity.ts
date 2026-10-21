@@ -22,11 +22,18 @@ export class ApplicantPersonalities {
   @Column({ type: 'int', unsigned: true, name: 'personality_id' })
   personality_id: number;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', nullable: true })
-  created_at: Date | null;
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  created_at: Date;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', nullable: true })
-  updated_at: Date | null;
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
+  updated_at: Date;
 
   // ----------------------
   // Relations

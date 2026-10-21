@@ -151,6 +151,11 @@ import { EvaluationSummary } from 'src/entities/evaluation-summary.entity';
 import { Remark } from 'src/entities/remark.entity';
 import { Benefit } from 'src/entities/benefit.entity';
 import { ApplicantJobOffer } from 'src/entities/applicants/applicant-job-offer.entity';
+import { ApplicantIndustryTags } from 'src/entities/applicants/applicant-industry-tags.entity';
+import { ApplicantSaveJobs } from 'src/entities/applicants/applicant-save-jobs.entity';
+import {ApplicantSavedResumes } from 'src/entities/applicants/applicant-cv-template.entity';
+import { Bookmark } from 'src/entities/bookmark.entity';
+import { PayrollReduction } from 'src/entities/payroll-reduction.entity';
  
  
 
@@ -304,6 +309,12 @@ const allEntities = [
   Remark,
   Benefit,
   ApplicantJobOffer,
+  ApplicantIndustryTags,
+  ApplicantSaveJobs,
+  ApplicantSavedResumes,
+  Bookmark,
+  PayrollReduction,
+
   // TaskAttachment,
   // TaskMessageAttachment,
   // TaskMessage,

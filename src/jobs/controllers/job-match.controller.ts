@@ -5,13 +5,14 @@ import { Users } from 'src/entities/users.entity';
 import { JobMatchService } from '../services/job-match.service';
 
 @Controller('job-match')
+@UseGuards(SanctumGuard)
 export class JobMatchController {
     constructor(
         private readonly jobMatchService: JobMatchService,
     ) { }
 
     @Get(':jobId/match-applicants')
-    @UseGuards(SanctumGuard)
+  
     async findApplicantsByJob(
         @Param('jobId', ParseIntPipe) jobId: number,
         @Query('page') page = 1,
@@ -26,18 +27,34 @@ export class JobMatchController {
             search,
         );
     }
-    @Get(':applicantId/match-jobs')
-    @UseGuards(SanctumGuard)
-    async findJobsByApplicant(
-        @Param('applicantId', ParseIntPipe) applicantId: number,
-        @Query('page') page = 1,
-        @Query('limit') limit = 20,
-    ) {
+    // @Get(':applicantId/match-jobs')
+    // @UseGuards(SanctumGuard)
+    // async findJobsByApplicant(
+    //     @Param('applicantId', ParseIntPipe) applicantId: number,
+    //     @Query('page') page = 1,
+    //     @Query('limit') limit = 20,
+    // ) {
 
+    //     return this.jobMatchService.findJobsByApplicant(
+    //         applicantId,
+    //         Number(page),
+    //         Number(limit),
+    //     );
+    // }
+
+
+    @Get('/recommended')
+    async findJobsForApplicant(
+        @CurrentUser() user: Users,
+        @Query('page') page = '1',
+        @Query('limit') limit = '20',
+        @Query('search') search?: string,
+    ) {
         return this.jobMatchService.findJobsByApplicant(
-            applicantId,
+            user.id,
             Number(page),
             Number(limit),
+            search,
         );
     }
 }

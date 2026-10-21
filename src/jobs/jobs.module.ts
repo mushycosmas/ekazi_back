@@ -11,6 +11,8 @@ import { JobTool } from './entities/job-tool.entity';
 import { JobSoftware } from './entities/job-software.entity';
 import { JobKnowledge } from './entities/job-knowledge.entity';
 import { JobAddresses } from './entities/job-addresses.entity';
+import { Positions } from 'src/entities/positions.entity';
+import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -21,10 +23,13 @@ import { JobAddresses } from './entities/job-addresses.entity';
         JobKnowledge,
         JobProficiencies,
         JobAddresses,
-    ])],
+        Positions,
+        ApplicantApplication,
+    ])
+
+    ],
     controllers: [JobsController],
     providers: [JobsService],
     exports: [JobsService],
 })
 export class JobsModule { }
-  
