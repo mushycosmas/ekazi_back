@@ -17,6 +17,7 @@ import { ClientEmail } from 'src/client/entities/client-email.entity';
 import { ClientPhone } from 'src/client/entities/client-phones.entity';
 import { Notification } from 'src/client/entities/notifications.entity';
 import { Role } from 'src/entities/role.entity';
+import { MailService } from 'src/mail/mail.service';
 
 @Module({
   imports: [
@@ -30,6 +31,8 @@ import { Role } from 'src/entities/role.entity';
       Notification,
       ClientPhone,
       Role,
+ 
+
     ]),
     MailModule,
   ],
@@ -38,10 +41,12 @@ import { Role } from 'src/entities/role.entity';
     AuthService,
     SanctumGuard,
     RolesGuard,
+   
   ],
   exports: [
     AuthService,
     SanctumGuard,
+
   ],
 })
 export class AuthModule {}

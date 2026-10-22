@@ -92,9 +92,7 @@ export class ApplicantService {
     }
   }
   async getApplicant(applicantId: number) {
-    // ---------------------
-    // 1️⃣ Load applicant main info + relations
-    // ---------------------
+    // 1. Load applicant and related entities
     const applicant = await this.applicantsRepo
       .createQueryBuilder('applicant')
       .leftJoinAndSelect('applicant.user', 'user')
@@ -112,7 +110,10 @@ export class ApplicantService {
       .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
       .leftJoinAndSelect('applicant.applicant_software', 'applicantSoftware')
       .leftJoinAndSelect('applicantSoftware.software', 'software')
-      .leftJoinAndSelect('applicant.applicant_proficiencies', 'applicant_proficiencies')
+      .leftJoinAndSelect(
+        'applicant.applicant_proficiencies',
+        'applicant_proficiencies',
+      )
       .leftJoinAndSelect('applicant_proficiencies.organization', 'organization')
       .leftJoinAndSelect('applicant_proficiencies.proficiency', 'proficiency')
       .leftJoinAndSelect('applicant.applicant_education', 'education')
@@ -133,11 +134,11 @@ export class ApplicantService {
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
 
-    if (!applicant) return null;
+    if (!applicant) {
+      return null;
+    }
 
-    // ---------------------
-    // 2️⃣ Load applicant positions separately with all relations
-    // ---------------------
+    // 2. Load work experience and its related entities
     const positions = await this.applicantPositionsRepo
       .createQueryBuilder('pos')
       .leftJoinAndSelect('pos.position', 'position')
@@ -151,266 +152,346 @@ export class ApplicantService {
       .orderBy('pos.start_date', 'DESC')
       .getMany();
 
-    // ---------------------
-    // 3️⃣ Get current position using the custom logic
-    // ---------------------
+    // 3. Get current position
     const current_position = await this.getApplicantPosition(applicantId);
 
-    // ---------------------
-    // 4️⃣ Filter out null entries and clean the data
-    // ---------------------
-    const tools = (applicant.applicant_tools || [])
-      .map(t => t.tools)
-      .filter(tool => tool !== null);
-
-    const software = (applicant.applicant_software || [])
-      .map(s => s.software)
-      .filter(software => software !== null);
-
-    // ---------------------
-    // 5️⃣ Build the final response object in CV profile order
-    // ---------------------
+    // 4. Format the response
     const data = {
       // =============================================
-      // 1. BASIC INFORMATION
+      // BASIC INFORMATION
       // =============================================
       applicant_profile: {
         id: applicant.id,
+        user_id: applicant.user?.id ?? null,
+
         first_name: applicant.first_name,
         middle_name: applicant.middle_name,
         last_name: applicant.last_name,
         dob: this.formatDate(applicant.dob),
-        nationality_id: applicant.nationality_id || null,
+
+        nationality_id: applicant.nationality_id ?? null,
         picture: applicant.picture,
         background_picture: applicant.background_picture,
-        email: applicant.user?.email || null,
-        marital_status: applicant.marital?.marital_status || null,
-        gender: applicant.gender?.gender_name || null,
+        email: applicant.user?.email ?? null,
+
+        marital_status: applicant.marital
+          ? {
+            id: applicant.marital.id,
+            name: applicant.marital.marital_status,
+          }
+          : null,
+
+        gender: applicant.gender
+          ? {
+            id: applicant.gender.id,
+            name: applicant.gender.gender_name,
+          }
+          : null,
       },
 
       // =============================================
-      // 2. CONTACT INFORMATION
+      // CONTACT INFORMATION
       // =============================================
-      phone: (applicant.applicant_phones || []).map(phone => ({
+      phone: (applicant.applicant_phones || []).map((phone) => ({
         id: phone.id,
-        phone_number: phone.phone_number
+        applicant_id: phone.applicant_id,
+        phone_number: phone.phone_number,
       })),
 
-      address: (applicant.applicant_addresses || []).map(address => ({
+      address: (applicant.applicant_addresses || []).map((address) => ({
         id: address.id,
-        region: address.region?.region_name || null,
+        applicant_id: address.applicant_id,
+
+        region: address.region
+          ? {
+            id: address.region.id,
+            name: address.region.region_name,
+          }
+          : null,
+
         sub_location: address.sub_location,
-        postal: address.postal
+        postal: address.postal,
       })),
 
       // =============================================
-      // 3. CAREER OBJECTIVE & SUMMARY
+      // CAREER OBJECTIVE AND SUMMARY
       // =============================================
-      objective: applicant.applicant_objectives?.[0]?.objective || null,
-      career_summary: applicant.applicant_career?.[0]?.career || null,
-      current_position: current_position,
+      objective: applicant.applicant_objectives?.[0]?.objective ?? null,
+
+      career_summary: applicant.applicant_career?.[0]?.career ?? null,
+
+      current_position,
 
       // =============================================
-      // 4. WORK EXPERIENCE
+      // WORK EXPERIENCE
       // =============================================
-      experience: positions.map(pos => ({
+      experience: positions.map((pos) => ({
         id: pos.id,
-        position: pos.position?.position_name || null,
-        position_level: pos.position_level?.position_name || null,
-        industry: pos.industry?.industry_name || null,
-        employer: pos.applicant_employer?.employer_name || null,
-        region: pos.region?.region_name || null,
+        applicant_id: pos.applicant_id,
+
+        position: pos.position
+          ? {
+            id: pos.position.id,
+            name: pos.position.position_name,
+          }
+          : null,
+
+        position_level: pos.position_level
+          ? {
+            id: pos.position_level.id,
+            name: pos.position_level.position_name,
+          }
+          : null,
+
+        industry: pos.industry
+          ? {
+            id: pos.industry.id,
+            name: pos.industry.industry_name,
+          }
+          : null,
+
+        employer: pos.applicant_employer
+          ? {
+            id: pos.applicant_employer.id,
+            name: pos.applicant_employer.employer_name,
+          }
+          : null,
+
+        region: pos.region
+          ? {
+            id: pos.region.id,
+            name: pos.region.region_name,
+          }
+          : null,
+
+        start_salary: pos.start_salary
+          ? {
+            id: pos.start_salary.id,
+            name: String(pos.start_salary.low),
+          }
+          : null,
+
+        end_salary: pos.end_salary
+          ? {
+            id: pos.end_salary.id,
+            name: String(pos.end_salary.high),
+          }
+          : null,
+
         sub_location: pos.sub_location,
         responsibility: pos.responsibility,
         remark: pos.remark,
         start_date: this.formatDate(pos.start_date),
         end_date: this.formatDate(pos.end_date),
-        start_salary: pos.start_salary?.low || null,
-        end_salary: pos.end_salary?.high || null,
       })),
 
       // =============================================
-      // 5. EDUCATION
+      // EDUCATION
       // =============================================
-      // education: (applicant.applicant_education || []).map(edu => ({
-      //   id: edu.id,
-      //   college_id: edu.college_id,
-      //   course_id: edu.course_id,
-      //   major_id: edu.major_id,
-      //   education_level_id: edu.education_level_id,
-      //   attachment: edu.attachment,
-      //   started: this.formatDate(edu.started),
-      //   ended: this.formatDate(edu.ended)
-      // })),
-      education: (applicant.applicant_education || []).map(edu => ({
-
+      education: (applicant.applicant_education || []).map((edu) => ({
         id: edu.id,
+        applicant_id: edu.applicant_id,
 
+        college: edu.college
+          ? {
+            id: edu.college.id,
+            name: edu.college.college_name,
+            town: edu.college.town,
+            registration: edu.college.reg,
+          }
+          : null,
 
-        college_id:
-          edu.college_id,
-
-        college:
-          edu.college
-            ? {
-              id: edu.college.id,
-              name: edu.college.college_name,
-              town: edu.college.town,
-              registration: edu.college.reg
-            }
-            : null,
-        course_id: edu.course_id,
         course: edu.course
           ? {
             id: edu.course.id,
-            name: edu.course.course_name
+            name: edu.course.course_name,
           }
           : null,
-        major_id: edu.major_id,
+
         major: edu.major
           ? {
             id: edu.major.id,
-            name: edu.major.name
+            name: edu.major.name,
           }
           : null,
-        education_level_id: edu.education_level_id,
+
         education_level: edu.education_level
           ? {
             id: edu.education_level.id,
-            name: edu.education_level.education_level
+            name: edu.education_level.education_level,
           }
           : null,
-        attachment:
-          edu.attachment,
 
-
-        started:
-          this.formatDate(
-            edu.started
-          ),
-
-
-        ended:
-          this.formatDate(
-            edu.ended
-          )
-
+        attachment: edu.attachment,
+        started: this.formatDate(edu.started),
+        ended: this.formatDate(edu.ended),
       })),
 
       // =============================================
-      // 6. TRAINING & CERTIFICATIONS
-      // =============================================
-      training: (applicant.applicant_trainings || [])
-        .filter(training => !training.hide)
-        .map(training => ({
-          id: training.id,
-          name: training.name,
-          institution: training.institution,
-          description: training.description,
-          started: this.formatDate(training.started),
-          ended: this.formatDate(training.ended),
-          attachment: training.attachment
-        })),
-
-      // =============================================
-      // 7. SKILLS & PROFICIENCY
+      // SKILLS
       // =============================================
       skills: {
-        tools: tools
-          .filter(tool => tool && tool.hide === 0)
-          .map(tool => ({
-            id: tool.id,
-            name: tool.tool_name
+        tools: (applicant.applicant_tools || [])
+          .filter((item) => item.tools && item.tools.hide === 0)
+          .map((item) => ({
+            id: item.id,
+
+            tool: {
+              id: item.tools.id,
+              name: item.tools.tool_name,
+            },
           })),
 
         knowledge: (applicant.applicant_knowledge || [])
-          .map(k => k.knowledge)
-          .filter(knowledge => knowledge && !knowledge.hide)
-          .map(knowledge => ({
-            id: knowledge.id,
-            name: knowledge.knowledge_name
+          .filter((item) => item.knowledge && !item.knowledge.hide)
+          .map((item) => ({
+            id: item.id,
+
+            knowledge: {
+              id: item.knowledge.id,
+              name: item.knowledge.knowledge_name,
+            },
           })),
 
-        software: software
-          .filter(software => software && !software.hide)
-          .map(software => ({
-            id: software.id,
-            name: software.software_name
+        software: (applicant.applicant_software || [])
+          .filter((item) => item.software && !item.software.hide)
+          .map((item) => ({
+            id: item.id,
+
+            software: {
+              id: item.software.id,
+              name: item.software.software_name,
+            },
           })),
       },
 
       // =============================================
-      // 8. LANGUAGE PROFICIENCY
+      // LANGUAGES
       // =============================================
-      language: (applicant.applicant_languages || []).map(lang => ({
+      language: (applicant.applicant_languages || []).map((lang) => ({
         id: lang.id,
-        language: lang.language?.language_name || null,
-        read: lang.read?.read_ability || null,
-        write: lang.write?.write_ability || null,
-        speak: lang.speak?.speak_ability || null,
-        understand: lang.understand?.understand_ability || null
+
+        language: lang.language
+          ? {
+            id: lang.language.id,
+            name: lang.language.language_name,
+          }
+          : null,
+
+        read: lang.read
+          ? {
+            id: lang.read.id,
+            name: lang.read.read_ability,
+          }
+          : null,
+
+        write: lang.write
+          ? {
+            id: lang.write.id,
+            name: lang.write.write_ability,
+          }
+          : null,
+
+        speak: lang.speak
+          ? {
+            id: lang.speak.id,
+            name: lang.speak.speak_ability,
+          }
+          : null,
+
+        understand: lang.understand
+          ? {
+            id: lang.understand.id,
+            name: lang.understand.understand_ability,
+          }
+          : null,
       })),
 
       // =============================================
-      // 9. CULTURAL & PERSONALITY TRAITS
+      // CULTURE
       // =============================================
       culture: (applicant.applicant_cultures || [])
-        .map(c => c.culture)
-        .filter(culture => culture !== null)
-        .map(culture => ({
-          id: culture.id,
-          name: culture.culture_name
+        .filter((item) => item.culture)
+        .map((item) => ({
+          id: item.id,
+
+          culture: {
+            id: item.culture.id,
+            name: item.culture.culture_name,
+          },
         })),
 
+      // =============================================
+      // PERSONALITY
+      // =============================================
       applicant_personality: (applicant.applicant_personalities || [])
-        .map(ap => ap.personality)
-        .filter((personality): personality is NonNullable<typeof personality> =>
-          personality !== null && personality !== undefined
-        )
-        .map(personality => ({
-          id: personality.id,
-          name: personality.personality_name
+        .filter((item) => item.personality)
+        .map((item) => ({
+          id: item.id,
+
+          personality: {
+            id: item.personality.id,
+            name: item.personality.personality_name,
+          },
         })),
 
       // =============================================
-      // 10. PROFESSIONAL PROFICIENCY
+      // TRAINING
       // =============================================
-      proficiency: (applicant.applicant_proficiencies || []).map(prof => ({
-        id: prof.id,
-        proficiency_id: prof.proficiency_id,
-        proficiency: prof.proficiency
-          ? {
-            id: prof.proficiency.id,
-            name: prof.proficiency.proficiency_name,
-          }
-          : null,
-        organization_id: prof.organization_id,
-        organization: prof.organization
-          ? {
-            id: prof.organization.id,
-            name: prof.organization.organization_name,
-          }
-          : null,
-        started: this.formatDate(prof.started),
-        ended: this.formatDate(prof.ended),
-        award: prof.award,
-        attachment: prof.attachment,
+      training: (applicant.applicant_trainings || [])
+        .filter((item) => !item.hide)
+        .map((item) => ({
+          id: item.id,
+          applicant_id: item.applicant_id,
+          name: item.name,
+          institution: item.institution,
+          description: item.description,
+          started: this.formatDate(item.started),
+          ended: this.formatDate(item.ended),
+          attachment: item.attachment,
+        })),
 
+      // =============================================
+      // PROFICIENCY AND ORGANIZATION
+      // =============================================
+      proficiency: (applicant.applicant_proficiencies || []).map((item) => ({
+        id: item.id,
+        applicant_id: item.applicant_id,
+
+        proficiency: item.proficiency
+          ? {
+            id: item.proficiency.id,
+            name: item.proficiency.proficiency_name,
+          }
+          : null,
+
+        organization: item.organization
+          ? {
+            id: item.organization.id,
+            name: item.organization.organization_name,
+          }
+          : null,
+
+        started: this.formatDate(item.started),
+        ended: this.formatDate(item.ended),
+        award: item.award,
+        attachment: item.attachment,
       })),
 
       // =============================================
-      // 11. REFERENCES
+      // REFEREES
       // =============================================
-      referees: (applicant.referees || []).map(referee => ({
-        id: referee.id,
-        first_name: referee.first_name,
-        middle_name: referee.middle_name,
-        last_name: referee.last_name,
-        employer: referee.employer,
-        position: referee.referee_position,
-        email: referee.email,
-        phone: referee.phone,
-        type: referee.type
+      referees: (applicant.referees || []).map((item) => ({
+        id: item.id,
+        applicant_id: item.applicant_id,
+        first_name: item.first_name,
+        middle_name: item.middle_name,
+        last_name: item.last_name,
+        employer: item.employer,
+        position: item.referee_position,
+        email: item.email,
+        phone: item.phone,
+        type: item.type,
       })),
     };
 
