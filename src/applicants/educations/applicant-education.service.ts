@@ -265,82 +265,79 @@ export class ApplicantEducationService {
     // Accepts course_id OR course_name.
     // =========================================================
 
-    private async resolveCourse(
-        userId: number,
-        dto: Partial<CreateApplicantEducationDto>,
-        educationLevelId: number,
-        manager: EntityManager,
-    ): Promise<Courses> {
-        const courseRepo = manager.getRepository(Courses);
 
-        const rawId = dto.course_id as
-            | number
-            | string
-            | null
-            | undefined;
+private async resolveCourse(
+    userId: number,
+    dto: Partial<CreateApplicantEducationDto>,
+    educationLevelId: number,
+    manager: EntityManager,
+): Promise<Courses> {
+    const courseRepo = manager.getRepository(Courses);
 
-        if (rawId === null) {
-            throw new BadRequestException(
-                'Provide course_id or course_name.',
-            );
-        }
+    const rawId = dto.course_id as
+        | number
+        | string
+        | null
+        | undefined;
 
-        const courseId = this.parseRecordId(rawId);
+    // Normalize missing or zero IDs to 0.
+    const rawEducationLevelId = Number(educationLevelId) || 0;
+    const rawProgrammeCategoryId =
+        Number(dto.programme_category_id) || 0;
 
-        if (courseId !== null) {
-            const course = await this.getCourse(courseId, manager);
-
-            if (course.education_level_id !== educationLevelId) {
-                throw new BadRequestException(
-                    'The selected course does not belong to the selected education level.',
-                );
-            }
-
-            return course;
-        }
-
-        const courseName = this.getTextValue(
-            rawId,
-            dto.course_name,
+    if (rawId === null) {
+        throw new BadRequestException(
+            'Provide course_id or course_name.',
         );
-
-        if (!courseName) {
-            throw new BadRequestException(
-                'Provide course_id or course_name.',
-            );
-        }
-
-
-
-        const existing = await courseRepo
-            .createQueryBuilder('course')
-            .where('LOWER(course.course_name) = LOWER(:name)', {
-                name: courseName,
-            })
-            .andWhere('course.education_level_id = :levelId', {
-                levelId: educationLevelId,
-            })
-            .andWhere(
-                'course.programme_category_id = :categoryId',
-                { categoryId: dto.programme_category_id },
-            )
-            .andWhere('course.hide = :hide', { hide: false })
-            .getOne();
-
-        if (existing) {
-            return existing;
-        }
-
-        const course = courseRepo.create({
-            course_name: courseName,
-            education_level_id: educationLevelId,
-            creator_id: userId,
-            updator_id: userId,
-            hide: false,
-        });
-
-        return courseRepo.save(course);
     }
+
+    const courseId = this.parseRecordId(rawId);
+
+    // Resolve an existing course by ID without checking
+    // its education-level or programme-category relationship.
+    if (courseId !== null) {
+        const course = await this.getCourse(courseId, manager);
+        return course;
+    }
+
+    const courseName = this.getTextValue(
+        rawId,
+        dto.course_name,
+    );
+
+    if (!courseName) {
+        throw new BadRequestException(
+            'Provide course_id or course_name.',
+        );
+    }
+
+    // Search by course name only; do not enforce relationships.
+    const existing = await courseRepo
+        .createQueryBuilder('course')
+        .where('LOWER(course.course_name) = LOWER(:name)', {
+            name: courseName,
+        })
+        .andWhere('course.hide = :hide', { hide: false })
+        .getOne();
+
+    if (existing) {
+        return existing;
+    }
+
+    // Create the course using 0 when either ID is missing.
+    const course = courseRepo.create({
+        course_name: courseName,
+        education_level_id: rawEducationLevelId,
+        programme_category_id: rawProgrammeCategoryId,
+        creator_id: userId,
+        updator_id: userId,
+        hide: false,
+    });
+
+    return courseRepo.save(course);
+}
+
+
 
     // =========================================================
     // RESOLVE MAJOR

@@ -27,6 +27,7 @@ import { Users } from 'src/entities/users.entity';
 import { multerConfig } from 'src/common/upload/multer.config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { promises as fs } from 'fs';
+import { UpdateBasicInformationDto } from './dto/update-basic-information.dto';
 
 
 
@@ -49,6 +50,18 @@ export class ApplicantAddressesController {
 
         return this.applicantAddressesService.basicInformation(userId);
     }
+
+    @Patch('applicant/basic-information')
+    async updateBasicInformation(
+        @Req() req: any,
+        @Body() dto: UpdateBasicInformationDto,
+    ) {
+        return this.applicantAddressesService.updateBasicInformation(
+            req.user.id,
+            dto,
+        );
+    }
+    
     @Post('applicant/addresses')
     create(
         @CurrentUser() user: Users,
