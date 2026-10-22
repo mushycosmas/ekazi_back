@@ -1,7 +1,7 @@
 import { Controller ,Get } from '@nestjs/common';
 import { MalitalStatusesService } from './malital-statuses.service';
 
-@Controller('malital-statuses')
+@Controller('marital-statuses')
 export class MalitalStatusesController {
       constructor(
     private readonly maritalStatusesService: MalitalStatusesService,
