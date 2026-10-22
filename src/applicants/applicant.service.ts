@@ -107,7 +107,15 @@ export class ApplicantService {
       .leftJoinAndSelect('applicantCultures.culture', 'culture')
       .leftJoinAndSelect('applicant.applicant_knowledge', 'applicantKnowledge')
       .leftJoinAndSelect('applicantKnowledge.knowledge', 'knowledge')
-      .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
+      // .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
+      .leftJoinAndSelect(
+        'applicant.applicant_personalities',
+        'applicantPersonality',
+      )
+      .leftJoinAndSelect(
+        'applicantPersonality.personality',
+        'personalityDetail',
+      )
       .leftJoinAndSelect('applicant.applicant_software', 'applicantSoftware')
       .leftJoinAndSelect('applicantSoftware.software', 'software')
       .leftJoinAndSelect(
@@ -330,35 +338,35 @@ export class ApplicantService {
       // =============================================
       // SKILLS
       // =============================================
-     tools: (applicant.applicant_tools || [])
-  .filter((item) => item.tools && item.tools.hide === 0)
-  .map((item) => ({
-    id: item.id,
-    tool: {
-      id: item.tools.id,
-      name: item.tools.tool_name,
-    },
-  })),
+      tools: (applicant.applicant_tools || [])
+        .filter((item) => item.tools && item.tools.hide === 0)
+        .map((item) => ({
+          id: item.id,
+          tool: {
+            id: item.tools.id,
+            name: item.tools.tool_name,
+          },
+        })),
 
-knowledge: (applicant.applicant_knowledge || [])
-  .filter((item) => item.knowledge && !item.knowledge.hide)
-  .map((item) => ({
-    id: item.id,
-    knowledge: {
-      id: item.knowledge.id,
-      name: item.knowledge.knowledge_name,
-    },
-  })),
+      knowledge: (applicant.applicant_knowledge || [])
+        .filter((item) => item.knowledge && !item.knowledge.hide)
+        .map((item) => ({
+          id: item.id,
+          knowledge: {
+            id: item.knowledge.id,
+            name: item.knowledge.knowledge_name,
+          },
+        })),
 
-software: (applicant.applicant_software || [])
-  .filter((item) => item.software && !item.software.hide)
-  .map((item) => ({
-    id: item.id,
-    software: {
-      id: item.software.id,
-      name: item.software.software_name,
-    },
-  })),
+      software: (applicant.applicant_software || [])
+        .filter((item) => item.software && !item.software.hide)
+        .map((item) => ({
+          id: item.id,
+          software: {
+            id: item.software.id,
+            name: item.software.software_name,
+          },
+        })),
 
       // =============================================
       // LANGUAGES
@@ -419,11 +427,12 @@ software: (applicant.applicant_software || [])
       // =============================================
       // PERSONALITY
       // =============================================
-      applicant_personality: (applicant.applicant_personalities || [])
+      personality: (
+        applicant.applicant_personalities || []
+      )
         .filter((item) => item.personality)
         .map((item) => ({
           id: item.id,
-
           personality: {
             id: item.personality.id,
             name: item.personality.personality_name,
