@@ -327,4 +327,83 @@ export class ApplicantAddressesService {
             },
         };
     }
+
+    async basicInformation(userId: number) {
+        const applicant = await this.getApplicant(userId);
+
+        // Fetch all applicant addresses, including the full country entity
+        const addresses = await this.addressesRepo.find({
+            where: {
+                applicant_id: applicant.id,
+            },
+            relations: {
+                region: {
+                    country: true,
+                },
+            },
+            order: {
+                id: 'DESC',
+            },
+        });
+
+        // Fetch all phone numbers belonging to the applicant
+        const phoneRepo =
+            this.applicantsRepo.manager.getRepository(ApplicantPhones);
+
+        const phones = await phoneRepo.find({
+            where: {
+                applicant_id: applicant.id,
+            },
+            order: {
+                id: 'DESC',
+            },
+        });
+
+        return {
+            success: true,
+            message: 'Applicant basic information retrieved successfully',
+            data: {
+                id: applicant.id,
+                first_name: applicant.first_name,
+                middle_name: applicant.middle_name,
+                last_name: applicant.last_name,
+                dob: applicant.dob,
+
+                phone: phones.map((phone) => ({
+                    id: phone.id,
+                    phone_number: phone.phone_number,
+                })),
+
+                addresses: addresses.map((address) => ({
+                    id: address.id,
+                    sub_location: address.sub_location,
+                    postal: address.postal,
+
+                    region: address.region
+                        ? {
+                            id: address.region.id,
+                            name: address.region.region_name,
+
+                            // Return every country field from the countries table
+                            country: address.region.country
+                                ? {
+                                    id: address.region.country.id,
+                                    name: address.region.country.name,
+                                    citizenship: address.region.country.citizenship,
+                                    country_code: address.region.country.country_code,
+                                    alpha_code: address.region.country.alpha_code,
+                                    currency: address.region.country.currency,
+                                    creator_id: address.region.country.creator_id,
+                                    updator_id: address.region.country.updator_id,
+                                    created_at: address.region.country.created_at,
+                                    updated_at: address.region.country.updated_at,
+                                    hide: address.region.country.hide,
+                                }
+                                : null,
+                        }
+                        : null,
+                })),
+            },
+        };
+    }
 }

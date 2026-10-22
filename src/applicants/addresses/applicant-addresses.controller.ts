@@ -33,13 +33,23 @@ import { promises as fs } from 'fs';
 
 
 
-@Controller('applicant/addresses')
+@Controller()
 @UseGuards(SanctumGuard)
 export class ApplicantAddressesController {
     constructor(
         private readonly applicantAddressesService: ApplicantAddressesService,
     ) { }
-    @Post()
+    @Get('applicant/basic-information')
+    async basicInformation(
+        @CurrentUser() user: Users,
+
+        @Req() req: any) {
+        const userId = user.id;
+
+
+        return this.applicantAddressesService.basicInformation(userId);
+    }
+    @Post('applicant/addresses')
     create(
         @CurrentUser() user: Users,
         @Body() dto: CreateApplicantAddressDto,
@@ -55,11 +65,11 @@ export class ApplicantAddressesController {
         return this.applicantAddressesService.create(user.id, dto);
     }
 
-    @Get()
+    @Get('applicant/addresses')
     findAll(@CurrentUser() user: Users) {
         return this.applicantAddressesService.findAll(user.id);
     }
-    @Patch('picture')
+    @Patch('applicant/addresses/picture')
     @UseInterceptors(
         FileInterceptor('picture', multerConfig('picture')),
     )
@@ -89,7 +99,7 @@ export class ApplicantAddressesController {
         }
     }
 
-    @Patch('background-picture')
+    @Patch('applicant/addresses/background-picture')
     @UseInterceptors(
         FileInterceptor(
             'background_picture',
@@ -123,7 +133,7 @@ export class ApplicantAddressesController {
         }
     }
 
-    @Get(':id')
+    @Get('applicant/addresses/:id')
     findOne(
         @CurrentUser() user: Users,
         @Param('id', ParseIntPipe) id: number,
@@ -131,7 +141,7 @@ export class ApplicantAddressesController {
         return this.applicantAddressesService.findOne(user.id, id);
     }
 
-    @Patch(':id')
+    @Patch('applicant/addresses/:id')
     update(
         @CurrentUser() user: Users,
         @Param('id', ParseIntPipe) id: number,
@@ -144,7 +154,7 @@ export class ApplicantAddressesController {
         );
     }
 
-    @Delete(':id')
+    @Delete('applicant/addresses/:id')
     remove(
         @CurrentUser() user: Users,
         @Param('id', ParseIntPipe) id: number,
