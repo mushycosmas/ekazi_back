@@ -1,11 +1,15 @@
-// src/entities/applicants/applicant-employers.entity.ts
+// 
 import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+
 import { ApplicantPositions } from './applicant-positions.entity';
+import { Regions } from '../regions.entity';
 
 @Entity('applicant_employers')
 export class ApplicantEmployers {
@@ -21,15 +25,26 @@ export class ApplicantEmployers {
   @Column({ type: 'varchar', length: 100 })
   sub_location: string;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   created_at: Date;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updated_at: Date;
 
-  // ---------------------
-  // Relations
-  // ---------------------
-  @OneToMany(() => ApplicantPositions, (pos) => pos.applicant_employer, { cascade: true })
+  @ManyToOne(() => Regions, { nullable: false })
+  @JoinColumn({ name: 'region_id' })
+  region: Regions;
+
+  @OneToMany(
+    () => ApplicantPositions,
+    (pos) => pos.applicant_employer,
+  )
   positions: ApplicantPositions[];
 }

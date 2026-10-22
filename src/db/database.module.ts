@@ -156,6 +156,7 @@ import { ApplicantSaveJobs } from 'src/entities/applicants/applicant-save-jobs.e
 import {ApplicantSavedResumes } from 'src/entities/applicants/applicant-cv-template.entity';
 import { Bookmark } from 'src/entities/bookmark.entity';
 import { PayrollReduction } from 'src/entities/payroll-reduction.entity';
+import { ExperienceTypes } from 'src/entities/experience-types.entity';
  
  
 
@@ -314,6 +315,7 @@ const allEntities = [
   ApplicantSavedResumes,
   Bookmark,
   PayrollReduction,
+  ExperienceTypes,
 
   // TaskAttachment,
   // TaskMessageAttachment,

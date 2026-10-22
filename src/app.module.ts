@@ -95,6 +95,9 @@ import { ApplicantDashboardModule } from './applicants/dashboard/applicant-dashb
 import { BookmarksModule } from './applicants/cv-builder/Bookmark/bookmarks.module';
 import { ApplicantSavedResumesModule } from './applicants/cv-builder/cv/applicant-saved-resumes.module';
 import { TaxCalculationModule } from './tax-calculation/tax-calculation.module';
+import { ApplicantEmployersModule } from './applicants/employer/applicant-employers.module';
+import { ExperienceTypes } from './entities/experience-types.entity';
+import { ExperienceTypesModule } from './experience-types/experience-types.module';
  
 
 
@@ -127,7 +130,8 @@ import { TaxCalculationModule } from './tax-calculation/tax-calculation.module';
     ApplicantLanguagesModule,ApplicantRefereesModule,ApplicantToolsModule,ApplicantSoftwareModule,ApplicantCulturesModule,
     ApplicantPersonalitiesModule,ApplicantKnowledgeModule,ApplicantCareersModule, ApplicantObjectivesModule,ApplicantEducationModule,
     ApplicantTrainingsModule,ApplicantProficienciesModule,ApplicantPositionsModule,ApplicantAddressesModule,ApplicantIndustryTagsModule,
-    ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule, TaxCalculationModule,
+    ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule, TaxCalculationModule,ApplicantEmployersModule,
+    ExperienceTypesModule,
 
   ],
   // controllers: [EmployerController,
