@@ -1,4 +1,4 @@
- import {
+import {
   Controller,
   Get,
   Post,
@@ -11,6 +11,7 @@
   UploadedFile,
   UseInterceptors,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { unlink } from 'fs/promises';
@@ -21,13 +22,15 @@ import { CreateApplicantTrainingDto } from './dto/create-applicant-training.dto'
 import { UpdateApplicantTrainingDto } from './dto/update-applicant-training.dto';
 import { multerConfig } from 'src/common/upload/multer.config';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Users } from 'src/entities/users.entity';
 
-@Controller('applicant/trainings')
-@UseGuards(SanctumGuard)
+@Controller()
+
 export class ApplicantTrainingsController {
   constructor(
     private readonly applicantTrainingsService: ApplicantTrainingsService,
-  ) {}
+  ) { }
 
   private getRelativeFilePath(filePath: string): string {
     return path
@@ -45,8 +48,18 @@ export class ApplicantTrainingsController {
       console.error('Failed to clean up uploaded training file:', error);
     }
   }
-
-  @Post()
+  @Get('trainings')
+  findAllTrainingsPaginated(
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    return this.applicantTrainingsService.findAllTrainingsPaginated(
+      Number(page),
+      Number(limit),
+    );
+  }
+  @Post('applicant/trainings')
+  @UseGuards(SanctumGuard)
   @UseInterceptors(
     FileInterceptor(
       'attachment',
@@ -73,12 +86,14 @@ export class ApplicantTrainingsController {
     }
   }
 
-  @Get()
+  @Get('applicant/trainings')
+  @UseGuards(SanctumGuard)
   async findAll(@Req() req: any) {
     return this.applicantTrainingsService.findAll(req.user.id);
   }
 
-  @Get(':id')
+@UseGuards(SanctumGuard)
+  @Get('applicant/trainings/:id')
   async findOne(
     @Req() req: any,
     @Param('id', ParseIntPipe) id: number,
@@ -89,7 +104,8 @@ export class ApplicantTrainingsController {
     );
   }
 
-  @Patch(':id')
+  @Patch('applicant/trainings/:id')
+  @UseGuards(SanctumGuard)
   @UseInterceptors(
     FileInterceptor(
       'attachment',
@@ -118,7 +134,8 @@ export class ApplicantTrainingsController {
     }
   }
 
-  @Delete(':id')
+  @Delete('applicant/trainings/:id')
+  @UseGuards(SanctumGuard)
   async remove(
     @Req() req: any,
     @Param('id', ParseIntPipe) id: number,

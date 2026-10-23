@@ -1,4 +1,4 @@
- import {
+import {
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -22,7 +22,7 @@ export class ApplicantTrainingsService {
     private readonly applicantsRepository: Repository<Applicants>,
 
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   private async getApplicant(userId: number): Promise<Applicants> {
     const applicant = await this.applicantsRepository.findOne({
@@ -159,6 +159,37 @@ export class ApplicantTrainingsService {
     return {
       message: 'Applicant trainings retrieved successfully.',
       data: records,
+    };
+  }
+
+  async findAllTrainingsPaginated(
+    page = 1,
+    limit = 20,
+  ) {
+    const currentPage = Math.max(1, Number(page) || 1);
+    const perPage = Math.min(100, Math.max(1, Number(limit) || 10));
+
+    const [records, total] = await this.trainingRepository.findAndCount({
+      where: {
+        hide: false,
+      },
+      order: {
+        started: 'DESC',
+        id: 'DESC',
+      },
+      skip: (currentPage - 1) * perPage,
+      take: perPage,
+    });
+
+    return {
+      success: true,
+      message: 'All trainings retrieved successfully.',
+      data: records,
+      total,
+      page: currentPage,
+      limit: perPage,
+      totalPages: Math.ceil(total / perPage),
+
     };
   }
 

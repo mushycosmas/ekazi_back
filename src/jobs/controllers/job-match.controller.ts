@@ -43,7 +43,7 @@ export class JobMatchController {
     // }
 
 
-    @Get('/recommended')
+    @Get('/match-jobs')
     async findJobsForApplicant(
         @CurrentUser() user: Users,
         @Query('page') page = '1',
