@@ -98,6 +98,10 @@ import { TaxCalculationModule } from './tax-calculation/tax-calculation.module';
 import { ApplicantEmployersModule } from './applicants/employer/applicant-employers.module';
 import { ExperienceTypes } from './entities/experience-types.entity';
 import { ExperienceTypesModule } from './experience-types/experience-types.module';
+import { ApplicantProfilePrivacyModule } from './applicants/privacy/applicant-profile-privacy.module';
+import { HomepageModule } from './website/homepage/homepage.module';
+import { SocialMediaModule } from './social-media/social-media.module';
+import { BlogPostsModule } from './articles/blog-posts.module';
  
 
 
@@ -131,7 +135,7 @@ import { ExperienceTypesModule } from './experience-types/experience-types.modul
     ApplicantPersonalitiesModule,ApplicantKnowledgeModule,ApplicantCareersModule, ApplicantObjectivesModule,ApplicantEducationModule,
     ApplicantTrainingsModule,ApplicantProficienciesModule,ApplicantPositionsModule,ApplicantAddressesModule,ApplicantIndustryTagsModule,
     ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule, TaxCalculationModule,ApplicantEmployersModule,
-    ExperienceTypesModule,
+    ExperienceTypesModule,ApplicantProfilePrivacyModule,HomepageModule,SocialMediaModule, BlogPostsModule,
 
   ],
   // controllers: [EmployerController,

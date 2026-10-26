@@ -22,6 +22,7 @@ import { ClientType } from './entities/client-types.entity';
 import { CompanySize } from 'src/entities/company-size.entity';
 import { ClientStaff } from './entities/client-staff.entity';
 import { InterviewParticipantEmail } from 'src/jobs/entities/interview/interview-participant-email.entity';
+import { ClientSocialMedia } from './entities/client-social-media.entity';
 
 @Entity('clients')
 export class Clients {
@@ -188,5 +189,11 @@ export class Clients {
         participant => participant.client,
     )
     interviewParticipantEmails: InterviewParticipantEmail[];
+
+    @OneToMany(
+        () => ClientSocialMedia,
+        (socialMedia) => socialMedia.client,
+    )
+    socialMedia: ClientSocialMedia[];
 
 }

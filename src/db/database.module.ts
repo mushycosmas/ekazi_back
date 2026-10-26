@@ -157,6 +157,11 @@ import {ApplicantSavedResumes } from 'src/entities/applicants/applicant-cv-templ
 import { Bookmark } from 'src/entities/bookmark.entity';
 import { PayrollReduction } from 'src/entities/payroll-reduction.entity';
 import { ExperienceTypes } from 'src/entities/experience-types.entity';
+import { ApplicantProfilePrivacy } from 'src/entities/applicants/applicant-profile-privacy.entity';
+import { Status } from 'src/entities/status.entity';
+import { ClientSocialMedia } from 'src/client/entities/client-social-media.entity';
+import { SocialMedia } from 'src/entities/social-media.entity';
+import { BlogPost } from 'src/entities/blog-post.entity';
  
  
 
@@ -316,6 +321,11 @@ const allEntities = [
   Bookmark,
   PayrollReduction,
   ExperienceTypes,
+  ApplicantProfilePrivacy,
+  Status,
+  ClientSocialMedia,
+  SocialMedia,
+  BlogPost,
 
   // TaskAttachment,
   // TaskMessageAttachment,
