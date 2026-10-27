@@ -194,6 +194,7 @@ export class JobsService {
 
 
 
+
     async findAll(
         page = 1,
         limit = 20,
@@ -202,12 +203,14 @@ export class JobsService {
         onlyActive: boolean = true,
     ) {
         try {
+            page = Math.max(1, Number(page) || 1);
+            limit = Math.max(1, Number(limit) || 20);
+
+            // ======================
+            // MAIN QUERY
+            // ======================
             const query = this.jobsRepository
                 .createQueryBuilder('job')
-
-                // ======================
-                // JOINS
-                // ======================
                 .leftJoinAndSelect('job.client', 'client')
                 .leftJoinAndSelect('job.country', 'country')
                 .leftJoinAndSelect('job.region', 'region')
@@ -217,10 +220,6 @@ export class JobsService {
                 .leftJoinAndSelect('job.addresses', 'addresses')
                 .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
                 .leftJoinAndSelect('job.jobUniversalType', 'jobUniversalType')
-
-                // ======================
-                // SELECT
-                // ======================
                 .select([
                     'job.id',
                     'job.status',
@@ -254,16 +253,30 @@ export class JobsService {
 
                     'addresses.id',
                     'addresses.sub_location',
-                ])
-
-                .orderBy('job.id', 'DESC');
-            query.andWhere('job.published = :published', { published: '1' });
-            query.andWhere('job.dead_line > CURDATE()');
+                ]);
 
             // ======================
-            // 🔎 SEARCH FILTER
+            // FILTER ACTIVE JOBS
             // ======================
-            if (search && search.trim() !== '') {
+            // // if (onlyActive) {
+            // query
+            //     .andWhere('job.published = :published', {
+            //         published: '1',
+            //     })
+            //     // .andWhere('job.dead_line > CURDATE()');
+            // // }
+            query.andWhere('job.published = :published', {
+                published: '1',
+            });
+
+            // if (onlyActive) {
+                query.andWhere('job.dead_line > CURDATE()');
+            // }
+
+            // ======================
+            // SEARCH FILTER
+            // ======================
+            if (search?.trim()) {
                 const keyword = `%${search.trim()}%`;
 
                 query.andWhere(
@@ -282,23 +295,19 @@ export class JobsService {
             }
 
             // ======================
-            // 🏭 INDUSTRY FILTER
+            // INDUSTRY FILTER
             // ======================
             if (industryId) {
-                query.andWhere('job.industry_id = :industryId', { industryId });
+                query.andWhere('job.industry_id = :industryId', {
+                    industryId,
+                });
             }
 
-            // ======================
-            // ⏳ ACTIVE JOB FILTER
-            // published = 1 AND not expired
-            // ======================
-            if (onlyActive) {
-                query.andWhere('job.published = :published', { published: '1' });
-                query.andWhere('job.dead_line > CURDATE()');
-            }
+            query.orderBy('job.id', 'DESC');
 
             // ======================
             // COUNT QUERY
+            // Apply exactly the same filters
             // ======================
             const totalQuery = this.jobsRepository
                 .createQueryBuilder('job')
@@ -310,38 +319,49 @@ export class JobsService {
                 .leftJoin('job.addresses', 'addresses')
                 .leftJoin('job.jobUniversalType', 'jobUniversalType');
 
-            if (search && search.trim() !== '') {
+            // Count active jobs only
+            // totalQuery
+            //     .andWhere('job.published = :published', {
+            //         published: '1',
+            //     })
+            //     .andWhere('job.dead_line > CURDATE()');
+            totalQuery.andWhere('job.published = :published', {
+                published: '1',
+            });
+
+            // if (onlyActive) {
+                totalQuery.andWhere('job.dead_line > CURDATE()');
+            // }
+
+            if (search?.trim()) {
                 const keyword = `%${search.trim()}%`;
 
                 totalQuery.andWhere(
                     `(
-                    job.title LIKE :keyword OR
-                    client.client_name LIKE :keyword OR
-                    country.name LIKE :keyword OR
-                    region.region_name LIKE :keyword OR
-                    industry.industry_name LIKE :keyword OR
-                    position.position_name LIKE :keyword OR
-                    jobUniversalType.type_name LIKE :keyword OR
-                    addresses.sub_location LIKE :keyword
-                )`,
+            job.title LIKE :keyword OR
+            client.client_name LIKE :keyword OR
+            country.name LIKE :keyword OR
+            region.region_name LIKE :keyword OR
+            industry.industry_name LIKE :keyword OR
+            position.position_name LIKE :keyword OR
+            jobUniversalType.type_name LIKE :keyword OR
+            addresses.sub_location LIKE :keyword
+        )`,
                     { keyword },
                 );
             }
 
             if (industryId) {
-                totalQuery.andWhere('job.industry_id = :industryId', { industryId });
-            }
-
-            if (onlyActive) {
-                totalQuery.andWhere('job.published = :published', { published: '1' });
-                totalQuery.andWhere('job.dead_line > CURDATE()');
+                totalQuery.andWhere('job.industry_id = :industryId', {
+                    industryId,
+                });
             }
 
             const totalResult = await totalQuery
                 .select('COUNT(DISTINCT job.id)', 'count')
                 .getRawOne();
 
-            const total = Number(totalResult.count);
+            const total = Number(totalResult?.count ?? 0);
 
             // ======================
             // PAGINATION
@@ -355,12 +375,16 @@ export class JobsService {
                 success: true,
                 message: 'Jobs fetched successfully',
                 data: jobs,
-                current_page: page,
-                per_page: limit,
-                total_pages: Math.ceil(total / limit),
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
                 total,
             };
         } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
             throw new InternalServerErrorException({
                 success: false,
                 message: 'Failed to fetch jobs',
@@ -368,6 +392,7 @@ export class JobsService {
             });
         }
     }
+
 
     // =========================
     // FIND ONE
