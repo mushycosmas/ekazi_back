@@ -270,7 +270,7 @@ export class JobsService {
             });
 
             // if (onlyActive) {
-            // query.andWhere('job.dead_line > CURDATE()');
+            query.andWhere('job.dead_line > CURDATE()');
             // }
 
             // ======================
@@ -330,7 +330,7 @@ export class JobsService {
             });
 
             // if (onlyActive) {
-            // totalQuery.andWhere('job.dead_line > CURDATE()');
+            totalQuery.andWhere('job.dead_line > CURDATE()');
             // }
 
             if (search?.trim()) {
