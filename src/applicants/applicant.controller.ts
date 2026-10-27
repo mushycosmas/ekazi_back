@@ -119,6 +119,16 @@ export class ApplicantController {
             Number(limit),
         );
     }
+    @Get('featured/:id')
+
+    async getFeaturedApplicantsDetail(
+        @Param('id') id: number
+    ) {
+
+        return this.applicantService
+            .getFeaturedApplicantDetail(Number(id));
+
+    }
 }
 
 

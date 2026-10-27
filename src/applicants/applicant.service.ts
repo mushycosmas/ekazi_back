@@ -2009,11 +2009,71 @@ END
       success: true,
       message: 'Featured applicants retrieved successfully.',
       data,
-      pagination: {
-        total,
-        page: currentPage,
-        per_page: perPage,
-        total_pages: Math.ceil(total / perPage),
+      total,
+      page: currentPage,
+      limit: perPage,
+      totalPages: Math.ceil(total / perPage),
+
+    };
+  }
+  async getFeaturedApplicantDetail(applicantId: number) {
+    // 1. Verify the applicant has an active featured subscription.
+    const featured = await this.applicantsRepo
+      .createQueryBuilder('applicant')
+      .innerJoin(
+        'applicant.featuredPlanSubscriptions',
+        'featuredSubscription',
+        'featuredSubscription.verify = :verify',
+        { verify: 1 },
+      )
+      .where('applicant.id = :id', { id: applicantId })
+      .getOne();
+
+    if (!featured) {
+      return {
+        success: false,
+        message: 'Featured applicant not found',
+        data: null,
+      };
+    }
+
+    // 2. Retrieve the complete profile, including status
+    // if you have added it to getApplicant().
+    const result = await this.getApplicant(applicantId);
+
+    if (!result?.data) {
+      return {
+        success: false,
+        message: 'Applicant details not found',
+        data: null,
+      };
+    }
+
+    // 3. Fetch featured views and likes, and ratings.
+    const [views, ratings] = await Promise.all([
+      this.applicantsRepo.manager
+        .getRepository(ApplicantViews)
+        .findOne({
+          where: { applicant_id: applicantId },
+        }),
+
+      this.applicantsRepo.manager
+        .getRepository(ApplicantRate)
+        .find({
+          where: { applicant_id: applicantId },
+        }),
+    ]);
+
+    // 4. Return the full applicant profile with featured details.
+    return {
+      success: true,
+      message: 'Featured applicant details retrieved successfully',
+      data: {
+        ...result.data,
+        featured: true,
+        view_number: views?.view_number ?? 0,
+        like_number: views?.like_number ?? 0,
+        applicantRates: ratings,
       },
     };
   }
