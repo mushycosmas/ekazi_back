@@ -138,39 +138,41 @@ export class HomepageService {
      * Active job count grouped by industry and employer
      * GET /api/homepage/jobs-by-industry
      */
+    /**
+     * Active job count grouped by industry
+     * GET /api/jobs/jobs-by-industry
+     */
     async getJobsCountByIndustry() {
         const sql = `
-      SELECT
-        i.industry_name,
-        c.id AS client_id,
-        c.client_name,
-        COUNT(j.id) AS job_count
-      FROM clients c
-      INNER JOIN jobs j
-        ON j.client_id = c.id
-        AND j.hide = 0
-        AND j.published = 1
-        AND j.dead_line >= CURDATE()
-      LEFT JOIN industries i
-        ON c.industry_id = i.id
-      WHERE i.industry_name IS NOT NULL
-      GROUP BY
-        i.industry_name,
-        c.id,
-        c.client_name
-      ORDER BY job_count DESC
+        SELECT
+            i.id AS industry_id,
+            i.industry_name,
+            COUNT(j.id) AS total_positions
+        FROM jobs j
+        INNER JOIN clients c
+            ON j.client_id = c.id
+        INNER JOIN industries i
+            ON c.industry_id = i.id
+        WHERE
+            j.hide = 0
+            AND j.published = 1
+            AND j.dead_line >= CURDATE()
+        GROUP BY
+            i.id,
+            i.industry_name
+        ORDER BY
+            total_positions DESC
     `;
 
         const rows = await this.dataSource.query(sql);
 
         return {
             success: true,
-            message: 'Industry job counts retrieved successfully.',
+            message: 'Job counts by industry retrieved successfully.',
             data: rows.map((row: any) => ({
+                industry_id: Number(row.industry_id),
                 industry_name: row.industry_name,
-                client_id: Number(row.client_id),
-                client_name: row.client_name,
-                job_count: Number(row.job_count),
+                total_positions: Number(row.total_positions),
             })),
         };
     }
@@ -180,23 +182,23 @@ export class HomepageService {
  */
     async getJobCountByRegion() {
         const sql = `
-        SELECT
-            r.id AS region_id,
-            r.region_name,
-            COUNT(j.id) AS total_positions
-        FROM jobs j
-        INNER JOIN regions r
-            ON j.region_id = r.id
-        WHERE
-            j.hide = 0
-            AND j.published = 1
-            AND j.dead_line >= CURDATE()
-        GROUP BY
-            r.id,
-            r.region_name
-        ORDER BY
-            MAX(j.updated_at) DESC
-    `;
+    SELECT
+      r.id AS region_id,
+      r.region_name,
+      COUNT(j.id) AS total_positions
+    FROM jobs j
+    INNER JOIN regions r
+      ON j.region_id = r.id
+    WHERE
+      j.hide = 0
+      AND j.published = 1
+      AND j.dead_line >= CURDATE()
+    GROUP BY
+      r.id,
+      r.region_name
+    ORDER BY
+      total_positions DESC
+  `;
 
         const rows = await this.dataSource.query(sql);
 
@@ -206,6 +208,41 @@ export class HomepageService {
             data: rows.map((row: any) => ({
                 region_id: Number(row.region_id),
                 region_name: row.region_name,
+                total_positions: Number(row.total_positions),
+            })),
+        };
+    }
+    
+    async jobCountByCategory() {
+        const sql = `
+    SELECT
+      i.id AS category_id,
+      i.industry_name AS category_name,
+      COUNT(j.id) AS total_positions
+    FROM industries i
+    INNER JOIN clients c
+      ON c.industry_id = i.id
+    INNER JOIN jobs j
+      ON j.client_id = c.id
+    WHERE
+      j.hide = 0
+      AND j.published = 1
+      AND j.dead_line >= CURDATE()
+    GROUP BY
+      i.id,
+      i.industry_name
+    ORDER BY
+      total_positions DESC
+  `;
+
+        const rows = await this.dataSource.query(sql);
+
+        return {
+            success: true,
+            message: 'Job counts by category retrieved successfully.',
+            data: rows.map((row: any) => ({
+                category_id: Number(row.category_id),
+                category_name: row.category_name,
                 total_positions: Number(row.total_positions),
             })),
         };
