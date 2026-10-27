@@ -9,6 +9,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Users } from 'src/entities/users.entity';
 import { CreateEmployerDto } from 'src/employer/dto/create-employer.dto';
 import { BadRequestException } from '@nestjs/common';
+import { RegisterApplicantDto } from './dto/register-applicant.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -18,7 +19,12 @@ export class AuthController {
     registerEmployer(@Body() dto: CreateEmployerDto) {
         return this.authService.registerEmployer(dto);
     }
-
+    @Post('register/applicant')
+    async registerApplicant(
+        @Body() dto: RegisterApplicantDto,
+    ) {
+        return this.authService.registerApplicant(dto);
+    }
 
     @Post('login')
     async login(@Body() loginDto: LoginDto) {
@@ -145,7 +151,7 @@ export class AuthController {
         */
 
         return this.authService.getUsersWithStatistics(
-         
+
             parsedPage,
             parsedLimit,
             search,

@@ -1688,16 +1688,15 @@ END
     const completion = await this.getApplicantProfileCompletion(
       applicant.id,
     );
-
-    return {
-      success: true,
-      message: 'Applicant profile and completion retrieved successfully',
-      data: {
+return {
+    success: true,
+    message: 'Applicant profile and retrieved successfully',
+    data: {
         applicant_id: applicant.id,
-        profile: profile.data,
+        ...profile.data,
         profile_completion: completion.data.profile_completion,
-      },
-    };
+    },
+};
   }
 
 

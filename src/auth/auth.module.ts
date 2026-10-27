@@ -18,6 +18,8 @@ import { ClientPhone } from 'src/client/entities/client-phones.entity';
 import { Notification } from 'src/client/entities/notifications.entity';
 import { Role } from 'src/entities/role.entity';
 import { MailService } from 'src/mail/mail.service';
+import { Applicants } from 'src/entities/applicants/applicants.entity';
+import { ApplicantPhones } from 'src/entities/applicants/applicant-phones.entity';
 
 @Module({
   imports: [
@@ -31,6 +33,9 @@ import { MailService } from 'src/mail/mail.service';
       Notification,
       ClientPhone,
       Role,
+      Applicants,
+      ApplicantPhones,
+      
  
 
     ]),

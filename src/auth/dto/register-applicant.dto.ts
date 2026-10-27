@@ -1,12 +1,11 @@
-
 import {
   IsEmail,
   IsInt,
   IsNotEmpty,
-  IsString,
-  MaxLength,
-  MinLength,
   IsDateString,
+  IsString,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
 
 export class RegisterApplicantDto {
@@ -23,18 +22,22 @@ export class RegisterApplicantDto {
   password_confirmation: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(255)
   firstname: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(255)
   middlename: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(255)
   lastname: string;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(255)
   phone: string;
 
@@ -51,6 +54,7 @@ export class RegisterApplicantDto {
   region_id: number;
 
   @IsString()
+  @IsNotEmpty()
   @MaxLength(255)
   address: string;
 }

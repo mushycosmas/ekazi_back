@@ -1,6 +1,6 @@
-import { flatten, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, flatten, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { randomBytes, createHash, createHmac } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { ChangePasswordDto } from './dto/chage-password.dto';
@@ -19,6 +19,11 @@ import { Clients } from 'src/client/clients.entity';
 import { ClientEmail } from 'src/client/entities/client-email.entity';
 import { ClientPhone } from 'src/client/entities/client-phones.entity';
 import { Notification } from 'src/client/entities/notifications.entity';
+import { Applicants } from 'src/entities/applicants/applicants.entity';
+import { ApplicantPhones } from 'src/entities/applicants/applicant-phones.entity';
+import { ApplicantAddresses } from 'src/entities/applicants/applicant-addresses.entity';
+import { RegisterApplicantDto } from './dto/register-applicant.dto';
+
 
 
 
@@ -49,12 +54,21 @@ export class AuthService {
 
         @InjectRepository(PasswordReset)
         private readonly passwordResetRepository: Repository<PasswordReset>,
+        @InjectRepository(Applicants)
+        private readonly applicantsRepository: Repository<Applicants>,
+
+        @InjectRepository(ApplicantPhones)
+        private readonly applicantPhonesRepository: Repository<ApplicantPhones>,
+
+        private readonly dataSource: DataSource,
 
         @InjectRepository(EmailVerification)
         private emailVerificationRepository: Repository<EmailVerification>,
 
         private readonly mailService: MailService,
         private configService: ConfigService, // ✅ ADD THIS
+
+
     ) { }
 
 
@@ -955,7 +969,7 @@ export class AuthService {
         const query = this.usersRepository
             .createQueryBuilder('user');
 
- 
+
 
 
         /*
@@ -1024,7 +1038,7 @@ export class AuthService {
             this.usersRepository
                 .createQueryBuilder('user');
 
- 
+
 
 
         const statistics =
@@ -1208,6 +1222,195 @@ export class AuthService {
                     ),
             },
         };
+    }
+
+
+    async registerApplicant(dto: RegisterApplicantDto) {
+        // 1. Validate password confirmation.
+        if (dto.password !== dto.password_confirmation) {
+            throw new BadRequestException(
+                'Password confirmation does not match',
+            );
+        }
+
+        const email = dto.email.trim().toLowerCase();
+
+        try {
+            const result = await this.dataSource.transaction(
+                async (manager) => {
+                    // 2. Initialize correctly typed repositories.
+                    const usersRepo: Repository<Users> =
+                        manager.getRepository(Users);
+
+                    const applicantsRepo: Repository<Applicants> =
+                        manager.getRepository(Applicants);
+
+                    const phonesRepo: Repository<ApplicantPhones> =
+                        manager.getRepository(ApplicantPhones);
+
+                    const addressesRepo: Repository<ApplicantAddresses> =
+                        manager.getRepository(ApplicantAddresses);
+
+                    const notificationsRepo: Repository<Notification> =
+                        manager.getRepository(Notification);
+
+                    // 3. Check whether the email already exists.
+                    const existingUser = await usersRepo.findOne({
+                        where: { email },
+                    });
+
+                    if (existingUser) {
+                        throw new ConflictException(
+                            'User already registered',
+                        );
+                    }
+
+                    // 4. Create user account.
+                    // Confirm role_id 12 against your roles table.
+                    const user: Users = usersRepo.create({
+                        role_id: 12,
+                        email,
+                        temp_email: email,
+                        hide: 0,
+                        password: await bcrypt.hash(dto.password, 10),
+                        verify_key: randomBytes(32).toString('hex'),
+                    } as any) as unknown as Users;
+
+                    const savedUser: Users = await usersRepo.save(user);
+
+                    // 5. Format applicant names.
+                    const capitalizeName = (value: string): string => {
+                        return value
+                            .trim()
+                            .toLowerCase()
+                            .replace(
+                                /\b\p{L}/gu,
+                                (letter) => letter.toUpperCase(),
+                            );
+                    };
+
+                    // 6. Create applicant profile.
+                    const applicant: Applicants = applicantsRepo.create({
+                        first_name: capitalizeName(dto.firstname),
+                        middle_name: dto.middlename
+                            ? capitalizeName(dto.middlename)
+                            : null,
+                        last_name: capitalizeName(dto.lastname),
+                        marital_id: dto.marital_status_id,
+                        gender_id: dto.gender_id,
+                        dob: dto.dob,
+                        user_id: savedUser.id,
+                    } as any) as unknown as Applicants;
+
+                    const savedApplicant: Applicants =
+                        await applicantsRepo.save(applicant);
+
+                    // 7. Save applicant phone.
+                    const phone = phonesRepo.create({
+                        phone_number: dto.phone,
+                        applicant_id: savedApplicant.id,
+                    } as any);
+
+                    await phonesRepo.save(phone);
+
+                    // 8. Save applicant address.
+                    const address = addressesRepo.create({
+                        sub_location: dto.address,
+                        applicant_id: savedApplicant.id,
+                        region_id: dto.region_id,
+                    } as any);
+
+                    await addressesRepo.save(address);
+
+                    // 9. Create registration notification.
+                    const notification = notificationsRepo.create({
+                        applicant_id: savedApplicant.id,
+                        data: 'New Applicant Joined',
+                        type: 'new-applicant',
+                    } as any);
+
+                    await notificationsRepo.save(notification);
+
+                    // 10. Return the data needed after the transaction.
+                    return {
+                        userId: savedUser.id,
+                        applicantId: savedApplicant.id,
+                        email: savedUser.email,
+                        verifyKey: savedUser.verify_key,
+                    };
+                },
+            );
+
+            // Send verification email only after the transaction commits.
+            const applicantName = [
+                dto.firstname,
+                dto.middlename,
+                dto.lastname,
+            ]
+                .filter((name) => name?.trim())
+                .join(' ');
+
+            let verificationEmailSent = false;
+
+            try {
+                if (!result.email) {
+                    throw new InternalServerErrorException(
+                        'Applicant registered, but email address is missing',
+                    );
+                }
+
+                await this.sendVerificationEmail(
+                    result.email,
+                    applicantName,
+                );
+
+                verificationEmailSent = true;
+                console.log(
+                    `Verification email sent to ${result.email}`,
+                );
+            } catch (emailError) {
+                console.error(
+                    'Failed to send applicant verification email:',
+                    emailError,
+                );
+            }
+
+            return {
+                success: true,
+                message: verificationEmailSent
+                    ? 'Account created successfully. Check your email for the verification code.'
+                    : 'Account created successfully, but the verification email could not be sent. Please request a new code.',
+                user_id: result.userId,
+                applicant_id: result.applicantId,
+                email: result.email,
+                verification_email_sent: verificationEmailSent,
+            };
+        } catch (error: any) {
+            // Preserve expected HTTP errors.
+            if (
+                error instanceof ConflictException ||
+                error instanceof BadRequestException
+            ) {
+                throw error;
+            }
+
+            // Handle duplicate-key errors, including concurrent registrations.
+            if (
+                error?.code === 'ER_DUP_ENTRY' ||
+                error?.errno === 1062
+            ) {
+                throw new ConflictException(
+                    'User already registered',
+                );
+            }
+
+            // Log the underlying error for server-side debugging.
+            console.error('Applicant registration failed:', error);
+
+            throw new InternalServerErrorException(
+                'Failed to register applicant',
+            );
+        }
     }
 
 }

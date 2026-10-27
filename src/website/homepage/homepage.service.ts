@@ -174,4 +174,40 @@ export class HomepageService {
             })),
         };
     }
+    /**
+ * Active job count grouped by region
+ * GET /api/homepage/jobs-by-region
+ */
+    async getJobCountByRegion() {
+        const sql = `
+        SELECT
+            r.id AS region_id,
+            r.region_name,
+            COUNT(j.id) AS total_positions
+        FROM jobs j
+        INNER JOIN regions r
+            ON j.region_id = r.id
+        WHERE
+            j.hide = 0
+            AND j.published = 1
+            AND j.dead_line >= CURDATE()
+        GROUP BY
+            r.id,
+            r.region_name
+        ORDER BY
+            MAX(j.updated_at) DESC
+    `;
+
+        const rows = await this.dataSource.query(sql);
+
+        return {
+            success: true,
+            message: 'Job counts by region retrieved successfully.',
+            data: rows.map((row: any) => ({
+                region_id: Number(row.region_id),
+                region_name: row.region_name,
+                total_positions: Number(row.total_positions),
+            })),
+        };
+    }
 }

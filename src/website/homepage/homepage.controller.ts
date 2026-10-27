@@ -46,4 +46,8 @@ export class HomepageController {
     getJobsCountByIndustry() {
         return this.homepageService.getJobsCountByIndustry();
     }
+    @Get('jobs-by-region')
+    async getJobCountByRegion() {
+        return this.homepageService.getJobCountByRegion();
+    }
 }
