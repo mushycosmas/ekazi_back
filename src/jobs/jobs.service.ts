@@ -270,7 +270,7 @@ export class JobsService {
             });
 
             // if (onlyActive) {
-                query.andWhere('job.dead_line > CURDATE()');
+            // query.andWhere('job.dead_line > CURDATE()');
             // }
 
             // ======================
@@ -330,7 +330,7 @@ export class JobsService {
             });
 
             // if (onlyActive) {
-                totalQuery.andWhere('job.dead_line > CURDATE()');
+            // totalQuery.andWhere('job.dead_line > CURDATE()');
             // }
 
             if (search?.trim()) {
@@ -366,20 +366,85 @@ export class JobsService {
             // ======================
             // PAGINATION
             // ======================
+
             const jobs = await query
                 .skip((page - 1) * limit)
                 .take(limit)
                 .getMany();
 
+            const formattedJobs = jobs.map((job) => ({
+                id: job.id,
+                title: job.title,
+                quantity: job.quantity,
+                published: job.published,
+                status: job.status,
+                featured: job.featured,
+                publish_date: job.publish_date,
+                dead_line: job.dead_line,
+
+                client: job.client
+                    ? {
+                        id: job.client.id,
+                        name: job.client.client_name,
+                        logo: job.client.logo,
+                    }
+                    : null,
+
+                industry: job.industry
+                    ? {
+                        id: job.industry.id,
+                        name: job.industry.industry_name,
+                    }
+                    : null,
+
+                position: job.position
+                    ? {
+                        id: job.position.id,
+                        name: job.position.position_name,
+                    }
+                    : null,
+
+                country: job.country
+                    ? {
+                        id: job.country.id,
+                        name: job.country.name,
+                    }
+                    : null,
+
+                region: job.region
+                    ? {
+                        id: job.region.id,
+                        name: job.region.region_name,
+                    }
+                    : null,
+
+                addresses: (job.addresses || []).map((address) => ({
+                    id: address.id,
+                    sub_location: address.sub_location,
+                })),
+
+                statistics: job.jobStatistics || [],
+
+                type: job.jobUniversalType
+                    ? {
+                        id: job.jobUniversalType.id,
+                        name: job.jobUniversalType.type_name,
+                    }
+                    : null,
+
+                metas: job.jobMetas || [],
+            }));
+
             return {
                 success: true,
                 message: 'Jobs fetched successfully',
-                data: jobs,
+                data: formattedJobs,
                 page,
                 limit,
                 totalPages: Math.ceil(total / limit),
                 total,
             };
+
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
