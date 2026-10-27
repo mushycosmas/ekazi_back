@@ -9,8 +9,9 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Applicants } from 'src/entities/applicants/applicants.entity';
+import { Status } from '../status.entity';
 
-@Entity('applicant_status')
+@Entity('applicant_statuses')
 @Index(['applicant_id', 'status_id'], { unique: true })
 export class ApplicantProfilePrivacy {
   @PrimaryGeneratedColumn()
@@ -51,4 +52,9 @@ export class ApplicantProfilePrivacy {
   @ManyToOne(() => Applicants, { nullable: true })
   @JoinColumn({ name: 'applicant_id' })
   applicant: Applicants;
+
+  @ManyToOne(() => Status, { nullable: true })
+  @JoinColumn({ name: 'status_id' })
+  status: Status;
+
 }

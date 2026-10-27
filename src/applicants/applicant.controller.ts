@@ -108,6 +108,17 @@ export class ApplicantController {
             .getApplicantProfileCompletion(Number(id));
 
     }
+
+    @Get('featured')
+    getFeaturedApplicants(
+        @Query('page') page = '1',
+        @Query('limit') limit = '20',
+    ) {
+        return this.applicantService.getFeaturedApplicants(
+            Number(page),
+            Number(limit),
+        );
+    }
 }
 
 

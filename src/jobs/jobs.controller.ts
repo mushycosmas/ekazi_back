@@ -26,27 +26,27 @@ export class JobsController {
   //   return this.jobsService.create(createJobDto);
   // }
 
-@Get()
-findAll(
-  @Query('page') page?: string,
-  @Query('limit') limit?: string,
-  @Query('search') search?: string,
-  @Query('industryId') industryId?: string,
-  @Query('onlyActive') onlyActive?: string,
-) {
-  return this.jobsService.findAll(
-    Number(page) || 1,
-    Number(limit) || 20,
-    search,
-    industryId ? Number(industryId) : undefined,
-    onlyActive === 'true',
-  );
-}
+// @Get()
+// findAll(
+//   @Query('page') page?: string,
+//   @Query('limit') limit?: string,
+//   @Query('search') search?: string,
+//   @Query('industryId') industryId?: string,
+//   @Query('onlyActive') onlyActive?: string,
+// ) {
+//   return this.jobsService.findAll(
+//     Number(page) || 1,
+//     Number(limit) || 20,
+//     search,
+//     industryId ? Number(industryId) : undefined,
+//     onlyActive === 'true',
+//   );
+// }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.jobsService.findOne(+id);
-  }
+//   @Get(':id')
+//   findOne(@Param('id') id: string) {
+//     return this.jobsService.findOne(+id);
+//   }
 
   // @Patch(':id')
   // update(
@@ -76,12 +76,12 @@ findAll(
   //   );
   // }
 
-  @Delete(':id/complete-profile')
-  deleteCompleteProfile(
-    @Param('id') id: number,
-  ) {
-    return this.jobsService.deleteCompleteProfile(
-      Number(id),
-    );
-  }
+  // @Delete(':id/complete-profile')
+  // deleteCompleteProfile(
+  //   @Param('id') id: number,
+  // ) {
+  //   return this.jobsService.deleteCompleteProfile(
+  //     Number(id),
+  //   );
+  // }
 }

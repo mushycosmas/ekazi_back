@@ -7,6 +7,9 @@ import { ApplicantPositions } from 'src/entities/applicants/applicant-positions.
 import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { Users } from 'src/entities/users.entity';
 import { Repository, DataSource } from 'typeorm';
+import { ApplicantViews } from 'src/entities/applicants/applicant-views.entity';
+import { ApplicantRate } from 'src/entities/applicants/applicant-rate.entity';
+import { ApplicantProfilePrivacy } from 'src/entities/applicants/applicant-profile-privacy.entity';
 
 
 @Injectable()
@@ -1813,6 +1816,204 @@ END
             required: false,
           },
         ],
+      },
+    };
+  }
+
+  async getFeaturedApplicants(page = 1, limit = 20) {
+    const currentPage = Math.max(1, Number(page) || 1);
+    const perPage = Math.min(100, Math.max(1, Number(limit) || 20));
+    const now = new Date();
+
+    const query = this.applicantsRepo
+      .createQueryBuilder('applicant')
+      .innerJoin(
+        'applicant.featuredPlanSubscriptions',
+        'featuredSubscription',
+        'featuredSubscription.verify = :verify',
+        { verify: 1 },
+      )
+      .select([
+        'applicant.id',
+        'applicant.first_name',
+        'applicant.middle_name',
+        'applicant.last_name',
+        'applicant.picture',
+        'applicant.background_picture',
+      ])
+      .distinct(true)
+      .orderBy('applicant.id', 'DESC');
+
+    const [applicants, total] = await query
+      .skip((currentPage - 1) * perPage)
+      .take(perPage)
+      .getManyAndCount();
+
+    const ids = applicants.map((applicant) => applicant.id);
+
+    if (ids.length === 0) {
+      return {
+        success: true,
+        message: 'Featured applicants retrieved successfully.',
+        data: [],
+        pagination: {
+          total,
+          page: currentPage,
+          per_page: perPage,
+          total_pages: Math.ceil(total / perPage),
+        },
+      };
+    }
+    // Load statuses associated with the featured applicants
+    const statusRecords = await this.applicantsRepo.manager
+      .getRepository(ApplicantProfilePrivacy)
+      .createQueryBuilder('applicantStatus')
+      .leftJoinAndSelect('applicantStatus.status', 'status')
+      .where('applicantStatus.applicant_id IN (:...ids)', { ids })
+      .getMany();
+
+    // Group statuses by applicant ID
+    const statusMap = new Map<number, ApplicantProfilePrivacy[]>();
+
+    for (const record of statusRecords) {
+      if (record.applicant_id == null) continue;
+
+      const existing = statusMap.get(record.applicant_id) ?? [];
+      existing.push(record);
+      statusMap.set(record.applicant_id, existing);
+    }
+    // Get existing stored view/like records (no SUM)
+    const viewRecords = await this.applicantsRepo.manager
+      .getRepository(ApplicantViews)
+      .createQueryBuilder('views')
+      .where('views.applicant_id IN (:...ids)', { ids })
+      .getMany();
+    // Get applicant ratings, excluding soft-deleted records
+    const rateRecords = await this.applicantsRepo.manager
+      .getRepository(ApplicantRate)
+      .createQueryBuilder('rate')
+      .where('rate.applicant_id IN (:...ids)', { ids })
+      .orderBy('rate.created_at', 'DESC')
+      .getMany();
+
+    const rateMap = new Map<number, ApplicantRate[]>();
+
+    for (const rate of rateRecords) {
+      if (rate.applicant_id == null) continue;
+
+      const records = rateMap.get(rate.applicant_id) ?? [];
+      records.push(rate);
+      rateMap.set(rate.applicant_id, records);
+    }
+
+    // Load address and country details
+    const addresses = await this.applicantsRepo.manager
+      .getRepository(Applicants)
+      .createQueryBuilder('applicant')
+      .leftJoinAndSelect('applicant.applicant_addresses', 'address')
+      .leftJoinAndSelect('address.region', 'region')
+      .leftJoinAndSelect('region.country', 'country')
+      .where('applicant.id IN (:...ids)', { ids })
+      .getMany();
+
+    // Load current positions using the existing position repository
+    // Load the latest position recorded on each applicant's profile
+    const positions = await this.applicantPositionsRepo
+      .createQueryBuilder('pos')
+      .leftJoinAndSelect('pos.position', 'position')
+      .where('pos.applicant_id IN (:...ids)', { ids })
+      .orderBy('pos.start_date', 'DESC')
+      .addOrderBy('pos.id', 'DESC')
+      .getMany();
+
+    const viewMap = new Map(
+      viewRecords.map((view) => [view.applicant_id, view]),
+    );
+
+    const addressMap = new Map(
+      addresses.map((applicant) => [
+        applicant.id,
+        (applicant as any).applicant_addresses ?? [],
+      ]),
+    );
+
+    const positionMap = new Map<number, string>();
+
+    for (const pos of positions) {
+      const positionName = pos.position?.position_name;
+
+      if (!positionMap.has(pos.applicant_id) && positionName) {
+        const formattedPosition = this.formatPositionName(positionName);
+
+        if (formattedPosition !== null) {
+          positionMap.set(pos.applicant_id, formattedPosition);
+        }
+      }
+    }
+
+    const data = applicants.map((applicant) => {
+      const view = viewMap.get(applicant.id);
+      const applicantRates = rateMap.get(applicant.id) ?? [];
+
+      return {
+        id: applicant.id,
+        first_name: applicant.first_name,
+        middle_name: applicant.middle_name,
+        last_name: applicant.last_name,
+        picture: applicant.picture,
+        background_picture: applicant.background_picture,
+
+        // Stored view and like values
+        view_number: view?.view_number ?? 0,
+        like_number: view?.like_number ?? 0,
+
+        // Applicant rating records
+        applicantRates: (rateMap.get(applicant.id) ?? []).map((rate) => ({
+          id: rate.id,
+          user_id: rate.user_id,
+          rate: rate.rate,
+          comment: rate.comment,
+          created_at: rate.created_at,
+        })),
+
+        address: (addressMap.get(applicant.id) ?? []).map(
+          (address: any) => ({
+            id: address.id,
+            sub_location: address.sub_location ?? null,
+            region: address.region
+              ? {
+                id: address.region.id,
+                name: address.region.region_name,
+                country: address.region.country
+                  ? {
+                    id: address.region.country.id,
+                    name: address.region.country.name,
+                  }
+                  : null,
+              }
+              : null,
+          }),
+        ),
+        status: (statusMap.get(applicant.id) ?? []).map((record) => ({
+          id: record.id,
+          status_id: record.status_id,
+          status_name: record.status?.status_name ?? null,
+          value: record.value,
+        })),
+
+        current_position: positionMap.get(applicant.id) ?? null,
+      };
+    });
+
+    return {
+      success: true,
+      message: 'Featured applicants retrieved successfully.',
+      data,
+      pagination: {
+        total,
+        page: currentPage,
+        per_page: perPage,
+        total_pages: Math.ceil(total / perPage),
       },
     };
   }

@@ -27,8 +27,8 @@ import { CurrentUser } from
 import { Users } from 'src/entities/users.entity';
 import { JobsService } from 'src/jobs/jobs.service';
 
-@Controller('applicant')
-@UseGuards(SanctumGuard)
+@Controller()
+
 export class ApplicantJobsController {
     private readonly logger = new Logger(ApplicantJobsController.name);
     constructor(
@@ -36,7 +36,8 @@ export class ApplicantJobsController {
         private readonly JobsService: JobsService,
     ) { }
 
-    @Post('/saved-jobs')
+    @Post('applicant/saved-jobs')
+    @UseGuards(SanctumGuard)
     async saveJob(
         @CurrentUser() user: Users,
         @Body() dto: CreateApplicantSaveJobDto,
@@ -66,7 +67,8 @@ export class ApplicantJobsController {
         }
     }
 
-    @Get('/saved-jobs')
+    @Get('applicant/saved-jobs')
+    @UseGuards(SanctumGuard)
     async findAll(
         @CurrentUser() user: Users,
         @Query('page') page = '1',
@@ -81,7 +83,8 @@ export class ApplicantJobsController {
         );
     }
 
-    @Get('/saved-jobs/:jobId/check')
+    @Get('applicant/saved-jobs/:jobId/check')
+    @UseGuards(SanctumGuard)
     checkSavedJob(
         @CurrentUser() user: Users,
         @Param('jobId', ParseIntPipe) jobId: number,
@@ -92,7 +95,8 @@ export class ApplicantJobsController {
         );
     }
 
-    @Delete('/saved-jobs/:jobId')
+    @Delete('applicant/saved-jobs/:jobId')
+    @UseGuards(SanctumGuard)
     removeSavedJob(
         @CurrentUser() user: Users,
         @Param('jobId', ParseIntPipe) jobId: number,
@@ -129,7 +133,8 @@ export class ApplicantJobsController {
         return this.JobsService.JobDetail(id);
     }
 
-    @Get('my-application')
+    @Get('applicant/my-application')
+    @UseGuards(SanctumGuard)
     async myApplication(
         @CurrentUser() user: Users,
         @Query('page') page = '1',

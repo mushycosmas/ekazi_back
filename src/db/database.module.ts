@@ -162,6 +162,8 @@ import { Status } from 'src/entities/status.entity';
 import { ClientSocialMedia } from 'src/client/entities/client-social-media.entity';
 import { SocialMedia } from 'src/entities/social-media.entity';
 import { BlogPost } from 'src/entities/blog-post.entity';
+import { ApplicantViews } from 'src/entities/applicants/applicant-views.entity';
+import { ApplicantRate } from 'src/entities/applicants/applicant-rate.entity';
  
  
 
@@ -326,6 +328,8 @@ const allEntities = [
   ClientSocialMedia,
   SocialMedia,
   BlogPost,
+  ApplicantViews,
+  ApplicantRate,
 
   // TaskAttachment,
   // TaskMessageAttachment,

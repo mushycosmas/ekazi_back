@@ -9,6 +9,9 @@ import { ApplicantController } from './applicant.controller';
 import { ApplicantService } from './applicant.service';
 import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
 import { ApplicantPositions } from 'src/entities/applicants/applicant-positions.entity';
+import { ApplicantViews } from 'src/entities/applicants/applicant-views.entity';
+import { ApplicantRate } from 'src/entities/applicants/applicant-rate.entity';
+import { ApplicantProfilePrivacy } from 'src/entities/applicants/applicant-profile-privacy.entity';
 
 @Module({
     imports: [
@@ -20,6 +23,9 @@ import { ApplicantPositions } from 'src/entities/applicants/applicant-positions.
             ApplicantApplication,
             ApplicantListing,
             ApplicantPositions,
+            ApplicantViews,
+            ApplicantRate,
+            ApplicantProfilePrivacy,
         ]),
     ],
 
