@@ -125,7 +125,6 @@ export class ApplicantJobsController {
     }
 
     @Get('jobs/:id')
-    @UseGuards(SanctumGuard)
     async myJobDetail(
 
         @Param('id', ParseIntPipe) id: number,
