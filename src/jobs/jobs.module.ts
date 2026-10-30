@@ -13,6 +13,7 @@ import { JobKnowledge } from './entities/job-knowledge.entity';
 import { JobAddresses } from './entities/job-addresses.entity';
 import { Positions } from 'src/entities/positions.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
+import { JobStatistics } from './entities/job-statistics.entity';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -25,6 +26,7 @@ import { ApplicantApplication } from 'src/entities/applicants/applicant-applican
         JobAddresses,
         Positions,
         ApplicantApplication,
+        JobStatistics,
     ])
 
     ],

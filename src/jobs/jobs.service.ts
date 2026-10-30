@@ -28,6 +28,7 @@ import { generateSlug } from 'src/utils/slug';
 import { JobSalaries } from './entities/job-salaries.entity';
 import { Users } from 'src/entities/users.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
+import { JobStatistics } from './entities/job-statistics.entity';
 
 @Injectable()
 export class JobsService {
@@ -37,6 +38,8 @@ export class JobsService {
 
         @InjectRepository(Clients)
         private readonly clientRepository: Repository<Clients>,
+        @InjectRepository(JobStatistics)
+        private readonly jobStatisticRepo: Repository<JobStatistics>,
 
         @InjectRepository(JobCultures)
         private readonly jobCultureRepository: Repository<JobCultures>,
@@ -270,7 +273,7 @@ export class JobsService {
             });
 
             // if (onlyActive) {
-            query.andWhere('job.dead_line > CURDATE()');
+            // query.andWhere('job.dead_line > CURDATE()');
             // }
 
             // ======================
@@ -330,7 +333,7 @@ export class JobsService {
             });
 
             // if (onlyActive) {
-            totalQuery.andWhere('job.dead_line > CURDATE()');
+            // totalQuery.andWhere('job.dead_line > CURDATE()');
             // }
 
             if (search?.trim()) {
@@ -867,6 +870,62 @@ export class JobsService {
             });
         }
     }
+
+
+
+
+    async incrementJob(jobId: number) {
+        const job = await this.jobsRepository.findOne({
+            where: { id: jobId },
+            select: ['id'],
+        });
+
+        if (!job) {
+            throw new NotFoundException('Job not found.');
+        }
+
+        // Increment existing record.
+        const result = await this.dataSource.query(
+            `
+    UPDATE job_statistics
+    SET
+      job_views = COALESCE(job_views, 0) + 1,
+      updated_at = NOW()
+    WHERE job_id = ?
+    `,
+            [jobId],
+        );
+
+        // Create a record only if one does not exist.
+        if (result.affectedRows === 0) {
+            await this.dataSource.query(
+                `
+      INSERT INTO job_statistics
+        (job_id, job_views, created_at, updated_at)
+      VALUES (?, 1, NOW(), NOW())
+      `,
+                [jobId],
+            );
+        }
+
+        const [statistic] = await this.dataSource.query(
+            `
+    SELECT job_views
+    FROM job_statistics
+    WHERE job_id = ?
+    LIMIT 1
+    `,
+            [jobId],
+        );
+
+        return {
+            success: statistic ? Number(statistic.job_views) : 0,
+        };
+    }
+
+
+
+
 
     // =========================
     // UPDATE JOB

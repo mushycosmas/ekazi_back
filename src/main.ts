@@ -45,6 +45,8 @@ async function bootstrap() {
             'https://ekazi.co.tz',
 
             'http://localhost:3000',
+            
+            'https://test.ekazi.co.tz',
 
         ],
 

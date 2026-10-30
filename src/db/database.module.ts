@@ -164,6 +164,9 @@ import { SocialMedia } from 'src/entities/social-media.entity';
 import { BlogPost } from 'src/entities/blog-post.entity';
 import { ApplicantViews } from 'src/entities/applicants/applicant-views.entity';
 import { ApplicantRate } from 'src/entities/applicants/applicant-rate.entity';
+import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
+import { NonUserApplicationFile } from 'src/entities/applicants/non-user-application-file.entity';
+import { ApplicantFeaturedView } from 'src/entities/applicants/applicant-featured-view.entity';
  
  
 
@@ -330,6 +333,9 @@ const allEntities = [
   BlogPost,
   ApplicantViews,
   ApplicantRate,
+  NonUserApplication,
+  NonUserApplicationFile,
+  ApplicantFeaturedView,
 
   // TaskAttachment,
   // TaskMessageAttachment,

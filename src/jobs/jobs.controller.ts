@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 
 import { JobsService } from './jobs.service';
@@ -26,27 +27,27 @@ export class JobsController {
   //   return this.jobsService.create(createJobDto);
   // }
 
-// @Get()
-// findAll(
-//   @Query('page') page?: string,
-//   @Query('limit') limit?: string,
-//   @Query('search') search?: string,
-//   @Query('industryId') industryId?: string,
-//   @Query('onlyActive') onlyActive?: string,
-// ) {
-//   return this.jobsService.findAll(
-//     Number(page) || 1,
-//     Number(limit) || 20,
-//     search,
-//     industryId ? Number(industryId) : undefined,
-//     onlyActive === 'true',
-//   );
-// }
+  // @Get()
+  // findAll(
+  //   @Query('page') page?: string,
+  //   @Query('limit') limit?: string,
+  //   @Query('search') search?: string,
+  //   @Query('industryId') industryId?: string,
+  //   @Query('onlyActive') onlyActive?: string,
+  // ) {
+  //   return this.jobsService.findAll(
+  //     Number(page) || 1,
+  //     Number(limit) || 20,
+  //     search,
+  //     industryId ? Number(industryId) : undefined,
+  //     onlyActive === 'true',
+  //   );
+  // }
 
-//   @Get(':id')
-//   findOne(@Param('id') id: string) {
-//     return this.jobsService.findOne(+id);
-//   }
+  //   @Get(':id')
+  //   findOne(@Param('id') id: string) {
+  //     return this.jobsService.findOne(+id);
+  //   }
 
   // @Patch(':id')
   // update(
@@ -63,6 +64,13 @@ export class JobsController {
   @Get(':id/complete-profile')
   getCompleteProfile(@Param('id') id: number) {
     return this.jobsService.getCompleteProfile(Number(id));
+  }
+
+  @Post(':jobId/increment-view')
+  incrementJob(
+    @Param('jobId', ParseIntPipe) jobId: number,
+  ) {
+    return this.jobsService.incrementJob(jobId);
   }
 
   // @Patch(':id/complete-profile')

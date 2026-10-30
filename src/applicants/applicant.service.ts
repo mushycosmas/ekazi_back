@@ -10,6 +10,7 @@ import { Repository, DataSource } from 'typeorm';
 import { ApplicantViews } from 'src/entities/applicants/applicant-views.entity';
 import { ApplicantRate } from 'src/entities/applicants/applicant-rate.entity';
 import { ApplicantProfilePrivacy } from 'src/entities/applicants/applicant-profile-privacy.entity';
+import { ApplicantFeaturedView } from 'src/entities/applicants/applicant-featured-view.entity';
 
 
 @Injectable()
@@ -1688,15 +1689,15 @@ END
     const completion = await this.getApplicantProfileCompletion(
       applicant.id,
     );
-return {
-    success: true,
-    message: 'Applicant profile and retrieved successfully',
-    data: {
+    return {
+      success: true,
+      message: 'Applicant profile and retrieved successfully',
+      data: {
         applicant_id: applicant.id,
         ...profile.data,
         profile_completion: completion.data.profile_completion,
-    },
-};
+      },
+    };
   }
 
 
@@ -2074,6 +2075,68 @@ return {
         like_number: views?.like_number ?? 0,
         applicantRates: ratings,
       },
+    };
+  }
+
+  async incrementFeaturedApplicantView(applicantId: number) {
+    // Verify that applicant exists
+    const applicant = await this.applicantsRepo.findOne({
+      where: { id: applicantId },
+      select: ['id'],
+    });
+
+    if (!applicant) {
+      throw new NotFoundException('Applicant not found');
+    }
+
+    const featuredViewsRepo = this.applicantsRepo.manager.getRepository(
+      ApplicantFeaturedView,
+    );
+
+    // Increment existing record
+    const result = await featuredViewsRepo
+      .createQueryBuilder()
+      .update(ApplicantFeaturedView)
+      .set({
+        view_number: () => 'COALESCE(view_number, 0) + 1',
+      })
+      .where('applicant_id = :applicantId', { applicantId })
+      .execute();
+
+    // Create record if it does not exist
+    if (result.affected === 0) {
+      try {
+        await featuredViewsRepo.save(
+          featuredViewsRepo.create({
+            applicant_id: applicantId,
+            view_number: 1,
+            like_number: 0,
+          }),
+        );
+      } catch (error) {
+        // Handle concurrent requests that create the same record
+        const retry = await featuredViewsRepo
+          .createQueryBuilder()
+          .update(ApplicantFeaturedView)
+          .set({
+            view_number: () => 'COALESCE(view_number, 0) + 1',
+          })
+          .where('applicant_id = :applicantId', { applicantId })
+          .execute();
+
+        if (retry.affected === 0) {
+          throw error;
+        }
+      }
+    }
+
+    const statistic = await featuredViewsRepo.findOne({
+      where: { applicant_id: applicantId },
+    });
+
+    return {
+      success: statistic?.view_number ?? 0,
+      message: 'Featured applicant view incremented successfully',
     };
   }
 

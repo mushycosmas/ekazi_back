@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Received</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #1a73e8;
+            font-size: 19px;
+        }
+
+        p {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        ol li {
+            margin-bottom: 10px;
+        }
+
+        .position {
+            color: #1a73e8;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 14px;
+            color: #666;
+        }
+
+        a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Dear {{first_name}},</h1>
+
+        <p>
+            Thank you for applying through eKazi Portal!
+            We have successfully received your application for
+            the position of
+            <strong class="position">{{position_name}}</strong>.
+        </p>
+
+        <p>
+            Your application has been successfully submitted
+            and is now in our recruitment process.
+        </p>
+
+        <h2>Recruitment Process</h2>
+
+        <p>
+            Our selection process includes the following stages:
+        </p>
+
+        <ol>
+            <li><strong>Shortlisting</strong></li>
+            <li><strong>Screening</strong></li>
+            <li><strong>Interview</strong></li>
+            <li><strong>Final Selection</strong></li>
+        </ol>
+
+        <p>
+            Only shortlisted candidates will proceed to the
+            next stage. We appreciate your interest and wish
+            you the best in your job search!
+        </p>
+
+        <div class="footer">
+
+            <p>
+                Regards,<br>
+                <strong>eKazi</strong><br>
+                3<sup>rd</sup> Floor, The Arcade House, Plot No. 72,<br>
+                Mwai Kibaki Road, Mikocheni,<br>
+                Dar-Es-Salaam, Tanzania<br>
+                Tel: +255 677 014 718
+            </p>
+
+            <hr>
+
+            <p>
+                You have received this email because you
+                applied for a job through
+                <a href="https://ekazi.co.tz/">eKazi</a>.
+            </p>
+
+            <p style="font-size:12px;color:#999;">
+                &copy; {{year}} eKazi. All rights reserved.
+            </p>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

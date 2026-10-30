@@ -1,0 +1,186 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{subject}}</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #1a73e8;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        ol li {
+            margin-bottom: 10px;
+        }
+
+        .application-details {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8faff;
+            border: 1px solid #e1e8f0;
+            border-radius: 6px;
+        }
+
+        .application-details p {
+            margin: 8px 0;
+            font-size: 15px;
+        }
+
+        .notes {
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #1a73e8;
+            font-size: 15px;
+            white-space: pre-line;
+        }
+
+        .footer {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 14px;
+            color: #666;
+        }
+
+        a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>Dear {{recipient_name}},</h1>
+
+        <h2>{{heading}}</h2>
+
+        <p>
+            {{intro_message}}
+        </p>
+
+        <div class="application-details">
+            <h2>Application Details</h2>
+
+            <p>
+                <strong>Position:</strong>
+                {{position_name}}
+            </p>
+
+            <p>
+                <strong>Applicant Name:</strong>
+                {{applicant_name}}
+            </p>
+
+            <p>
+                <strong>Email Address:</strong>
+                {{applicant_email}}
+            </p>
+
+            <p>
+                <strong>Phone Number:</strong>
+                {{phone}}
+            </p>
+        </div>
+
+        {{#if notes}}
+        <p>
+            <strong>Application Message:</strong>
+        </p>
+
+        <div class="notes">{{notes}}</div>
+        {{/if}}
+
+        {{#if isEmployer}}
+        <p>
+            The applicant has attached their CV and supporting
+            documents for your review.
+        </p>
+        {{else}}
+        <p>
+            Our selection process includes the following stages:
+        </p>
+
+        <ol>
+            <li><strong>Shortlisting</strong></li>
+            <li><strong>Screening</strong></li>
+            <li><strong>Interview</strong></li>
+            <li><strong>Final Selection</strong></li>
+        </ol>
+        {{/if}}
+
+        <p>
+            {{closing_message}}
+        </p>
+
+        <div class="footer">
+            <p>
+                Regards,<br>
+                <strong>eKazi</strong><br>
+                3<sup>rd</sup> Floor, The Arcade House, Plot No. 72,<br>
+                Mwai Kibaki Road, Mikocheni,<br>
+                Dar-Es-Salaam, Tanzania<br>
+                Tel: +255 677 014 718
+            </p>
+
+            <hr>
+
+            <p>
+                You have received this email through the
+                <a href="https://ekazi.co.tz/">eKazi Portal</a>.
+            </p>
+
+            <p style="font-size:12px;color:#999;">
+                &copy; {{year}} eKazi. All rights reserved.
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

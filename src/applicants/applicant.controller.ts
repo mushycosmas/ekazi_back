@@ -1,4 +1,4 @@
-import { Controller, Get, NotFoundException, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, ParseIntPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApplicantService } from './applicant.service';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -128,6 +128,12 @@ export class ApplicantController {
         return this.applicantService
             .getFeaturedApplicantDetail(Number(id));
 
+    }
+    @Post('applicant/:applicantId/increment-featured-view')
+    incrementFeaturedApplicantView(
+        @Param('applicantId', ParseIntPipe) applicantId: number,
+    ) {
+        return this.applicantService.incrementFeaturedApplicantView(applicantId);
     }
 }
 
