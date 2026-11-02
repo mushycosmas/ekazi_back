@@ -36,7 +36,7 @@ export class ApplicationsController {
     ) { }
 
     @UseGuards(SanctumGuard)
-    @Post(':jobId/apply/internal')
+    @Post(':jobId/apply-job')
     applyInternally(
         @CurrentUser() user: Users,
         @Param('jobId', ParseIntPipe) jobId: number,
@@ -56,61 +56,36 @@ export class ApplicationsController {
             .join('/');
     }
 
-    private async removeUploadedFiles(
-        files: Express.Multer.File[] = [],
-    ): Promise<void> {
-        await Promise.all(
-            files.map(async (file) => {
-                if (!file?.path) return;
-
-                try {
-                    await unlink(file.path);
-                } catch (error) {
-                    console.error(
-                        'Failed to clean up uploaded application file:',
-                        error,
-                    );
-                }
-            }),
+    // POST /api/applications/non-user/email
+ @Post('apply-job-by-email')
+@HttpCode(HttpStatus.CREATED)
+@UseInterceptors(
+    FilesInterceptor(
+        'attachments',
+        5,
+        multerConfig('non_useremail'),
+    ),
+)
+async applyByEmail(
+    @Body() dto: CreateNonUserApplicationDto,
+    @UploadedFiles() files: Express.Multer.File[],
+) {
+    if (!files?.length) {
+        throw new BadRequestException(
+            'At least one attachment is required.',
         );
     }
 
-    // POST /api/applications/non-user/email
-    @Post('non-user/email')
-    @HttpCode(HttpStatus.CREATED)
-    @UseInterceptors(
-        FilesInterceptor(
-            'attachments',
-            5,
-            multerConfig('non_useremail'),
-        ),
-    )
-    async applyByEmail(
-        @Body() dto: CreateNonUserApplicationDto,
-        @UploadedFiles() files: Express.Multer.File[],
-    ) {
-        if (!files?.length) {
-            throw new BadRequestException(
-                'At least one attachment is required.',
-            );
-        }
+    const attachmentFiles = files.map((file) => ({
+        ...file,
+        path: this.getRelativeFilePath(file.path),
+    }));
 
-        // Store project-relative paths, consistent with BlogPostsController.
-        const attachmentFiles = files.map((file) => ({
-            ...file,
-            path: this.getRelativeFilePath(file.path),
-        }));
-
-        try {
-            return await this.applicationsService.applyNonUserByEmail(
-                dto,
-                attachmentFiles,
-            );
-        } catch (error) {
-            await this.removeUploadedFiles(files);
-            throw error;
-        }
-    }
+    return await this.applicationsService.applyNonUserByEmail(
+        dto,
+        attachmentFiles,
+    );
+}
 
 
     // @Post(':jobId/apply/email')

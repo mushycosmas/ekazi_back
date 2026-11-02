@@ -129,7 +129,7 @@ export class ApplicantController {
             .getFeaturedApplicantDetail(Number(id));
 
     }
-    @Post('applicant/:applicantId/increment-featured-view')
+    @Post('applicant/featured/:applicantId/increment-featured-view')
     incrementFeaturedApplicantView(
         @Param('applicantId', ParseIntPipe) applicantId: number,
     ) {

@@ -111,6 +111,7 @@ export class ApplicantService {
       .leftJoinAndSelect('applicantCultures.culture', 'culture')
       .leftJoinAndSelect('applicant.applicant_knowledge', 'applicantKnowledge')
       .leftJoinAndSelect('applicantKnowledge.knowledge', 'knowledge')
+
       // .leftJoinAndSelect('applicant.applicant_personalities', 'personality')
       .leftJoinAndSelect(
         'applicant.applicant_personalities',
@@ -136,6 +137,7 @@ export class ApplicantService {
       .leftJoinAndSelect('applicant.applicant_objectives', 'objective')
       .leftJoinAndSelect('applicant.applicant_addresses', 'address')
       .leftJoinAndSelect('address.region', 'addressRegion')
+      .leftJoinAndSelect('addressRegion.country', 'addressCountry')
       .leftJoinAndSelect('applicant.applicant_trainings', 'training')
       .leftJoinAndSelect('applicant.applicant_languages', 'language')
       .leftJoinAndSelect('language.language', 'languageDetail')
@@ -204,6 +206,7 @@ export class ApplicantService {
       // =============================================
       // CONTACT INFORMATION
       // =============================================
+
       phone: (applicant.applicant_phones || []).map((phone) => ({
         id: phone.id,
         applicant_id: phone.applicant_id,
@@ -214,15 +217,31 @@ export class ApplicantService {
         id: address.id,
         applicant_id: address.applicant_id,
 
+        sub_location: address.sub_location,
+        postal: address.postal,
+
         region: address.region
           ? {
             id: address.region.id,
             name: address.region.region_name,
+
+            country: address.region.country
+              ? {
+                id: address.region.country.id,
+                name: address.region.country.name,
+                citizenship: address.region.country.citizenship,
+                country_code: address.region.country.country_code,
+                alpha_code: address.region.country.alpha_code,
+                currency: address.region.country.currency,
+                creator_id: address.region.country.creator_id,
+                updator_id: address.region.country.updator_id,
+                created_at: address.region.country.created_at,
+                updated_at: address.region.country.updated_at,
+                hide: address.region.country.hide,
+              }
+              : null,
           }
           : null,
-
-        sub_location: address.sub_location,
-        postal: address.postal,
       })),
 
       // =============================================

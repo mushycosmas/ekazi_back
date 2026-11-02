@@ -223,6 +223,9 @@ export class JobsService {
                 .leftJoinAndSelect('job.addresses', 'addresses')
                 .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
                 .leftJoinAndSelect('job.jobUniversalType', 'jobUniversalType')
+                .leftJoinAndSelect('job.externalUrls', 'externalUrls')
+                .leftJoinAndSelect('job.jobEmails', 'jobEmails')
+
                 .select([
                     'job.id',
                     'job.status',
@@ -256,6 +259,13 @@ export class JobsService {
 
                     'addresses.id',
                     'addresses.sub_location',
+
+                    'externalUrls .id',
+                    'externalUrls.external_url',
+
+                    'jobEmails.id',
+                    'jobEmails.email'
+
                 ]);
 
             // ======================
@@ -436,6 +446,17 @@ export class JobsService {
                     : null,
 
                 metas: job.jobMetas || [],
+
+                job_email: job?.jobEmails ? {
+                    id: job.jobEmails.id,
+                    name: job.jobEmails.email,
+                } : null,
+
+                job_externalUrl: job?.externalUrls ? {
+                    id: job.externalUrls.id,
+                    name: job.externalUrls.external_url,
+                } : null,
+
             }));
 
             return {

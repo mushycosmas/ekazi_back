@@ -388,21 +388,21 @@ export class ApplicationsService {
         }
 
         // Confirm that this job accepts email applications.
-        const emailConfiguration = await this.dataSource
-            .getRepository(JobApplicationModals)
-            .findOne({
-                where: {
-                    job_id: job.id,
-                    status: 'email',
-                },
-            });
+        // const emailConfiguration = await this.dataSource
+        //     .getRepository(JobApplicationModals)
+        //     .findOne({
+        //         where: {
+        //             job_id: job.id,
+        //             status: 'email',
+        //         },
+        //     });
 
-        if (!emailConfiguration) {
-            await this.removeNonUserFiles(files);
-            throw new BadRequestException(
-                'This job is not configured for email applications.',
-            );
-        }
+        // if (!emailConfiguration) {
+        //     await this.removeNonUserFiles(files);
+        //     throw new BadRequestException(
+        //         'This job is not configured for email applications.',
+        //     );
+        // }
 
         const employerEmail = job.jobEmails?.email?.trim();
 

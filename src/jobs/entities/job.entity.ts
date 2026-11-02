@@ -312,7 +312,7 @@ export class Jobs {
         referencedColumnName: 'job_id',
     })
     jobEmails: JobEmails;
-
+  
     @OneToMany(() => JobEvaluationAptitudes, (aptitude) => aptitude.job,)
     evaluationAptitudes: JobEvaluationAptitudes[];
 
@@ -328,6 +328,7 @@ export class Jobs {
         referencedColumnName: 'job_id',
     })
     externalUrls: JobExternalUrls;
+ 
 
     @OneToMany(
         () => JobKnowledge,
