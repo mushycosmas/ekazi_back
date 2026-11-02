@@ -12,6 +12,7 @@ import {
     HttpCode,
     HttpStatus,
     BadRequestException,
+    Query,
 } from '@nestjs/common';
 
 import { ApplicationsService } from './application.service';
@@ -57,35 +58,54 @@ export class ApplicationsController {
     }
 
     // POST /api/applications/non-user/email
- @Post('apply-job-by-email')
-@HttpCode(HttpStatus.CREATED)
-@UseInterceptors(
-    FilesInterceptor(
-        'attachments',
-        5,
-        multerConfig('non_useremail'),
-    ),
-)
-async applyByEmail(
-    @Body() dto: CreateNonUserApplicationDto,
-    @UploadedFiles() files: Express.Multer.File[],
-) {
-    if (!files?.length) {
-        throw new BadRequestException(
-            'At least one attachment is required.',
+    @Post('apply-job-by-email')
+    @HttpCode(HttpStatus.CREATED)
+    @UseInterceptors(
+        FilesInterceptor(
+            'attachments',
+            5,
+            multerConfig('non_useremail'),
+        ),
+    )
+    async applyByEmail(
+        @Body() dto: CreateNonUserApplicationDto,
+        @UploadedFiles() files: Express.Multer.File[],
+    ) {
+        if (!files?.length) {
+            throw new BadRequestException(
+                'At least one attachment is required.',
+            );
+        }
+
+        const attachmentFiles = files.map((file) => ({
+            ...file,
+            path: this.getRelativeFilePath(file.path),
+        }));
+
+        return await this.applicationsService.applyNonUserByEmail(
+            dto,
+            attachmentFiles,
         );
     }
+    @UseGuards(SanctumGuard)
+    @Get('apply-job-by-email')
+    async getApplications(
+        @CurrentUser() user: Users,
+        @Query('page') page = 1,
+        @Query('limit') limit = 20,
+        @Query('search') search = '',
+        @Query('job_id') jobId?: number,
+    ) {
+        const userId = user.id
 
-    const attachmentFiles = files.map((file) => ({
-        ...file,
-        path: this.getRelativeFilePath(file.path),
-    }));
-
-    return await this.applicationsService.applyNonUserByEmail(
-        dto,
-        attachmentFiles,
-    );
-}
+        return this.applicationsService.getApplications(
+            userId,
+            page,
+            limit,
+            search,
+            jobId ? Number(jobId) : undefined,
+        );
+    }
 
 
     // @Post(':jobId/apply/email')

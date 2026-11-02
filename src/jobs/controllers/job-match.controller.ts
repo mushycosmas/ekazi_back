@@ -4,14 +4,14 @@ import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 import { Users } from 'src/entities/users.entity';
 import { JobMatchService } from '../services/job-match.service';
 
-@Controller('job-match')
+@Controller()
 @UseGuards(SanctumGuard)
 export class JobMatchController {
     constructor(
         private readonly jobMatchService: JobMatchService,
     ) { }
 
-    @Get(':jobId/match-applicants')
+    @Get('job-match/:jobId/match-applicants')
   
     async findApplicantsByJob(
         @Param('jobId', ParseIntPipe) jobId: number,
@@ -43,7 +43,7 @@ export class JobMatchController {
     // }
 
 
-    @Get('/match-jobs')
+    @Get('jobs/match-jobs')
     async findJobsForApplicant(
         @CurrentUser() user: Users,
         @Query('page') page = '1',
