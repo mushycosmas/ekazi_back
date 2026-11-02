@@ -1,4 +1,4 @@
- import {
+import {
   Injectable,
   NotFoundException,
   BadRequestException,
@@ -14,7 +14,7 @@ import { CreateApplicantEmployerDto } from
   './dto/create-applicant-employer.dto';
 import { UpdateApplicantEmployerDto } from
   './dto/update-applicant-employer.dto';
-  import { Brackets } from 'typeorm';
+import { Brackets } from 'typeorm';
 
 @Injectable()
 export class ApplicantEmployersService {
@@ -24,7 +24,7 @@ export class ApplicantEmployersService {
 
     @InjectRepository(Regions)
     private readonly regionsRepo: Repository<Regions>,
-  ) {}
+  ) { }
 
   // Format employer response
   private format(employer: ApplicantEmployers) {
@@ -34,9 +34,9 @@ export class ApplicantEmployersService {
 
       region: employer.region
         ? {
-            id: employer.region.id,
-            name: employer.region.region_name,
-          }
+          id: employer.region.id,
+          name: employer.region.region_name,
+        }
         : null,
 
       sub_location: employer.sub_location,
@@ -85,54 +85,62 @@ export class ApplicantEmployersService {
     };
   }
 
-// applicant-employers.service.ts
+  // applicant-employers.service.ts
 
 
 
-async findAll(
-  page = 1,
-  limit = 20,
-  search = '',
-) {
-  // Validate and normalize pagination
-  page = Math.max(1, Number(page) || 1);
-  limit = Math.min(100, Math.max(1, Number(limit) || 10));
+  async findAll(
+    page = 1,
+    limit = 20,
+    search = '',
+  ) {
+    // Validate and normalize pagination
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.min(100, Math.max(1, Number(limit) || 10));
 
-  const query = this.employersRepo
-    .createQueryBuilder('employer')
-    .leftJoinAndSelect('employer.region', 'region');
+    const query = this.employersRepo
+      .createQueryBuilder('employer')
+      .leftJoinAndSelect('employer.region', 'region');
 
-  // Search employer name, region name, or sub-location
-  if (search.trim()) {
-    const keyword = `%${search.trim()}%`;
+    // Search employer name, region name, or sub-location
+    if (search.trim()) {
+      const keyword = `%${search.trim()}%`;
 
-    query.andWhere(
-      new Brackets((qb) => {
-        qb.where('employer.employer_name LIKE :keyword', { keyword })
-          .orWhere('region.region_name LIKE :keyword', { keyword })
-          .orWhere('employer.sub_location LIKE :keyword', { keyword });
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('employer.employer_name LIKE :keyword', { keyword })
+            .orWhere('region.region_name LIKE :keyword', { keyword })
+            .orWhere('employer.sub_location LIKE :keyword', { keyword });
+        }),
+      );
+    }
+
+    query.orderBy('employer.id', 'DESC');
+
+    const [employers, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      success: true,
+      message: 'Employers retrieved successfully',
+      data: employers.map((employer) => {
+        const formatted = this.format(employer);
+
+        return {
+          ...formatted,
+          id: employer.id,
+          name: employer.employer_name,
+          employer_name: undefined,
+        };
       }),
-    );
-  }
-
-  query.orderBy('employer.id', 'DESC');
-
-  const [employers, total] = await query
-    .skip((page - 1) * limit)
-    .take(limit)
-    .getManyAndCount();
-
-  return {
-    success: true,
-    message: 'Applicant employers retrieved successfully',
-    data: employers.map((employer) => this.format(employer)),
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-    
-  };
-}
+    };
+  }
   // READ ONE
   async findOne(id: number) {
     const employer = await this.employersRepo.findOne({
