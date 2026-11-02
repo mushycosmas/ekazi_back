@@ -21,7 +21,7 @@ import { UpdateApplicantEmployerDto } from
     './dto/update-applicant-employer.dto';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 
-@Controller('applicant-employers')
+@Controller('applicant/employers')
 @UseGuards(SanctumGuard)
 export class ApplicantEmployersController {
     constructor(

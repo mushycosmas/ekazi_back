@@ -14,6 +14,8 @@ import { ApplicantPhones } from 'src/entities/applicants/applicant-phones.entity
 
 import { CreateApplicantAddressDto } from './dto/create-applicant-address.dto';
 import { UpdateApplicantAddressDto } from './dto/update-applicant-address.dto';
+import { Genders } from 'src/entities/genders.entity';
+import { MaritalStatuses } from 'src/entities/marital-statuses.entity';
 
 @Injectable()
 export class ApplicantAddressesService {
@@ -407,156 +409,179 @@ export class ApplicantAddressesService {
             },
         };
     }
-    async updateBasicInformation(
-        userId: number,
-        dto: {
-            first_name?: string;
-            middle_name?: string | null;
-            last_name?: string;
-            dob?: string | Date | null;
+async updateBasicInformation(
+    userId: number,
+    dto: {
+        first_name?: string;
+        middle_name?: string | null;
+        last_name?: string;
+        dob?: string | Date | null;
 
-            phone?: Array<{
-                id?: number;
-                phone_number: string;
-            }>;
+        gender_id?: number;
+        marital_status_id?: number;
 
-            addresses?: Array<{
-                id?: number;
-                region_id?: number;
-                sub_location: string;
-                postal?: string | null;
-            }>;
-        },
-    ) {
-        const applicant = await this.getApplicant(userId);
+        phone?: string;
 
-        await this.applicantsRepo.manager.transaction(async (manager) => {
-            const applicantRepo = manager.getRepository(Applicants);
-            const phoneRepo = manager.getRepository(ApplicantPhones);
-            const addressRepo = manager.getRepository(ApplicantAddresses);
-            const regionRepo = manager.getRepository(Regions);
+        region_id?: number;
+        sub_location?: string;
+        postal?: string | null;
+    },
+) {
+    const applicant = await this.getApplicant(userId);
 
-            // 1. Update applicant basic fields
-            if (dto.first_name !== undefined) {
-                applicant.first_name = dto.first_name;
-            }
-
-            if (dto.middle_name !== undefined) {
-                applicant.middle_name = dto.middle_name;
-            }
-
-            if (dto.last_name !== undefined) {
-                applicant.last_name = dto.last_name;
-            }
-
-            if (dto.dob !== undefined) {
-                applicant.dob = dto.dob
-                    ? new Date(dto.dob)
-                    : null;
-            }
-
-            await applicantRepo.save(applicant);
-
-            // 2. Create or update phone numbers
-            if (dto.phone !== undefined) {
-                for (const item of dto.phone) {
-                    if (item.id !== undefined) {
-                        const phone = await phoneRepo.findOne({
-                            where: {
-                                id: item.id,
-                                applicant_id: applicant.id,
-                            },
-                        });
-
-                        if (!phone) {
-                            throw new NotFoundException(
-                                `Phone record ${item.id} was not found for this applicant`,
-                            );
-                        }
-
-                        phone.phone_number = item.phone_number;
-                        await phoneRepo.save(phone);
-                    } else {
-                        const newPhone = phoneRepo.create({
-                            applicant_id: applicant.id,
-                            phone_number: item.phone_number,
-                        });
-
-                        await phoneRepo.save(newPhone);
-                    }
-                }
-            }
-
-            // 3. Create or update addresses
-            if (dto.addresses !== undefined) {
-                for (const item of dto.addresses) {
-                    if (item.id !== undefined) {
-                        const address = await addressRepo.findOne({
-                            where: {
-                                id: item.id,
-                                applicant_id: applicant.id,
-                            },
-                        });
-
-                        if (!address) {
-                            throw new NotFoundException(
-                                `Address record ${item.id} was not found for this applicant`,
-                            );
-                        }
-
-                        if (item.region_id !== undefined) {
-                            const region = await regionRepo.findOne({
-                                where: { id: item.region_id },
-                            });
-
-                            if (!region) {
-                                throw new BadRequestException(
-                                    `Region ${item.region_id} was not found`,
-                                );
-                            }
-
-                            address.region_id = region.id;
-                        }
-
-                        address.sub_location = item.sub_location;
-
-                        if (item.postal !== undefined) {
-                            address.postal = item.postal ?? '';
-                        }
-
-                        await addressRepo.save(address);
-                    } else {
-                        // A region is required when creating a new address.
-                        if (item.region_id === undefined) {
-                            throw new BadRequestException(
-                                'region_id is required when creating a new address',
-                            );
-                        }
-
-                        const region = await regionRepo.findOne({
-                            where: { id: item.region_id },
-                        });
-
-                        if (!region) {
-                            throw new BadRequestException(
-                                `Region ${item.region_id} was not found`,
-                            );
-                        }
-
-                        const newAddress = addressRepo.create({
-                            applicant_id: applicant.id,
-                            region_id: region.id,
-                            sub_location: item.sub_location,
-                            postal: item.postal ?? '',
-                        });
-
-                        await addressRepo.save(newAddress);
-                    }
-                }
-            }
-        });
-
-        // Return the refreshed information in the same format as basicInformation()
-        return this.basicInformation(userId);
+    if (!applicant) {
+        throw new NotFoundException('Applicant not found');
     }
+
+    await this.applicantsRepo.manager.transaction(async (manager) => {
+        const applicantRepo = manager.getRepository(Applicants);
+        const phoneRepo = manager.getRepository(ApplicantPhones);
+        const addressRepo = manager.getRepository(ApplicantAddresses);
+        const regionRepo = manager.getRepository(Regions);
+        const genderRepo = manager.getRepository(Genders);
+        const maritalRepo = manager.getRepository(MaritalStatuses);
+
+        // 1. UPDATE BASIC INFORMATION
+
+        if (dto.first_name !== undefined) {
+            applicant.first_name = dto.first_name;
+        }
+
+        if (dto.middle_name !== undefined) {
+            applicant.middle_name = dto.middle_name;
+        }
+
+        if (dto.last_name !== undefined) {
+            applicant.last_name = dto.last_name;
+        }
+
+        if (dto.dob !== undefined) {
+            applicant.dob = dto.dob ? new Date(dto.dob) : null;
+        }
+
+        // 2. UPDATE GENDER
+
+        if (dto.gender_id !== undefined) {
+            const gender = await genderRepo.findOne({
+                where: { id: dto.gender_id },
+            });
+
+            if (!gender) {
+                throw new BadRequestException(
+                    `Gender ${dto.gender_id} was not found`,
+                );
+            }
+
+            applicant.gender_id = gender.id;
+        }
+
+        // 3. UPDATE MARITAL STATUS
+
+        if (dto.marital_status_id !== undefined) {
+            const marital = await maritalRepo.findOne({
+                where: { id: dto.marital_status_id },
+            });
+
+            if (!marital) {
+                throw new BadRequestException(
+                    `Marital status ${dto.marital_status_id} was not found`,
+                );
+            }
+
+            applicant.marital_id = marital.id;
+        }
+
+        await applicantRepo.save(applicant);
+
+        // 4. UPDATE OR CREATE SINGLE PHONE NUMBER
+
+        if (dto.phone !== undefined) {
+            const existingPhone = await phoneRepo.findOne({
+                where: {
+                    applicant_id: applicant.id,
+                },
+                order: {
+                    id: 'DESC',
+                },
+            });
+
+            if (existingPhone) {
+                existingPhone.phone_number = dto.phone;
+                await phoneRepo.save(existingPhone);
+            } else {
+                await phoneRepo.save(
+                    phoneRepo.create({
+                        applicant_id: applicant.id,
+                        phone_number: dto.phone,
+                    }),
+                );
+            }
+        }
+
+        // 5. UPDATE OR CREATE APPLICANT ADDRESS
+
+        if (
+            dto.region_id !== undefined ||
+            dto.sub_location !== undefined ||
+            dto.postal !== undefined
+        ) {
+            const address = await addressRepo.findOne({
+                where: {
+                    applicant_id: applicant.id,
+                },
+                order: {
+                    id: 'DESC',
+                },
+            });
+
+            // Validate region
+            if (dto.region_id !== undefined) {
+                const region = await regionRepo.findOne({
+                    where: { id: dto.region_id },
+                });
+
+                if (!region) {
+                    throw new BadRequestException(
+                        `Region ${dto.region_id} was not found`,
+                    );
+                }
+            }
+
+            if (address) {
+                if (dto.region_id !== undefined) {
+                    address.region_id = dto.region_id;
+                }
+
+                if (dto.sub_location !== undefined) {
+                    address.sub_location = dto.sub_location;
+                }
+
+                if (dto.postal !== undefined) {
+                    address.postal = dto.postal ?? '';
+                }
+
+                await addressRepo.save(address);
+            } else {
+                if (dto.region_id === undefined) {
+                    throw new BadRequestException(
+                        'region_id is required when creating an address',
+                    );
+                }
+
+                await addressRepo.save(
+                    addressRepo.create({
+                        applicant_id: applicant.id,
+                        region_id: dto.region_id,
+                        sub_location: dto.sub_location ?? '',
+                        postal: dto.postal ?? '',
+                    }),
+                );
+            }
+        }
+    });
+
+    // 6. RETURN UPDATED INFORMATION
+
+    return this.basicInformation(userId);
+}
 }

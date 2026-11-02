@@ -1,52 +1,29 @@
 import {
-    IsArray,
     IsDateString,
     IsInt,
     IsNotEmpty,
     IsOptional,
     IsString,
     MaxLength,
-    ValidateNested,
     Min,
 } from 'class-validator';
+
 import { Type } from 'class-transformer';
 
-export class UpdateBasicPhoneDto {
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    id?: number;
-
-    @IsString()
-    @IsNotEmpty()
-    phone_number: string;
-}
-
-export class UpdateBasicAddressDto {
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    id?: number;
-
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    region_id?: number;
-
-    @IsString()
-    @IsNotEmpty()
-    @MaxLength(100)
-    sub_location: string;
-
-    @IsOptional()
-    @IsString()
-    postal?: string;
-}
-
 export class UpdateBasicInformationDto {
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    marital_status_id?: number;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    gender_id?: number;
+
     @IsOptional()
     @IsString()
     @IsNotEmpty()
@@ -66,14 +43,22 @@ export class UpdateBasicInformationDto {
     dob?: string | null;
 
     @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => UpdateBasicPhoneDto)
-    phone?: UpdateBasicPhoneDto[];
+    @IsString()
+    @IsNotEmpty()
+    phone?: string;
 
     @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => UpdateBasicAddressDto)
-    addresses?: UpdateBasicAddressDto[];
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    region_id?: number;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    sub_location?: string;
+
+    @IsOptional()
+    @IsString()
+    postal?: string;
 }
