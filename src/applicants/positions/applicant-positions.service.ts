@@ -530,8 +530,7 @@ export class ApplicantPositionsService {
         if (dto.responsibility !== undefined) {
             record.responsibility = dto.responsibility.trim();
         }
-
-        if (dto.remark !== undefined) {
+        if (dto.remark) {
             record.remark = dto.remark.trim();
         }
 

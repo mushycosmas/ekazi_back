@@ -109,6 +109,8 @@ export class CreateApplicantPositionDto {
   @MaxLength(100)
   responsibility: string;
 
+
+  @IsOptional()
   @Transform(emptyToUndefined)
   @IsString()
   @MaxLength(200)
