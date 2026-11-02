@@ -12,7 +12,7 @@ export class JobMatchController {
     ) { }
 
     @Get('job-match/:jobId/match-applicants')
-  
+
     async findApplicantsByJob(
         @Param('jobId', ParseIntPipe) jobId: number,
         @Query('page') page = 1,
@@ -43,7 +43,7 @@ export class JobMatchController {
     // }
 
 
-    @Get('jobs/match-jobs')
+    @Get('applicant/matched-jobs')
     async findJobsForApplicant(
         @CurrentUser() user: Users,
         @Query('page') page = '1',
