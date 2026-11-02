@@ -14,6 +14,7 @@ import { Industries } from '../industries.entity';
 import { SalaryRanges } from '../salary-ranges.entity';
 import { Regions } from '../regions.entity';
 import { ApplicantEmployers } from './applicant-employers.entity';
+import { ExperienceTypes } from '../experience-types.entity';
 
 @Entity('applicant_positions')
 export class ApplicantPositions {
@@ -103,4 +104,12 @@ export class ApplicantPositions {
   @ManyToOne(() => SalaryRanges, (s: SalaryRanges) => s.high)
   @JoinColumn({ name: 'end_salary_id' })
   end_salary: SalaryRanges;
+
+  @Column({ type: 'int', nullable: true })
+  experience_type_id: number | null;
+
+  @ManyToOne(() => ExperienceTypes, { nullable: true })
+  @JoinColumn({ name: 'experience_type_id' })
+  experience_type: ExperienceTypes | null;
+
 }

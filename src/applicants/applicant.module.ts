@@ -13,6 +13,7 @@ import { ApplicantViews } from 'src/entities/applicants/applicant-views.entity';
 import { ApplicantRate } from 'src/entities/applicants/applicant-rate.entity';
 import { ApplicantProfilePrivacy } from 'src/entities/applicants/applicant-profile-privacy.entity';
 import { ApplicantFeaturedView } from 'src/entities/applicants/applicant-featured-view.entity';
+import { ExperienceTypes } from 'src/entities/experience-types.entity';
 
 @Module({
     imports: [
@@ -28,6 +29,8 @@ import { ApplicantFeaturedView } from 'src/entities/applicants/applicant-feature
             ApplicantRate,
             ApplicantProfilePrivacy,
             ApplicantFeaturedView,
+            ExperienceTypes,
+
         ]),
     ],
 

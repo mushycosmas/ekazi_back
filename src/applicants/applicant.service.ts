@@ -158,7 +158,9 @@ export class ApplicantService {
       .leftJoinAndSelect('pos.position', 'position')
       .leftJoinAndSelect('pos.position_level', 'position_level')
       .leftJoinAndSelect('pos.industry', 'industry')
+      .leftJoinAndSelect('pos.experience_type', 'experienceType')
       .leftJoinAndSelect('pos.region', 'region')
+      .leftJoinAndSelect('region.country', 'country')
       .leftJoinAndSelect('pos.applicant_employer', 'employer')
       .leftJoinAndSelect('pos.start_salary', 'startSalary')
       .leftJoinAndSelect('pos.end_salary', 'endSalary')
@@ -274,6 +276,13 @@ export class ApplicantService {
           }
           : null,
 
+        experience_type: pos.experience_type
+          ? {
+            id: pos.experience_type.id,
+            name: pos.experience_type.name,
+          }
+          : null,
+
         industry: pos.industry
           ? {
             id: pos.industry.id,
@@ -292,6 +301,12 @@ export class ApplicantService {
           ? {
             id: pos.region.id,
             name: pos.region.region_name,
+            country: pos.region.country
+              ? {
+                id: pos.region.country.id,
+                name: pos.region.country.name,
+              }
+              : null,
           }
           : null,
 
