@@ -1393,43 +1393,43 @@ export class JobMatchService {
         // Each criterion contributes to the denominator only when the job
         // actually specifies that requirement. This avoids penalising jobs
         // for criteria they do not use.
-        // const activeCriteriaExpr = `(
-        //     CASE WHEN job.position_id IS NOT NULL AND job.position_id > 0 THEN 1 ELSE 0 END +
-        //     CASE WHEN job.position_level_id IS NOT NULL AND job.position_level_id > 0 THEN 1 ELSE 0 END +
-        //     CASE WHEN job.industry_id IS NOT NULL AND job.industry_id > 0 THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_education je WHERE je.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_majors jm WHERE jm.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_courses jc WHERE jc.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_knowledge jk WHERE jk.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_personalities jp WHERE jp.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_cultures jcu WHERE jcu.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_languages jl WHERE jl.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_tools jt WHERE jt.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN EXISTS (SELECT 1 FROM job_software js WHERE js.job_id = job.id) THEN 1 ELSE 0 END +
-        //     CASE WHEN COALESCE(job.years_experience, 0) > 0 THEN 1 ELSE 0 END
-        // )`;
         const activeCriteriaExpr = `(
-    CASE WHEN job.position_level_id IS NOT NULL AND job.position_level_id > 0 THEN 1 ELSE 0 END +
-    CASE WHEN job.industry_id IS NOT NULL AND job.industry_id > 0 THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_education je WHERE je.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_majors jm WHERE jm.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_courses jc WHERE jc.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_knowledge jk WHERE jk.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_personalities jp WHERE jp.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_cultures jcu WHERE jcu.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_languages jl WHERE jl.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_tools jt WHERE jt.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN EXISTS (SELECT 1 FROM job_software js WHERE js.job_id = job.id) THEN 1 ELSE 0 END +
-    CASE WHEN COALESCE(job.years_experience, 0) > 0 THEN 1 ELSE 0 END
-)`;
+            CASE WHEN job.position_id IS NOT NULL AND job.position_id > 0 THEN 1 ELSE 0 END +
+            CASE WHEN job.position_level_id IS NOT NULL AND job.position_level_id > 0 THEN 1 ELSE 0 END +
+            CASE WHEN job.industry_id IS NOT NULL AND job.industry_id > 0 THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_education je WHERE je.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_majors jm WHERE jm.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_courses jc WHERE jc.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_knowledge jk WHERE jk.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_personalities jp WHERE jp.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_cultures jcu WHERE jcu.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_languages jl WHERE jl.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_tools jt WHERE jt.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN EXISTS (SELECT 1 FROM job_software js WHERE js.job_id = job.id) THEN 1 ELSE 0 END +
+            CASE WHEN COALESCE(job.years_experience, 0) > 0 THEN 1 ELSE 0 END
+        )`;
+//         const activeCriteriaExpr = `(
+//     CASE WHEN job.position_level_id IS NOT NULL AND job.position_level_id > 0 THEN 1 ELSE 0 END +
+//     CASE WHEN job.industry_id IS NOT NULL AND job.industry_id > 0 THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_education je WHERE je.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_majors jm WHERE jm.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_courses jc WHERE jc.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_knowledge jk WHERE jk.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_personalities jp WHERE jp.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_cultures jcu WHERE jcu.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_languages jl WHERE jl.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_tools jt WHERE jt.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN EXISTS (SELECT 1 FROM job_software js WHERE js.job_id = job.id) THEN 1 ELSE 0 END +
+//     CASE WHEN COALESCE(job.years_experience, 0) > 0 THEN 1 ELSE 0 END
+// )`;
 
         const scoreExpressions = [
             // Position
-            // `CASE WHEN job.position_id IS NOT NULL AND job.position_id > 0 AND EXISTS (
-            //     SELECT 1 FROM applicant_positions ap
-            //     WHERE ap.applicant_id = :applicantId
-            //       AND ap.position_id = job.position_id
-            // ) THEN 1 ELSE 0 END`,
+            `CASE WHEN job.position_id IS NOT NULL AND job.position_id > 0 AND EXISTS (
+                SELECT 1 FROM applicant_positions ap
+                WHERE ap.applicant_id = :applicantId
+                  AND ap.position_id = job.position_id
+            ) THEN 1 ELSE 0 END`,
             // Position level
             `CASE WHEN job.position_level_id IS NOT NULL AND job.position_level_id > 0 AND EXISTS (
                 SELECT 1 FROM applicant_positions ap
@@ -1517,32 +1517,6 @@ export class JobMatchService {
             ELSE ROUND((${totalScoreExpr} * 100.0) / ${activeCriteriaExpr})
         END`;
 
-        // const buildQuery = () => {
-        //     const qb = this.jobRepo
-        //         .createQueryBuilder('job')
-        //         .leftJoinAndSelect('job.position', 'position')
-        //         .leftJoinAndSelect('job.positionLevel', 'positionLevel')
-        //         .leftJoinAndSelect('job.industry', 'industry')
-        //         .leftJoinAndSelect('job.client', 'client')
-        //         .where('job.published = :published', { published: 1 })
-        //         .andWhere('(job.hide = :hide OR job.hide IS NULL)', { hide: 0 })
-        //         // Do not recommend jobs whose application deadline has passed.
-        //         .andWhere('(job.dead_line IS NULL OR DATE(job.dead_line) >= CURDATE())')
-        //         .setParameter('applicantId', applicantId)
-        //         .andWhere(`${percentageExpr} >= :minMatch`, { minMatch: MIN_MATCH });
-
-        //     if (search?.trim()) {
-        //         const searchTerm = `%${search.trim()}%`;
-        //         qb.andWhere(
-        //             `(job.title LIKE :search
-        //               OR position.position_name LIKE :search
-        //               OR client.client_name LIKE :search)`,
-        //             { search: searchTerm },
-        //         );
-        //     }
-
-        //     return qb;
-        // };
         const buildQuery = () => {
             const qb = this.jobRepo
                 .createQueryBuilder('job')
@@ -1552,37 +1526,63 @@ export class JobMatchService {
                 .leftJoinAndSelect('job.client', 'client')
                 .where('job.published = :published', { published: 1 })
                 .andWhere('(job.hide = :hide OR job.hide IS NULL)', { hide: 0 })
+                // Do not recommend jobs whose application deadline has passed.
                 .andWhere('(job.dead_line IS NULL OR DATE(job.dead_line) >= CURDATE())')
-
-                // MANDATORY: Applicant must have the same position.
-                .andWhere(`
-            job.position_id IS NOT NULL
-            AND EXISTS (
-                SELECT 1
-                FROM applicant_positions ap
-                WHERE ap.applicant_id = :applicantId
-                  AND ap.position_id = job.position_id
-            )
-        `)
-
                 .setParameter('applicantId', applicantId)
-                .andWhere(`${percentageExpr} >= :minMatch`, {
-                    minMatch: MIN_MATCH,
-                });
+                .andWhere(`${percentageExpr} >= :minMatch`, { minMatch: MIN_MATCH });
 
             if (search?.trim()) {
                 const searchTerm = `%${search.trim()}%`;
-
                 qb.andWhere(
                     `(job.title LIKE :search
-              OR position.position_name LIKE :search
-              OR client.client_name LIKE :search)`,
+                      OR position.position_name LIKE :search
+                      OR client.client_name LIKE :search)`,
                     { search: searchTerm },
                 );
             }
 
             return qb;
         };
+        // const buildQuery = () => {
+        //     const qb = this.jobRepo
+        //         .createQueryBuilder('job')
+        //         .leftJoinAndSelect('job.position', 'position')
+        //         .leftJoinAndSelect('job.positionLevel', 'positionLevel')
+        //         .leftJoinAndSelect('job.industry', 'industry')
+        //         .leftJoinAndSelect('job.client', 'client')
+        //         .where('job.published = :published', { published: 1 })
+        //         .andWhere('(job.hide = :hide OR job.hide IS NULL)', { hide: 0 })
+        //         .andWhere('(job.dead_line IS NULL OR DATE(job.dead_line) >= CURDATE())')
+
+        //         // MANDATORY: Applicant must have the same position.
+        //         .andWhere(`
+        //     job.position_id IS NOT NULL
+        //     AND EXISTS (
+        //         SELECT 1
+        //         FROM applicant_positions ap
+        //         WHERE ap.applicant_id = :applicantId
+        //           AND ap.position_id = job.position_id
+        //     )
+        // `)
+
+        //         .setParameter('applicantId', applicantId)
+        //         .andWhere(`${percentageExpr} >= :minMatch`, {
+        //             minMatch: MIN_MATCH,
+        //         });
+
+        //     if (search?.trim()) {
+        //         const searchTerm = `%${search.trim()}%`;
+
+        //         qb.andWhere(
+        //             `(job.title LIKE :search
+        //       OR position.position_name LIKE :search
+        //       OR client.client_name LIKE :search)`,
+        //             { search: searchTerm },
+        //         );
+        //     }
+
+        //     return qb;
+        // };
 
         const total = await buildQuery().getCount();
 
@@ -1641,10 +1641,10 @@ export class JobMatchService {
 
         return {
             success: true,
-            // message: 'Matching jobs retrieved successfully',
-            message: total > 0
-                ? 'Matching jobs retrieved successfully'
-                : 'No matching jobs found for your position',
+            message: 'Matching jobs retrieved successfully',
+            // message: total > 0
+            //     ? 'Matching jobs retrieved successfully'
+            //     : 'No matching jobs found for your position',
             applicant_id: applicantId,
             total,
             current_page: currentPage,
