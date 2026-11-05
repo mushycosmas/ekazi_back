@@ -29,7 +29,7 @@ import * as path from 'path';
 
 
 
-@Controller('jobs')
+@Controller()
 
 export class ApplicationsController {
     constructor(
@@ -37,14 +37,13 @@ export class ApplicationsController {
     ) { }
 
     @UseGuards(SanctumGuard)
-    @Post(':jobId/apply-job')
+    @Post('application/apply-job')
     applyInternally(
         @CurrentUser() user: Users,
-        @Param('jobId', ParseIntPipe) jobId: number,
         @Body() dto: ApplyJobDto,
     ) {
         return this.applicationsService.applyInternal(
-            jobId,
+            dto.jobId,
             user.id,
             dto,
         );
@@ -58,7 +57,7 @@ export class ApplicationsController {
     }
 
     // POST /api/applications/non-user/email
-    @Post('apply-job-by-email')
+    @Post('application/apply-by-emails')
     @HttpCode(HttpStatus.CREATED)
     @UseInterceptors(
         FilesInterceptor(
@@ -87,23 +86,26 @@ export class ApplicationsController {
             attachmentFiles,
         );
     }
+
+    @Get('application/apply-by-emails')
     @UseGuards(SanctumGuard)
-    @Get('apply-job-by-email')
     async getApplications(
         @CurrentUser() user: Users,
         @Query('page') page = 1,
         @Query('limit') limit = 20,
         @Query('search') search = '',
-        @Query('job_id') jobId?: number,
     ) {
-        const userId = user.id
+        if (!user.email) {
+            throw new BadRequestException(
+                'Your account does not have an email address.',
+            );
+        }
 
         return this.applicationsService.getApplications(
-            userId,
+            user.email,
             page,
             limit,
             search,
-            jobId ? Number(jobId) : undefined,
         );
     }
 

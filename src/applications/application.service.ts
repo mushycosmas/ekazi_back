@@ -667,21 +667,24 @@ export class ApplicationsService {
 
 
     async getApplications(
-        userId: number,
+        userEmail: string,
         page = 1,
         limit = 20,
         search = '',
-        jobId?: number,
     ) {
         page = Math.max(1, Number(page) || 1);
         limit = Math.min(100, Math.max(1, Number(limit) || 20));
+
+        const email = userEmail.trim().toLowerCase();
 
         const query = this.nonUserApplicationsRepo
             .createQueryBuilder('application')
             .leftJoinAndSelect('application.files', 'files')
             .leftJoinAndSelect('application.job', 'job')
             .leftJoinAndSelect('job.position', 'position')
-            .where('job.client_id = :userId', { userId });
+            .where('LOWER(application.applicant_email) = :email', {
+                email,
+            });
 
         if (search.trim()) {
             const keyword = `%${search.trim()}%`;
@@ -696,10 +699,6 @@ export class ApplicationsService {
             );
         }
 
-        if (jobId) {
-            query.andWhere('application.job_id = :jobId', { jobId });
-        }
-
         query.orderBy('application.id', 'DESC');
 
         const [applications, total] = await query
@@ -709,13 +708,15 @@ export class ApplicationsService {
 
         return {
             success: true,
-            message: 'Email applications retrieved successfully',
+            message: 'Your email applications retrieved successfully',
             data: applications.map((application) => ({
                 id: application.id,
                 job_id: application.job_id,
+
                 applicant_name: application.full_name,
                 applicant_email: application.applicant_email,
                 phone: application.phone,
+
                 application_type: application.application_type,
                 notes: application.note,
 
@@ -734,6 +735,7 @@ export class ApplicationsService {
 
                 created_at: application.created_at,
             })),
+
             total,
             page,
             limit,

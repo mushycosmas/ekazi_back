@@ -376,7 +376,8 @@ export class EmployerJobsService {
                         'country',
                         'region',
                         'industry',
-                        'category',
+                        // 'category',
+                        'jobCategory',
                         'position',
                         'positionLevel',
                         'addresses',
@@ -500,9 +501,9 @@ export class EmployerJobsService {
                         id: job.industry.id,
                         name: job.industry.industry_name,
                     } : null,
-                    category: job?.category ? {
-                        id: job.category.id,
-                        name: job.category.industry_name,
+                    category: job?.jobCategory? {
+                        id: job.jobCategory.id,
+                        name: job.jobCategory.name,
                     } : null,
 
                     position: job?.position ? {

@@ -56,6 +56,7 @@ import { JobTool } from './job-tool.entity';
 import { JobUniversalTypes } from 'src/entities/job-universal-types.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 import { JobStage } from './job-stage.entity';
+import { PositionCategories } from 'src/entities/position-categories.entity';
 
 
 @Entity('jobs')
@@ -422,4 +423,15 @@ export class Jobs {
 
     @OneToMany(() => JobStage, (jobStage) => jobStage.job)
     jobStages: JobStage[];
+
+    @ManyToOne(
+    () => PositionCategories,
+    (category) => category.jobs,
+    {
+        nullable: true,
+        onDelete: 'SET NULL',
+    },
+)
+@JoinColumn({ name: 'category_id' })
+jobCategory: PositionCategories| null;
 }

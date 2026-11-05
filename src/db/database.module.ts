@@ -167,6 +167,7 @@ import { ApplicantRate } from 'src/entities/applicants/applicant-rate.entity';
 import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
 import { NonUserApplicationFile } from 'src/entities/applicants/non-user-application-file.entity';
 import { ApplicantFeaturedView } from 'src/entities/applicants/applicant-featured-view.entity';
+import { PositionCategories } from 'src/entities/position-categories.entity';
  
  
 
@@ -336,6 +337,7 @@ const allEntities = [
   NonUserApplication,
   NonUserApplicationFile,
   ApplicantFeaturedView,
+  PositionCategories,
 
   // TaskAttachment,
   // TaskMessageAttachment,

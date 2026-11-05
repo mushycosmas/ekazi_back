@@ -103,6 +103,7 @@ import { HomepageModule } from './website/homepage/homepage.module';
 import { SocialMediaModule } from './social-media/social-media.module';
 import { BlogPostsModule } from './articles/blog-posts.module';
 import { ApplicationModule } from './applications/application.module';
+import { PositionCategoriesModule } from './position-categories/position-categories.module';
  
 
 
@@ -136,7 +137,8 @@ import { ApplicationModule } from './applications/application.module';
     ApplicantPersonalitiesModule,ApplicantKnowledgeModule,ApplicantCareersModule, ApplicantObjectivesModule,ApplicantEducationModule,
     ApplicantTrainingsModule,ApplicantProficienciesModule,ApplicantPositionsModule,ApplicantAddressesModule,ApplicantIndustryTagsModule,
     ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule, TaxCalculationModule,ApplicantEmployersModule,
-    ExperienceTypesModule,ApplicantProfilePrivacyModule,HomepageModule,SocialMediaModule, BlogPostsModule,ApplicationModule,
+    ExperienceTypesModule,ApplicantProfilePrivacyModule,HomepageModule,SocialMediaModule, BlogPostsModule,ApplicationModule,PositionCategoriesModule,
+    
 
   ],
   // controllers: [EmployerController,
