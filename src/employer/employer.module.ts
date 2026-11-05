@@ -37,6 +37,7 @@ import { ApplicantService } from 'src/applicants/applicant.service';
 import { ApplicantModule } from 'src/applicants/applicant.module';
 import { JobMatchModule } from 'src/jobs/modules/job-match.module';
 import { UsersModule } from 'src/users/users.module';
+import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { UsersModule } from 'src/users/users.module';
       ClientDescription,
       Task,
       TaskAssignment,
+      NonUserApplication,
       
       
     ]),

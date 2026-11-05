@@ -6,6 +6,7 @@ import { Users } from 'src/entities/users.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 import { NotFoundException } from '@nestjs/common';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
+import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
 
 export type MyJobsQuery = {
     page?: number;
@@ -22,6 +23,9 @@ export class EmployerJobsService {
         private readonly jobsRepository: Repository<Jobs>,
         @InjectRepository(ApplicantApplication)
         private readonly applicationRepository: Repository<ApplicantApplication>,
+
+        @InjectRepository(NonUserApplication)
+        private readonly nonUserApplicationRepository: Repository<NonUserApplication>,
     ) { }
 
     async myjobs(user: Users, query: MyJobsQuery) {
@@ -364,7 +368,7 @@ export class EmployerJobsService {
             // =========================
             // RUN IN PARALLEL (FAST)
             // =========================
-            const [job, totalApplicants] = await Promise.all([
+            const [job, totalApplicants, totalNonUserApplicants] = await Promise.all([
                 this.jobsRepository.findOne({
                     where: {
                         id: jobId,
@@ -452,6 +456,11 @@ export class EmployerJobsService {
                 this.applicationRepository.count({
                     where: { job_id: jobId },
                 }),
+
+                // Non-user/email applicants
+                this.nonUserApplicationRepository.count({
+                    where: { job_id: jobId },
+                }),
             ]);
 
             // =========================
@@ -490,6 +499,7 @@ export class EmployerJobsService {
                     created_at: job?.created_at,
                     updated_at: job?.updated_at,
                     total_applicants: totalApplicants,
+                    total_non_user_applicants: totalNonUserApplicants,
 
                     client: job?.client ? {
                         id: job.client.id,
@@ -501,7 +511,7 @@ export class EmployerJobsService {
                         id: job.industry.id,
                         name: job.industry.industry_name,
                     } : null,
-                    category: job?.jobCategory? {
+                    category: job?.jobCategory ? {
                         id: job.jobCategory.id,
                         name: job.jobCategory.name,
                     } : null,
@@ -554,7 +564,7 @@ export class EmployerJobsService {
                     } : null,
 
 
-        
+
                     gender: job?.gender ? {
                         id: job.gender.id,
                         name: job.gender.gender_name,

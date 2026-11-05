@@ -29,12 +29,16 @@ import { JobSalaries } from './entities/job-salaries.entity';
 import { Users } from 'src/entities/users.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 import { JobStatistics } from './entities/job-statistics.entity';
+import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
 
 @Injectable()
 export class JobsService {
     constructor(
         @InjectRepository(Jobs)
         private readonly jobsRepository: Repository<Jobs>,
+
+        @InjectRepository(NonUserApplication)
+        private readonly nonUserApplicationRepository: Repository<NonUserApplication>,
 
         @InjectRepository(Clients)
         private readonly clientRepository: Repository<Clients>,
@@ -573,7 +577,7 @@ export class JobsService {
             // =========================
             // RUN IN PARALLEL (FAST)
             // =========================
-            const [job, totalApplicants] = await Promise.all([
+            const [job, totalApplicants, totalNonUserApplicants] = await Promise.all([
                 this.jobsRepository.findOne({
                     where: {
                         id: jobId,
@@ -661,6 +665,10 @@ export class JobsService {
                 this.applicationRepository.count({
                     where: { job_id: jobId },
                 }),
+                // Non-user/email applicants
+                this.nonUserApplicationRepository.count({
+                    where: { job_id: jobId },
+                }),
             ]);
 
             // =========================
@@ -699,6 +707,7 @@ export class JobsService {
                     created_at: job?.created_at,
                     updated_at: job?.updated_at,
                     total_applicants: totalApplicants,
+                    total_non_user_applicants: totalNonUserApplicants,
 
                     client: job?.client ? {
                         id: job.client.id,
