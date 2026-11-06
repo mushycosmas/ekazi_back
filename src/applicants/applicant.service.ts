@@ -2174,4 +2174,1021 @@ END
     };
   }
 
+  async checkJobMatch(
+    userId: number,
+    jobId: number,
+  ) {
+    // =========================================================
+    // 1. FIND APPLICANT
+    // =========================================================
+    const applicant = await this.applicantsRepo.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
+
+    if (!applicant) {
+      throw new NotFoundException(
+        'Applicant profile was not found.',
+      );
+    }
+
+    const applicantId = applicant.id;
+
+    // =========================================================
+    // 2. GET JOB
+    // =========================================================
+    const job = await this.applicantsRepo.manager
+      .createQueryBuilder()
+      .select([
+        'job.id AS job_id',
+        'job.title AS job_title',
+        'job.position_id AS position_id',
+        'job.position_level_id AS position_level_id',
+        'job.industry_id AS industry_id',
+        'job.years_experience AS years_experience',
+        'position.position_name AS position_name',
+        'positionLevel.position_name AS position_level_name',
+        'industry.industry_name AS industry_name',
+      ])
+      .from('jobs', 'job')
+      .leftJoin(
+        'positions',
+        'position',
+        'position.id = job.position_id',
+      )
+      .leftJoin(
+        'position_levels',
+        'positionLevel',
+        'positionLevel.id = job.position_level_id',
+      )
+      .leftJoin(
+        'industries',
+        'industry',
+        'industry.id = job.industry_id',
+      )
+      .where('job.id = :jobId', {
+        jobId,
+      })
+      .getRawOne();
+
+    if (!job) {
+      throw new NotFoundException(
+        'Job was not found.',
+      );
+    }
+
+    // =========================================================
+    // 3. PROFILE COMPLETION
+    // =========================================================
+    const completion =
+      await this.getApplicantProfileCompletion(
+        applicantId,
+      );
+
+    const profileCompletion =
+      completion.data.profile_completion;
+
+    // =========================================================
+    // 4. EXPERIENCE
+    // Same calculation used by findJobsByApplicant()
+    // =========================================================
+    const experienceResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .select(
+          `
+                COALESCE(
+                    SUM(
+                        TIMESTAMPDIFF(
+                            MONTH,
+                            ap.start_date,
+                            COALESCE(ap.end_date, NOW())
+                        )
+                    ),
+                    0
+                ) / 12.0
+                `,
+          'experience_years',
+        )
+        .from(
+          'applicant_positions',
+          'ap',
+        )
+        .where(
+          'ap.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'ap.start_date IS NOT NULL',
+        )
+        .andWhere(
+          `
+                ap.end_date IS NULL
+                OR ap.end_date >= ap.start_date
+                `,
+        )
+        .getRawOne();
+
+    const applicantExperienceYears =
+      Math.round(
+        Number(
+          experienceResult?.experience_years ?? 0,
+        ) * 100,
+      ) / 100;
+
+    const requiredExperienceYears =
+      Number(job.years_experience ?? 0);
+
+    // =========================================================
+    // 5. POSITION
+    // POSITION IS MANDATORY
+    // =========================================================
+    const positionResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .select('ap.position_id', 'position_id')
+        .addSelect(
+          'position.position_name',
+          'position_name',
+        )
+        .from(
+          'applicant_positions',
+          'ap',
+        )
+        .leftJoin(
+          'positions',
+          'position',
+          'position.id = ap.position_id',
+        )
+        .where(
+          'ap.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'ap.position_id = :positionId',
+          {
+            positionId: job.position_id,
+          },
+        )
+        .getRawMany();
+
+    const positionMatched =
+      positionResult.length > 0;
+
+    const applicantPositions =
+      await this.applicantPositionsRepo.find({
+        where: {
+          applicant_id: applicantId,
+        },
+        relations: [
+          'position',
+          'position_level',
+          'industry',
+        ],
+      });
+
+    // =========================================================
+    // 6. POSITION LEVEL
+    // =========================================================
+    const positionLevelResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_positions',
+          'ap',
+        )
+        .where(
+          'ap.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'ap.position_level_id = :positionLevelId',
+          {
+            positionLevelId:
+              job.position_level_id,
+          },
+        )
+        .getCount();
+
+    const positionLevelMatched =
+      Number(job.position_level_id) > 0
+        ? positionLevelResult > 0
+        : true;
+
+    // =========================================================
+    // 7. INDUSTRY
+    // =========================================================
+    const industryResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_positions',
+          'ap',
+        )
+        .where(
+          'ap.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'ap.industry_id = :industryId',
+          {
+            industryId:
+              job.industry_id,
+          },
+        )
+        .getCount();
+
+    const industryMatched =
+      Number(job.industry_id) > 0
+        ? industryResult > 0
+        : true;
+
+    // =========================================================
+    // 8. EDUCATION LEVEL
+    // =========================================================
+    const educationResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_education',
+          'ae',
+        )
+        .innerJoin(
+          'job_education',
+          'je',
+          'je.education_level_id = ae.education_level_id',
+        )
+        .where(
+          'ae.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'je.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    // Check whether job actually has education requirements.
+    const educationRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_education',
+          'je',
+        )
+        .where(
+          'je.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const educationRequired =
+      educationRequirementCount > 0;
+
+    const educationMatched =
+      educationRequired
+        ? educationResult > 0
+        : true;
+
+    // =========================================================
+    // 9. MAJOR
+    // =========================================================
+    const majorResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_education',
+          'ae',
+        )
+        .innerJoin(
+          'job_majors',
+          'jm',
+          'jm.major_id = ae.major_id',
+        )
+        .where(
+          'ae.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'jm.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const majorRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_majors',
+          'jm',
+        )
+        .where(
+          'jm.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const majorRequired =
+      majorRequirementCount > 0;
+
+    const majorMatched =
+      majorRequired
+        ? majorResult > 0
+        : true;
+
+    // =========================================================
+    // 10. COURSE
+    // =========================================================
+    const courseResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_education',
+          'ae',
+        )
+        .innerJoin(
+          'job_courses',
+          'jc',
+          'jc.course_id = ae.course_id',
+        )
+        .where(
+          'ae.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'jc.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const courseRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_courses',
+          'jc',
+        )
+        .where(
+          'jc.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const courseRequired =
+      courseRequirementCount > 0;
+
+    const courseMatched =
+      courseRequired
+        ? courseResult > 0
+        : true;
+
+    // =========================================================
+    // 11. KNOWLEDGE
+    // =========================================================
+    const knowledgeResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_knowledge',
+          'ak',
+        )
+        .innerJoin(
+          'job_knowledge',
+          'jk',
+          'jk.knowledge_id = ak.knowledge_id',
+        )
+        .where(
+          'ak.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'jk.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const knowledgeRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_knowledge',
+          'jk',
+        )
+        .where(
+          'jk.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const knowledgeRequired =
+      knowledgeRequirementCount > 0;
+
+    const knowledgeMatched =
+      knowledgeRequired
+        ? knowledgeResult > 0
+        : true;
+
+    // =========================================================
+    // 12. PERSONALITIES
+    // =========================================================
+    const personalityResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_personalities',
+          'ap',
+        )
+        .innerJoin(
+          'job_personalities',
+          'jp',
+          'jp.personality_id = ap.personality_id',
+        )
+        .where(
+          'ap.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'jp.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const personalityRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_personalities',
+          'jp',
+        )
+        .where(
+          'jp.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const personalityRequired =
+      personalityRequirementCount > 0;
+
+    const personalityMatched =
+      personalityRequired
+        ? personalityResult > 0
+        : true;
+
+    // =========================================================
+    // 13. CULTURE
+    // =========================================================
+    const cultureResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_cultures',
+          'ac',
+        )
+        .innerJoin(
+          'job_cultures',
+          'jc',
+          'jc.culture_id = ac.culture_id',
+        )
+        .where(
+          'ac.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'jc.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const cultureRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_cultures',
+          'jc',
+        )
+        .where(
+          'jc.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const cultureRequired =
+      cultureRequirementCount > 0;
+
+    const cultureMatched =
+      cultureRequired
+        ? cultureResult > 0
+        : true;
+
+    // =========================================================
+    // 14. LANGUAGES
+    // =========================================================
+    const languageResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_languages',
+          'al',
+        )
+        .innerJoin(
+          'job_languages',
+          'jl',
+          'jl.language_id = al.language_id',
+        )
+        .where(
+          'al.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'jl.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const languageRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_languages',
+          'jl',
+        )
+        .where(
+          'jl.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const languageRequired =
+      languageRequirementCount > 0;
+
+    const languageMatched =
+      languageRequired
+        ? languageResult > 0
+        : true;
+
+    // =========================================================
+    // 15. TOOLS
+    // =========================================================
+    const toolResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_tools',
+          'at',
+        )
+        .innerJoin(
+          'job_tools',
+          'jt',
+          'jt.tool_id = at.tool_id',
+        )
+        .where(
+          'at.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'jt.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const toolRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_tools',
+          'jt',
+        )
+        .where(
+          'jt.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const toolRequired =
+      toolRequirementCount > 0;
+
+    const toolMatched =
+      toolRequired
+        ? toolResult > 0
+        : true;
+
+    // =========================================================
+    // 16. SOFTWARE
+    // =========================================================
+    const softwareResult =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'applicant_software',
+          'asw',
+        )
+        .innerJoin(
+          'job_software',
+          'js',
+          'js.software_id = asw.software_id',
+        )
+        .where(
+          'asw.applicant_id = :applicantId',
+          {
+            applicantId,
+          },
+        )
+        .andWhere(
+          'js.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const softwareRequirementCount =
+      await this.applicantsRepo.manager
+        .createQueryBuilder()
+        .from(
+          'job_software',
+          'js',
+        )
+        .where(
+          'js.job_id = :jobId',
+          {
+            jobId,
+          },
+        )
+        .getCount();
+
+    const softwareRequired =
+      softwareRequirementCount > 0;
+
+    const softwareMatched =
+      softwareRequired
+        ? softwareResult > 0
+        : true;
+
+    // =========================================================
+    // 17. EXPERIENCE
+    // =========================================================
+    const experienceRequired =
+      requiredExperienceYears > 0;
+
+    const experienceMatched =
+      !experienceRequired ||
+      applicantExperienceYears >=
+      requiredExperienceYears;
+
+    // =========================================================
+    // 18. BUILD REQUIREMENTS
+    // =========================================================
+    const requirements = [
+      {
+        name: 'position',
+        label: 'Position',
+        required: true,
+        matched: positionMatched,
+        required_value: {
+          id: Number(job.position_id),
+          name: job.position_name,
+        },
+        applicant_values:
+          applicantPositions.map(
+            item => ({
+              id: item.position?.id,
+              name:
+                item.position
+                  ?.position_name ??
+                null,
+            }),
+          ),
+      },
+
+      {
+        name: 'position_level',
+        label: 'Position Level',
+        required:
+          Number(job.position_level_id) > 0,
+        matched: positionLevelMatched,
+        required_value: {
+          id:
+            Number(
+              job.position_level_id,
+            ),
+          name:
+            job.position_level_name,
+        },
+        applicant_values:
+          applicantPositions.map(
+            item => ({
+              id:
+                item.position_level
+                  ?.id,
+              name:
+                item.position_level
+                  ?.position_name ??
+                null,
+            }),
+          ),
+      },
+
+      {
+        name: 'industry',
+        label: 'Industry',
+        required:
+          Number(job.industry_id) > 0,
+        matched: industryMatched,
+        required_value: {
+          id: Number(job.industry_id),
+          name: job.industry_name,
+        },
+        applicant_values:
+          applicantPositions.map(
+            item => ({
+              id:
+                item.industry?.id,
+              name:
+                item.industry
+                  ?.industry_name ??
+                null,
+            }),
+          ),
+      },
+
+      {
+        name: 'education',
+        label: 'Education Level',
+        required: educationRequired,
+        matched: educationMatched,
+      },
+
+      {
+        name: 'major',
+        label: 'Major',
+        required: majorRequired,
+        matched: majorMatched,
+      },
+
+      {
+        name: 'course',
+        label: 'Course',
+        required: courseRequired,
+        matched: courseMatched,
+      },
+
+      {
+        name: 'knowledge',
+        label: 'Knowledge',
+        required: knowledgeRequired,
+        matched: knowledgeMatched,
+      },
+
+      {
+        name: 'personality',
+        label: 'Personality',
+        required: personalityRequired,
+        matched: personalityMatched,
+      },
+
+      {
+        name: 'culture',
+        label: 'Culture',
+        required: cultureRequired,
+        matched: cultureMatched,
+      },
+
+      {
+        name: 'language',
+        label: 'Language',
+        required: languageRequired,
+        matched: languageMatched,
+      },
+
+      {
+        name: 'tools',
+        label: 'Tools',
+        required: toolRequired,
+        matched: toolMatched,
+      },
+
+      {
+        name: 'software',
+        label: 'Software',
+        required: softwareRequired,
+        matched: softwareMatched,
+      },
+
+      {
+        name: 'experience',
+        label: 'Experience',
+        required: experienceRequired,
+        matched: experienceMatched,
+        required_years:
+          requiredExperienceYears,
+        applicant_years:
+          applicantExperienceYears,
+      },
+    ];
+
+    // =========================================================
+    // 19. SCORE
+    //
+    // POSITION IS A GATE.
+    // It is NOT included in the percentage denominator.
+    // =========================================================
+    const scoredRequirements =
+      requirements.filter(
+        requirement =>
+          requirement.required &&
+          requirement.name !== 'position',
+      );
+
+    const matchedRequirements =
+      scoredRequirements.filter(
+        requirement =>
+          requirement.matched,
+      );
+
+    const totalRequired =
+      scoredRequirements.length;
+
+    const totalMatched =
+      matchedRequirements.length;
+
+  const matchPercentage =
+  totalRequired > 0
+    ? Math.round(
+        (totalMatched / totalRequired) * 100,
+      )
+    : 100;
+
+ 
+
+   
+
+    // =========================================================
+    // 20. MISSING REQUIREMENTS
+    // =========================================================
+    const missingRequirements =
+      requirements
+        .filter(
+          requirement =>
+            requirement.required &&
+            !requirement.matched,
+        )
+        .map(requirement => ({
+          name: requirement.name,
+          label: requirement.label,
+          reason:
+            requirement.name ===
+              'position'
+              ? 'Your profile position does not match the required job position.'
+              : `Your profile does not match the required ${requirement.label.toLowerCase()}.`,
+        }));
+
+    // =========================================================
+    // 21. CAN APPLY
+    // =========================================================
+    const canApply =
+      positionMatched &&
+      matchPercentage >= 50;
+
+    // =========================================================
+    // 22. RETURN
+    // =========================================================
+    return {
+      success: true,
+      message:
+        canApply
+          ? 'Your profile matches this job.'
+          : 'Your profile does not sufficiently match this job.',
+
+      data: {
+        applicant_id: applicantId,
+
+        job: {
+          id: Number(job.job_id),
+          title: job.job_title,
+          position: {
+            id: Number(job.position_id),
+            name: job.position_name,
+          },
+          position_level: {
+            id:
+              Number(
+                job.position_level_id,
+              ),
+            name:
+              job.position_level_name,
+          },
+          industry: {
+            id: Number(job.industry_id),
+            name: job.industry_name,
+          },
+          years_experience:
+            requiredExperienceYears,
+        },
+
+       
+
+        match: {
+          percentage: matchPercentage,
+          position_match:
+            positionMatched,
+          // can_apply: canApply,
+          matched_requirements:
+            totalMatched,
+          required_requirements:
+            totalRequired,
+          missing_requirements:
+            missingRequirements.length,
+          recommendation:
+            this.getRecommendation(
+              matchPercentage,
+            ),
+        },
+
+        requirements,
+
+        // missing_requirements:
+        //   missingRequirements,
+      },
+    };
+  }
+
+  private getRecommendation(
+    matchPercentage: number,
+  ): string {
+    if (matchPercentage >= 80) {
+      return 'Excellent Match';
+    }
+
+    if (matchPercentage >= 70) {
+      return 'Strong Match';
+    }
+
+    if (matchPercentage >= 50) {
+      return 'Good Match';
+    }
+
+    if (matchPercentage >= 30) {
+      return 'Partial Match';
+    }
+
+    return 'Low Match';
+  }
+
 }

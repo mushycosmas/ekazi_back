@@ -28,6 +28,17 @@ export class ApplicantController {
             user.id,
         );
     }
+    @Get('applicant/profile-match')
+    @UseGuards(SanctumGuard)
+    async checkJobMatch(
+        @CurrentUser() user: Users,
+        @Query('jobId', ParseIntPipe) jobId: number,
+    ) {
+        return this.applicantService.checkJobMatch(
+            user.id,
+            jobId,
+        );
+    }
 
     @Get('jobseekers')
     @UseGuards(SanctumGuard)
