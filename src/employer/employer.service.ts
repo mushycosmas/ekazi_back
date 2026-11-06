@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Users } from 'src/entities/users.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { Clients } from 'src/client/clients.entity';
 import { ConfigService } from '@nestjs/config';
 import { NotFoundException } from '@nestjs/common';
@@ -14,6 +14,7 @@ import { ApplicantApplication } from 'src/entities/applicants/applicant-applican
 import { Jobs } from 'src/jobs/entities/job.entity';
 import { JobStage } from 'src/jobs/entities/job-stage.entity';
 import { ClientDescription } from 'src/client/entities/client-descriptions.entity';
+import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
 
 @Injectable()
 export class EmployerService {
@@ -40,6 +41,9 @@ export class EmployerService {
 
         @InjectRepository(ClientDescription)
         private readonly clientDescriptionRepository: Repository<ClientDescription>,
+
+        @InjectRepository(NonUserApplication)
+        private readonly nonUserApplicationsRepo: Repository<NonUserApplication>,
 
 
 
@@ -671,6 +675,105 @@ export class EmployerService {
 
         }
 
+    }
+
+
+    async getNonUserApplications(
+        jobId: number,
+        page = 1,
+        limit = 20,
+        search = '',
+    ) {
+        page = Math.max(1, Number(page) || 1);
+        limit = Math.min(100, Math.max(1, Number(limit) || 20));
+
+        jobId = Number(jobId);
+
+        if (!jobId || jobId <= 0) {
+            throw new BadRequestException('Invalid job ID.');
+        }
+
+        const query = this.nonUserApplicationsRepo
+            .createQueryBuilder('application')
+            .leftJoinAndSelect('application.files', 'files')
+            .leftJoinAndSelect('application.job', 'job')
+            .leftJoinAndSelect('job.position', 'position')
+            .where('application.job_id = :jobId', {
+                jobId,
+            });
+
+        // Search applicant
+        if (search.trim()) {
+            const keyword = `%${search.trim()}%`;
+
+            query.andWhere(
+                new Brackets((qb) => {
+                    qb.where(
+                        'application.full_name LIKE :keyword',
+                        { keyword },
+                    )
+                        .orWhere(
+                            'application.applicant_email LIKE :keyword',
+                            { keyword },
+                        )
+                        .orWhere(
+                            'application.phone LIKE :keyword',
+                            { keyword },
+                        )
+                        .orWhere(
+                            'position.position_name LIKE :keyword',
+                            { keyword },
+                        );
+                }),
+            );
+        }
+
+        query.orderBy('application.id', 'DESC');
+
+        const [applications, total] = await query
+            .skip((page - 1) * limit)
+            .take(limit)
+            .getManyAndCount();
+
+        return {
+            success: true,
+            message: 'Job applicants retrieved successfully',
+
+            data: applications.map((application) => ({
+                id: application.id,
+
+                job_id: application.job_id,
+
+                applicant_name: application.full_name,
+                applicant_email: application.applicant_email,
+                phone: application.phone,
+
+                application_type: application.application_type,
+                notes: application.note,
+
+                job: application.job
+                    ? {
+                        id: application.job.id,
+                        name:
+                            application.job.position?.position_name ??
+                            null,
+                    }
+                    : null,
+
+                attachments: (application.files || []).map((file) => ({
+                    id: file.id,
+                    file_path: file.file_path,
+                    original_name: file.original_name,
+                })),
+
+                created_at: application.created_at,
+            })),
+
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
     }
 
 

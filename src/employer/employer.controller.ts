@@ -102,6 +102,22 @@ export class EmployerController {
       stageId ? Number(stageId) : undefined,
     );
   }
+
+  @Get('jobs/:jobId/non-user-applications')
+  @UseGuards(SanctumGuard)
+  async getNonUserApplications(
+    @Param('jobId', ParseIntPipe) jobId: number,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('search') search = '',
+  ) {
+    return this.employerService.getNonUserApplications(
+      jobId,
+      page,
+      limit,
+      search,
+    );
+  }
   @Get(':jobId/applications')
   @UseGuards(SanctumGuard)
   getByStage(

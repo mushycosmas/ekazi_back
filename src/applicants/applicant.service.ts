@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Clients } from 'src/client/clients.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
@@ -1701,6 +1701,8 @@ END
       totalPages: Math.ceil(total / limit),
     };
   }
+
+
 
 
   async getMyApplicantProfileCompletion(userId: number) {
