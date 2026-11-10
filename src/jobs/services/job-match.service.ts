@@ -1408,20 +1408,20 @@ export class JobMatchService {
             CASE WHEN EXISTS (SELECT 1 FROM job_software js WHERE js.job_id = job.id) THEN 1 ELSE 0 END +
             CASE WHEN COALESCE(job.years_experience, 0) > 0 THEN 1 ELSE 0 END
         )`;
-//         const activeCriteriaExpr = `(
-//     CASE WHEN job.position_level_id IS NOT NULL AND job.position_level_id > 0 THEN 1 ELSE 0 END +
-//     CASE WHEN job.industry_id IS NOT NULL AND job.industry_id > 0 THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_education je WHERE je.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_majors jm WHERE jm.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_courses jc WHERE jc.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_knowledge jk WHERE jk.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_personalities jp WHERE jp.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_cultures jcu WHERE jcu.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_languages jl WHERE jl.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_tools jt WHERE jt.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN EXISTS (SELECT 1 FROM job_software js WHERE js.job_id = job.id) THEN 1 ELSE 0 END +
-//     CASE WHEN COALESCE(job.years_experience, 0) > 0 THEN 1 ELSE 0 END
-// )`;
+        //         const activeCriteriaExpr = `(
+        //     CASE WHEN job.position_level_id IS NOT NULL AND job.position_level_id > 0 THEN 1 ELSE 0 END +
+        //     CASE WHEN job.industry_id IS NOT NULL AND job.industry_id > 0 THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_education je WHERE je.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_majors jm WHERE jm.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_courses jc WHERE jc.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_knowledge jk WHERE jk.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_personalities jp WHERE jp.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_cultures jcu WHERE jcu.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_languages jl WHERE jl.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_tools jt WHERE jt.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN EXISTS (SELECT 1 FROM job_software js WHERE js.job_id = job.id) THEN 1 ELSE 0 END +
+        //     CASE WHEN COALESCE(job.years_experience, 0) > 0 THEN 1 ELSE 0 END
+        // )`;
 
         const scoreExpressions = [
             // Position
@@ -1516,28 +1516,107 @@ export class JobMatchService {
             WHEN ${activeCriteriaExpr} = 0 THEN 0
             ELSE ROUND((${totalScoreExpr} * 100.0) / ${activeCriteriaExpr})
         END`;
-
         const buildQuery = () => {
             const qb = this.jobRepo
                 .createQueryBuilder('job')
-                .leftJoinAndSelect('job.position', 'position')
-                .leftJoinAndSelect('job.positionLevel', 'positionLevel')
-                .leftJoinAndSelect('job.industry', 'industry')
-                .leftJoinAndSelect('job.client', 'client')
-                .where('job.published = :published', { published: 1 })
-                .andWhere('(job.hide = :hide OR job.hide IS NULL)', { hide: 0 })
-                // Do not recommend jobs whose application deadline has passed.
-                .andWhere('(job.dead_line IS NULL OR DATE(job.dead_line) >= CURDATE())')
-                .setParameter('applicantId', applicantId)
-                .andWhere(`${percentageExpr} >= :minMatch`, { minMatch: MIN_MATCH });
+
+                .leftJoinAndSelect(
+                    'job.position',
+                    'position',
+                )
+
+                .leftJoinAndSelect(
+                    'job.positionLevel',
+                    'positionLevel',
+                )
+
+                .leftJoinAndSelect(
+                    'job.industry',
+                    'industry',
+                )
+
+                .leftJoinAndSelect(
+                    'job.client',
+                    'client',
+                )
+
+                // =========================
+                // LOCATION
+                // =========================
+                .leftJoinAndSelect(
+                    'job.country',
+                    'country',
+                )
+
+                .leftJoinAndSelect(
+                    'job.region',
+                    'region',
+                )
+
+                .leftJoinAndSelect(
+                    'job.addresses',
+                    'addresses',
+                )
+
+                // =========================
+                // JOB STATISTICS / VIEWS
+                // =========================
+                .leftJoinAndSelect(
+                    'job.jobStatistics',
+                    'jobStatistics',
+                )
+
+                // =========================
+                // JOB TYPE
+                // =========================
+                .leftJoinAndSelect(
+                    'job.jobUniversalType',
+                    'jobUniversalType',
+                )
+
+                .where('job.published = :published', {
+                    published: 1,
+                })
+
+                .andWhere(
+                    '(job.hide = :hide OR job.hide IS NULL)',
+                    {
+                        hide: 0,
+                    },
+                )
+
+                .andWhere(
+                    '(job.dead_line IS NULL OR DATE(job.dead_line) >= CURDATE())',
+                )
+
+                .setParameter(
+                    'applicantId',
+                    applicantId,
+                )
+
+                .andWhere(
+                    `${percentageExpr} >= :minMatch`,
+                    {
+                        minMatch: MIN_MATCH,
+                    },
+                );
 
             if (search?.trim()) {
                 const searchTerm = `%${search.trim()}%`;
+
                 qb.andWhere(
-                    `(job.title LIKE :search
-                      OR position.position_name LIKE :search
-                      OR client.client_name LIKE :search)`,
-                    { search: searchTerm },
+                    `(
+                job.title LIKE :search
+                OR position.position_name LIKE :search
+                OR client.client_name LIKE :search
+                OR country.name LIKE :search
+                OR region.region_name LIKE :search
+                OR addresses.sub_location LIKE :search
+                OR jobUniversalType.type_name LIKE :search
+            )`,
+                    {
+                        search: searchTerm,
+                    },
                 );
             }
 
@@ -1588,6 +1667,9 @@ export class JobMatchService {
 
         const result = await buildQuery()
             .select([
+                // =========================
+                // JOB
+                // =========================
                 'job.id',
                 'job.title',
                 'job.position_id',
@@ -1598,14 +1680,61 @@ export class JobMatchService {
                 'job.created_at',
                 'job.dead_line',
                 'job.published',
+
+                // =========================
+                // POSITION
+                // =========================
                 'position.id',
                 'position.position_name',
+
+                // =========================
+                // POSITION LEVEL
+                // =========================
                 'positionLevel.id',
+                'positionLevel.position_name',
+
+                // =========================
+                // INDUSTRY
+                // =========================
                 'industry.id',
                 'industry.industry_name',
+
+                // =========================
+                // COMPANY
+                // =========================
                 'client.id',
                 'client.client_name',
                 'client.logo',
+
+                // =========================
+                // COUNTRY
+                // =========================
+                'country.id',
+                'country.name',
+
+                // =========================
+                // REGION
+                // =========================
+                'region.id',
+                'region.region_name',
+
+                // =========================
+                // ADDRESSES
+                // =========================
+                'addresses.id',
+                'addresses.sub_location',
+
+                // =========================
+                // JOB STATISTICS
+                // =========================
+                'jobStatistics.id',
+                'jobStatistics.job_views',
+
+                // =========================
+                // JOB TYPE
+                // =========================
+                'jobUniversalType.id',
+                'jobUniversalType.type_name',
             ])
             .addSelect(totalScoreExpr, 'total_score')
             .addSelect(activeCriteriaExpr, 'active_criteria')
@@ -1619,23 +1748,123 @@ export class JobMatchService {
 
         const data = result.entities.map((job, index) => {
             const raw = result.raw[index] ?? {};
+
             return {
+                // =========================
+                // JOB
+                // =========================
                 job_id: job.id,
                 title: job.title,
-                position: job.position?.position_name ?? null,
-                industry: job.industry?.industry_name ?? null,
-                position_level: job.positionLevel?.position_name ?? null,
-                company: job.client?.client_name ?? null,
-                company_logo: job.client?.logo ?? null,
-                posted_on: job.publish_date ?? job.created_at ?? null,
-                deadline: job.dead_line ?? null,
-                years_experience_required: job.years_experience ?? 0,
+
+                position:
+                    job.position?.position_name ?? null,
+
+                industry:
+                    job.industry?.industry_name ?? null,
+
+                position_level:
+                    job.positionLevel?.position_name ?? null,
+
+                // =========================
+                // COMPANY
+                // =========================
+                company:
+                    job.client?.client_name ?? null,
+
+                company_logo:
+                    job.client?.logo ?? null,
+
+                // =========================
+                // DATES
+                // =========================
+                posted_on:
+                    job.publish_date ??
+                    job.created_at ??
+                    null,
+
+                deadline:
+                    job.dead_line ?? null,
+
+                // =========================
+                // JOB TYPE
+                // =========================
+                job_type: job.jobUniversalType
+                    ? {
+                        id: job.jobUniversalType.id,
+                        name: job.jobUniversalType.type_name,
+                    }
+                    : null,
+
+                // =========================
+                // VIEW COUNT
+                // =========================
+                view_count:
+                    job.jobStatistics?.[0]?.job_views ?? 0,
+
+                // =========================
+                // LOCATION
+                // =========================
+                location: {
+                    country: job.country
+                        ? {
+                            id: job.country.id,
+                            name: job.country.name,
+                        }
+                        : null,
+
+                    region: job.region
+                        ? {
+                            id: job.region.id,
+                            name: job.region.region_name,
+                        }
+                        : null,
+
+                    addresses: (
+                        job.addresses || []
+                    ).map((address) => ({
+                        id: address.id,
+                        sub_location:
+                            address.sub_location,
+                    })),
+                },
+
+                // =========================
+                // EXPERIENCE
+                // =========================
+                years_experience_required:
+                    job.years_experience ?? 0,
+
                 applicant_experience_years:
-                    Math.round(Number(raw.experience_years ?? 0) * 100) / 100,
-                matched_criteria: Number(raw.total_score ?? 0),
-                total_criteria: Number(raw.active_criteria ?? 0),
-                match_percentage: Number(raw.match_percentage ?? 0),
-                recommendation: this.getRecommendation(Number(raw.match_percentage ?? 0)),
+                    Math.round(
+                        Number(
+                            raw.experience_years ?? 0,
+                        ) * 100,
+                    ) / 100,
+
+                // =========================
+                // MATCHING
+                // =========================
+                matched_criteria:
+                    Number(
+                        raw.total_score ?? 0,
+                    ),
+
+                total_criteria:
+                    Number(
+                        raw.active_criteria ?? 0,
+                    ),
+
+                match_percentage:
+                    Number(
+                        raw.match_percentage ?? 0,
+                    ),
+
+                recommendation:
+                    this.getRecommendation(
+                        Number(
+                            raw.match_percentage ?? 0,
+                        ),
+                    ),
             };
         });
 

@@ -168,6 +168,7 @@ import { NonUserApplication } from 'src/entities/applicants/non-user-application
 import { NonUserApplicationFile } from 'src/entities/applicants/non-user-application-file.entity';
 import { ApplicantFeaturedView } from 'src/entities/applicants/applicant-featured-view.entity';
 import { PositionCategories } from 'src/entities/position-categories.entity';
+import { Email } from 'src/entities/notification.entity';
  
  
 
@@ -338,6 +339,7 @@ const allEntities = [
   NonUserApplicationFile,
   ApplicantFeaturedView,
   PositionCategories,
+  Email,
 
   // TaskAttachment,
   // TaskMessageAttachment,
