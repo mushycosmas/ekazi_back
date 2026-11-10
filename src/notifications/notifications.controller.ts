@@ -1,10 +1,13 @@
- import {
+import {
     Controller,
     Get,
     Req,
     Res,
     Query,
     UnauthorizedException,
+    Patch,
+    Param,
+    ParseIntPipe,
 } from '@nestjs/common';
 
 import type { Request, Response } from 'express';
@@ -20,7 +23,39 @@ export class NotificationsController {
 
     constructor(
         private readonly notifications: NotificationsService,
-    ) {}
+    ) { }
+
+
+    @Get()
+    async index(
+        @Req() req,
+        @Query('page') page = 1,
+        @Query('limit') limit = 20,
+    ) {
+        return this.notifications.getNotifications(
+            req.user.id,
+            Number(page),
+            Number(limit),
+        );
+    }
+
+    @Patch(':id/read')
+    async markAsRead(
+        @Req() req,
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        return this.notifications.markAsRead(
+            id,
+            req.user.id,
+        );
+    }
+
+    @Patch('read-all')
+    async markAllAsRead(@Req() req) {
+        return this.notifications.markAllAsRead(
+            req.user.id,
+        );
+    }
 
     @Get('stream')
     @Public()
@@ -61,11 +96,11 @@ export class NotificationsController {
 
         const sub = isUser
             ? this.notifications
-                  .streamForUser(user!.id)
-                  .subscribe((evt) => this.writeEvent(res, evt))
+                .streamForUser(user!.id)
+                .subscribe((evt) => this.writeEvent(res, evt))
             : this.notifications
-                  .streamForGuest(reference)
-                  .subscribe((evt) => this.writeEvent(res, evt));
+                .streamForGuest(reference)
+                .subscribe((evt) => this.writeEvent(res, evt));
 
         req.on('close', () => {
             clearInterval(heartbeat);

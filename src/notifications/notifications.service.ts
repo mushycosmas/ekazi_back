@@ -12,6 +12,7 @@ import { Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 
 import { SubscriptionPayment } from 'src/payment/entities/subscription-payment.entity';
+import { Email } from 'src/entities/notification.entity';
 
 export interface NotificationEvent {
     channel: string;    // 'user:<id>' | 'guest'
@@ -35,6 +36,8 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     constructor(
         @InjectRepository(SubscriptionPayment)
         private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
+        @InjectRepository(Email)
+        private readonly emailRepo: Repository<Email>,
     ) { }
 
     // ========================================================
@@ -128,60 +131,6 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         return `user:${n}`;
     }
 
-    // ========================================================
-    // GUEST SUCCESS POLLER
-    //
-    // Rules (strictly "success only"):
-    //   - user_id IS NULL           (guest)
-    //   - status = 'success'        (payment really succeeded)
-    //   - provider_transaction_id IS NOT NULL
-    //     (SELCOM / Snippe actually issued a reference)
-    //   - id > lastSeenId           (avoid replaying the same row)
-    //
-    // Anything pending, failed, or without a provider reference
-    // is ignored — no notification goes out.
-    // ========================================================
-    // private async pollGuestSuccess() {
-
-    //     // Only look at rows created in the last 30 minutes so we
-    //     // don't scan the whole table forever.
-    //     const cutoff = new Date(Date.now() - 30 * 60 * 1000);
-
-    //     const rows = await this.subscriptionPaymentRepository
-    //         .createQueryBuilder('p')
-    //         .where('p.user_id IS NULL')
-    //         .andWhere('p.status = :status', { status: 'success' })
-    //         .andWhere('p.provider_transaction_id IS NOT NULL')
-    //         .andWhere('p.id > :lastId', { lastId: this.lastSeenId })
-    //         .andWhere('p.created_at >= :cutoff', { cutoff })
-    //         .orderBy('p.id', 'ASC')
-    //         .take(50)
-    //         .getMany();
-
-    //     if (rows.length === 0) return;
-
-    //     for (const p of rows) {
-
-    //         this.logger.log(
-    //             `[Notifications] Guest payment SUCCESS: id=${p.id} ref=${p.transaction_id}`,
-    //         );
-
-    //         this.emitToUser(null, 'subscription.activated', {
-    //             status: 'success',
-    //             payment_id: p.id,
-    //             transaction_id: p.transaction_id,
-    //             provider: p.provider,
-    //             provider_transaction_id: p.provider_transaction_id,
-    //             amount: Number(p.amount),
-    //             plan_id: p.subscription_plan_id,
-    //             paid_at: p.paid_at,
-    //             // Frontend uses this to decide what comes next
-    //             next_step: 'continue',
-    //         });
-
-    //         this.lastSeenId = Math.max(this.lastSeenId, p.id);
-    //     }
-    // }
     private polling = false;
 
     private async pollGuestSuccess() {
@@ -241,5 +190,99 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         } finally {
             this.polling = false;
         }
+    }
+
+
+    async createNotification(data: {
+        senderId: number;
+        receiverId: number;
+        subject: string;
+        message: string;
+    }) {
+        const notification = this.emailRepo.create({
+            sender_id: data.senderId,
+            receiver_id: data.receiverId,
+            subject: data.subject,
+            subject_body: data.message,
+            marked: false,
+            is_read: false,
+        });
+
+        return this.emailRepo.save(notification);
+    }
+
+    async getNotifications(
+        userId: number,
+        page = 1,
+        limit = 20,
+    ) {
+        page = Math.max(1, Number(page) || 1);
+        limit = Math.min(100, Math.max(1, Number(limit) || 20));
+
+        const [notifications, total] =
+            await this.emailRepo.findAndCount({
+                where: {
+                    receiver_id: userId,
+                },
+                order: {
+                    created_at: 'DESC',
+                },
+                skip: (page - 1) * limit,
+                take: limit,
+            });
+
+        const unreadCount = await this.emailRepo.count({
+            where: {
+                receiver_id: userId,
+                is_read: false,
+            },
+        });
+
+        return {
+            success: true,
+            data: notifications,
+            unread_count: unreadCount,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
+    }
+
+    async markAsRead(
+        notificationId: number,
+        userId: number,
+    ) {
+        await this.emailRepo.update(
+            {
+                id: notificationId,
+                receiver_id: userId,
+            },
+            {
+                is_read: true,
+            },
+        );
+
+        return {
+            success: true,
+            message: 'Notification marked as read',
+        };
+    }
+
+    async markAllAsRead(userId: number) {
+        await this.emailRepo.update(
+            {
+                receiver_id: userId,
+                is_read: false,
+            },
+            {
+                is_read: true,
+            },
+        );
+
+        return {
+            success: true,
+            message: 'All notifications marked as read',
+        };
     }
 }

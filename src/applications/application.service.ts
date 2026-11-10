@@ -182,20 +182,53 @@ export class ApplicationsService {
             const savedApplication =
                 await queryRunner.manager.save(application);
 
-            // 9. Notify the employer
-            const notification = queryRunner.manager.create(
+            // // 9. Notify the employer
+            // const notification = queryRunner.manager.create(
+            //     Notification,
+            //     {
+            //         user_id: user.id,
+            //         applicant_id: applicant.id,
+            //         user_to_notify: job.client_id,
+            //         data: 'Job Application',
+            //         type: 'job-application',
+            //         job_id: job.id,
+            //     },
+            // );
+
+            // await queryRunner.manager.save(notification);
+            // 9. Create notifications
+            // =========================================================
+
+            // 9.1 Notify employer about the new application
+            const employerNotification = queryRunner.manager.create(
                 Notification,
                 {
                     user_id: user.id,
                     applicant_id: applicant.id,
                     user_to_notify: job.client_id,
-                    data: 'Job Application',
+                    data: 'New Job Application',
                     type: 'job-application',
                     job_id: job.id,
                 },
             );
 
-            await queryRunner.manager.save(notification);
+            await queryRunner.manager.save(employerNotification);
+
+
+            // 9.2 Notify applicant that application was submitted
+            const applicantNotification = queryRunner.manager.create(
+                Notification,
+                {
+                    user_id: user.id,
+                    applicant_id: applicant.id,
+                    user_to_notify: user.id,
+                    data: 'Application Submitted',
+                    type: 'application-submitted',
+                    job_id: job.id,
+                },
+            );
+
+            await queryRunner.manager.save(applicantNotification);
 
             // 10. Find or create job stage
             let jobStage = await queryRunner.manager.findOne(
@@ -256,6 +289,8 @@ export class ApplicationsService {
 
             // 12. Commit all changes
             await queryRunner.commitTransaction();
+
+
             // Send confirmation email to applicant
             const applicantEmail = user.email?.trim();
 

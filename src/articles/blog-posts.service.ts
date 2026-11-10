@@ -1,4 +1,4 @@
- import {
+import {
     Injectable,
     NotFoundException,
     ConflictException,
@@ -7,9 +7,11 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 
- 
-import {  BlogPost,
-    BlogPostStatus } from 'src/entities/blog-post.entity';
+
+import {
+    BlogPost,
+    BlogPostStatus
+} from 'src/entities/blog-post.entity';
 
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
@@ -19,7 +21,7 @@ export class BlogPostsService {
     constructor(
         @InjectRepository(BlogPost)
         private readonly blogPostRepository: Repository<BlogPost>,
-    ) {}
+    ) { }
 
     private generateSlug(value: string): string {
         return value
@@ -81,8 +83,8 @@ export class BlogPostsService {
                         ? new Date(dto.published_at)
                         : null
                     : status === BlogPostStatus.PUBLISHED
-                      ? new Date()
-                      : null,
+                        ? new Date()
+                        : null,
             author_id: String(authorId),
             views: '0',
         });
@@ -107,21 +109,36 @@ export class BlogPostsService {
         }
     }
 
-    async findAll(page = 1, perPage = 10, search?: string, status?: BlogPostStatus) {
+    async findAll(
+        page = 1,
+        perPage = 20,
+        search?: string,
+        status?: string,
+    ) {
         const currentPage = Math.max(1, Number(page) || 1);
-        const limit = Math.min(100, Math.max(1, Number(perPage) || 10));
+        const limit = Math.min(100, Math.max(1, Number(perPage) || 20));
 
         const query = this.blogPostRepository.createQueryBuilder('post');
 
+        // Search filter
         if (search?.trim()) {
             query.andWhere(
-                '(post.title LIKE :search OR post.excerpt LIKE :search OR post.content LIKE :search)',
-                { search: `%${search.trim()}%` },
+                `(
+        post.title LIKE :search
+        OR post.excerpt LIKE :search
+        OR post.content LIKE :search
+      )`,
+                {
+                    search: `%${search.trim()}%`,
+                },
             );
         }
 
+        // Status filter
         if (status) {
-            query.andWhere('post.status = :status', { status });
+            query.andWhere('post.status = :status', {
+                status,
+            });
         }
 
         const [posts, total] = await query

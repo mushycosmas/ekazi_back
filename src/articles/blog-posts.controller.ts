@@ -25,11 +25,12 @@ import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
 import { multerConfig } from 'src/common/upload/multer.config';
 import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 
+
 @Controller()
 export class BlogPostsController {
     constructor(
         private readonly blogPostsService: BlogPostsService,
-    ) {}
+    ) { }
 
     private getRelativeFilePath(filePath: string): string {
         return path
@@ -54,20 +55,20 @@ export class BlogPostsController {
     }
 
     // GET /api/blog-posts?page=1&per_page=10
-    @Get('blog-posts')
-    findAll(
-        @Query('page') page = '1',
-        @Query('per_page') perPage = '10',
-        @Query('search') search?: string,
-        @Query('status') status?: string,
-    ) {
-        return this.blogPostsService.findAll(
-            Number(page),
-            Number(perPage),
-            search,
-            status as any,
-        );
-    }
+@Get('blog-posts')
+findAll(
+    @Query('page') page = '1',
+    @Query('per_page') perPage = '20',
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+) {
+    return this.blogPostsService.findAll(
+        Number(page),
+        Number(perPage),
+        search,
+        status,
+    );
+}
 
     // POST /api/blog-posts
     @Post('blog-posts')
