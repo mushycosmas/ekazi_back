@@ -8,7 +8,7 @@ import {
     JoinColumn,
 } from 'typeorm';
 
- 
+
 
 import { Users } from 'src/entities/users.entity';
 import { Clients } from '../clients.entity';
@@ -21,19 +21,19 @@ export class Notification {
     id: number;
 
     @Column({ type: 'int', nullable: true })
-    user_id: number;
+    user_id: number | null;
 
     @Column({ type: 'int', nullable: true })
-    plan_id: number;
+    plan_id: number | null;
 
     @Column({ type: 'int', nullable: true })
-    applicant_id: number;
+    applicant_id: number | null;
 
     @Column({ type: 'int', nullable: true })
-    client_id: number;
+    client_id: number | null;
 
     @Column({ type: 'int', nullable: true })
-    user_to_notify: number;
+    user_to_notify: number | null;
 
     @Column({ type: 'varchar', length: 100 })
     type: string;
@@ -45,7 +45,7 @@ export class Notification {
     readed: boolean;
 
     @Column({ type: 'int', nullable: true })
-    job_id: number;
+    job_id: number | null;
 
     @CreateDateColumn()
     created_at: Date;

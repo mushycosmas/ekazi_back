@@ -7,7 +7,8 @@ import { NotificationsService } from './notifications.service';
 import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
 import { Users } from 'src/entities/users.entity';
 import { SubscriptionPayment } from 'src/payment/entities/subscription-payment.entity';
-import { Email } from 'src/entities/notification.entity';
+import { Notification } from 'src/client/entities/notifications.entity';
+ 
 
 @Global()
 @Module({
@@ -16,7 +17,8 @@ import { Email } from 'src/entities/notification.entity';
             PersonalAccessToken,
             Users,
             SubscriptionPayment,
-            Email,
+            Notification,
+            
         ]),
     ],
     controllers: [NotificationsController],

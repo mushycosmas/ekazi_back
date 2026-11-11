@@ -8,6 +8,7 @@ import {
     Patch,
     Param,
     ParseIntPipe,
+    UseGuards,
 } from '@nestjs/common';
 
 import type { Request, Response } from 'express';
@@ -17,8 +18,9 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Users } from 'src/entities/users.entity';
 
 import { NotificationsService } from './notifications.service';
+import { SanctumGuard } from 'src/auth/guards/sanctum.guard';
 
-@Controller('notifications')
+@Controller()
 export class NotificationsController {
 
     constructor(
@@ -26,34 +28,39 @@ export class NotificationsController {
     ) { }
 
 
-    @Get()
+    @Get('applicant/notifications')
+    @UseGuards(SanctumGuard)
     async index(
-        @Req() req,
+        @CurrentUser() user: Users,
         @Query('page') page = 1,
         @Query('limit') limit = 20,
     ) {
         return this.notifications.getNotifications(
-            req.user.id,
+            user.id,
             Number(page),
             Number(limit),
         );
     }
 
-    @Patch(':id/read')
+    @Patch('applicant/notifications/:id/read')
+      @UseGuards(SanctumGuard)
     async markAsRead(
-        @Req() req,
+        @CurrentUser() user: Users,
         @Param('id', ParseIntPipe) id: number,
     ) {
         return this.notifications.markAsRead(
             id,
-            req.user.id,
+            user.id,
         );
     }
 
-    @Patch('read-all')
-    async markAllAsRead(@Req() req) {
+    @Patch('applicant/notifications/read-all')
+    async markAllAsRead(
+        @CurrentUser() user: Users,
+        ) 
+        {
         return this.notifications.markAllAsRead(
-            req.user.id,
+            user.id,
         );
     }
 

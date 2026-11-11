@@ -12,7 +12,8 @@ import { Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 
 import { SubscriptionPayment } from 'src/payment/entities/subscription-payment.entity';
-import { Email } from 'src/entities/notification.entity';
+import { Email } from 'src/entities/e-mail.entity';
+import { Notification } from 'src/client/entities/notifications.entity';
 
 export interface NotificationEvent {
     channel: string;    // 'user:<id>' | 'guest'
@@ -36,8 +37,8 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     constructor(
         @InjectRepository(SubscriptionPayment)
         private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
-        @InjectRepository(Email)
-        private readonly emailRepo: Repository<Email>,
+        @InjectRepository(Notification)
+        private readonly notificationRepo: Repository<Notification>,
     ) { }
 
     // ========================================================
@@ -196,22 +197,27 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
     async createNotification(data: {
         senderId: number;
         receiverId: number;
-        subject: string;
+        applicantId?: number;
+        clientId?: number;
+        jobId?: number;
+        type: string;
         message: string;
     }) {
-        const notification = this.emailRepo.create({
-            sender_id: data.senderId,
-            receiver_id: data.receiverId,
-            subject: data.subject,
-            subject_body: data.message,
-            marked: false,
-            is_read: false,
-        });
+        const notification = new Notification();
 
-        return this.emailRepo.save(notification);
+        notification.user_id = data.senderId;
+        notification.user_to_notify = data.receiverId;
+        notification.applicant_id = data.applicantId ?? null;
+        notification.client_id = data.clientId ?? null;
+        notification.job_id = data.jobId ?? null;
+        notification.type = data.type;
+        notification.data = data.message;
+        notification.readed = false;
+
+        return this.notificationRepo.save(notification);
     }
 
-    async getNotifications(
+    async getAllNotifications(
         userId: number,
         page = 1,
         limit = 20,
@@ -220,9 +226,16 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         limit = Math.min(100, Math.max(1, Number(limit) || 20));
 
         const [notifications, total] =
-            await this.emailRepo.findAndCount({
+            await this.notificationRepo.findAndCount({
                 where: {
-                    receiver_id: userId,
+                    user_to_notify: userId,
+                },
+                relations: {
+                    user: true,
+                    notifyUser: true,
+                    applicant: true,
+                    client: true,
+                    job: true,
                 },
                 order: {
                     created_at: 'DESC',
@@ -231,10 +244,10 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
                 take: limit,
             });
 
-        const unreadCount = await this.emailRepo.count({
+        const unreadCount = await this.notificationRepo.count({
             where: {
-                receiver_id: userId,
-                is_read: false,
+                user_to_notify: userId,
+                readed: false,
             },
         });
 
@@ -249,40 +262,144 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
         };
     }
 
+
+    async getNotifications(
+        userId: number,
+        page = 1,
+        limit = 20,
+    ) {
+        page = Math.max(1, Number(page) || 1);
+        limit = Math.min(100, Math.max(1, Number(limit) || 20));
+
+        const [notifications, total] =
+            await this.notificationRepo.findAndCount({
+                where: {
+                    user_to_notify: userId,
+                },
+                relations: {
+                    user: true,
+                    notifyUser: true,
+                    applicant: true,
+                    client: true,
+                    job: {
+                        position: true,
+                    },
+                },
+                order: {
+                    created_at: 'DESC',
+                },
+                skip: (page - 1) * limit,
+                take: limit,
+            });
+
+        const unreadCount = await this.notificationRepo.count({
+            where: {
+                user_to_notify: userId,
+                readed: false,
+            },
+        });
+
+        const data = notifications.map((notification) => {
+            let message = notification.data;
+
+            const position = notification.job?.position?.position_name || 'the position';
+
+            switch (notification.type) {
+                case 'job-application':
+                    message = `A candidate has submitted an application for the ${position} position.`;
+                    break;
+
+                case 'application-submitted':
+                    message = `You have submitted an application for the ${position} position.`;
+                    break;
+
+                case 'job-stage':
+                    message = `Your application for the ${position} position has moved to a new stage.`;
+                    break;
+
+                case 'account-created':
+                    message = `Your eKazi account has been successfully created.`;
+                    break;
+
+                case 'application-rejected':
+                    message = `Your application for the ${position} position was not successful.`;
+                    break;
+
+                case 'application-shortlisted':
+                    message = `Congratulations! You have been shortlisted for the ${position} position.`;
+                    break;
+
+                case 'interview':
+                    message = `You have an interview update for the ${position} position.`;
+                    break;
+
+                default:
+                    message = notification.data;
+            }
+
+            return {
+                id: notification.id,
+                type: notification.type,
+                message,
+                readed: notification.readed,
+                created_at: notification.created_at,
+                user: notification.user
+                    ? {
+                        id: notification.user.id,
+                    }
+                    : null,
+            };
+        });
+
+        return {
+            success: true,
+            data,
+            unread_count: unreadCount,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
+    }
+
+
     async markAsRead(
         notificationId: number,
         userId: number,
     ) {
-        await this.emailRepo.update(
+        const result = await this.notificationRepo.update(
             {
                 id: notificationId,
-                receiver_id: userId,
+                user_to_notify: userId,
+                readed: false,
             },
             {
-                is_read: true,
+                readed: true,
             },
         );
 
         return {
             success: true,
             message: 'Notification marked as read',
+            updated: result.affected ?? 0,
         };
     }
 
     async markAllAsRead(userId: number) {
-        await this.emailRepo.update(
+        const result = await this.notificationRepo.update(
             {
-                receiver_id: userId,
-                is_read: false,
+                user_to_notify: userId,
+                readed: false,
             },
             {
-                is_read: true,
+                readed: true,
             },
         );
 
         return {
             success: true,
             message: 'All notifications marked as read',
+            updated: result.affected ?? 0,
         };
     }
 }
