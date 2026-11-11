@@ -313,6 +313,10 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
                     message = `You have submitted an application for the ${position} position.`;
                     break;
 
+                case 'new-applicant':
+                    message = 'A new applicant has registered on the system.';
+                    break;
+
                 case 'job-stage':
                     message = `Your application for the ${position} position has moved to a new stage.`;
                     break;
