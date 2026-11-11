@@ -55,6 +55,7 @@ export class NotificationsController {
     }
 
     @Patch('applicant/notifications/read-all')
+    @UseGuards(SanctumGuard)
     async markAllAsRead(
         @CurrentUser() user: Users,
         ) 
