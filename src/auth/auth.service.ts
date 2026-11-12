@@ -766,15 +766,15 @@ export class AuthService {
 
 
         // Verify account
-        // user.verified = true,
-        //     user.email_verified_at = new Date();
+        user.verified = true,
+            user.email_verified_at = new Date();
 
         // // Clear token after success
-        // user.verify_key = null,
-        //     user.verify_key_expires_at = null,
+        user.verify_key = null,
+            user.verify_key_expires_at = null,
 
 
-        //     await this.usersRepository.save(user);
+            await this.usersRepository.save(user);
 
         // // ==========================
         // // CREATE LOGIN TOKEN
