@@ -6,6 +6,7 @@ import {
   IsString,
   MinLength,
   MaxLength,
+  IsOptional,
 } from 'class-validator';
 
 export class RegisterApplicantDto {
@@ -26,10 +27,14 @@ export class RegisterApplicantDto {
   @MaxLength(255)
   firstname: string;
 
+  // @IsString()
+  // @IsNotEmpty()
+  // @MaxLength(255)
+  // middlename: string;
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(255)
-  middlename: string;
+  middlename?: string | null;
 
   @IsString()
   @IsNotEmpty()
