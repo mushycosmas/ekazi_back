@@ -1264,10 +1264,19 @@ export class AuthService {
                             'User already registered',
                         );
                     }
-
+                    const capitalizeName = (value: string): string => {
+                        return value
+                            .trim()
+                            .toLowerCase()
+                            .replace(
+                                /\b\p{L}/gu,
+                                (letter) => letter.toUpperCase(),
+                            );
+                    };
                     // 4. Create user account.
                     // Confirm role_id 12 against your roles table.
                     const user: Users = usersRepo.create({
+                        username: capitalizeName(dto.firstname),
                         role_id: 12,
                         email,
                         temp_email: email,
@@ -1279,15 +1288,15 @@ export class AuthService {
                     const savedUser: Users = await usersRepo.save(user);
 
                     // 5. Format applicant names.
-                    const capitalizeName = (value: string): string => {
-                        return value
-                            .trim()
-                            .toLowerCase()
-                            .replace(
-                                /\b\p{L}/gu,
-                                (letter) => letter.toUpperCase(),
-                            );
-                    };
+                    // const capitalizeName = (value: string): string => {
+                    //     return value
+                    //         .trim()
+                    //         .toLowerCase()
+                    //         .replace(
+                    //             /\b\p{L}/gu,
+                    //             (letter) => letter.toUpperCase(),
+                    //         );
+                    // };
 
                     // 6. Create applicant profile.
                     const applicant: Applicants = applicantsRepo.create({
