@@ -29,34 +29,65 @@ export class MailService {
         return this.transporter.sendMail(options);
     }
 
-    async sendPasswordReset(email: string, token: string) {
-        const resetLink = `${this.configService.get(
-            'FRONTEND_URL',
-        )}/reset-password?token=${token}&email=${email}`;
+    // async sendPasswordReset(email: string, token: string) {
+    //     const resetLink = `${this.configService.get(
+    //         'FRONTEND_URL',
+    //     )}/reset-password?token=${token}&email=${email}`;
 
-        // 📄 Load HTML template (Option B)
-        const templatePath = path.join(
-            process.cwd(),
-            'src',
-            'mail',
-            'templates',
-            'password-reset.template.html',
-        );
+    //     // 📄 Load HTML template (Option B)
+    //     const templatePath = path.join(
+    //         process.cwd(),
+    //         'src',
+    //         'mail',
+    //         'templates',
+    //         'password-reset.template.html',
+    //     );
 
-        let html = fs.readFileSync(templatePath, 'utf-8');
+    //     let html = fs.readFileSync(templatePath, 'utf-8');
 
-        // 🔁 Replace variables
-        html = html.replace('{{RESET_LINK}}', resetLink);
+    //     // 🔁 Replace variables
+    //     html = html.replace('{{RESET_LINK}}', resetLink);
 
-        await this.transporter.sendMail({
-            from: `"${this.configService.get('MAIL_FROM_NAME')}" <${this.configService.get(
-                'MAIL_FROM_ADDRESS',
-            )}>`,
-            to: email,
-            subject: 'Reset Password',
-            html,
-        });
-    }
+    //     await this.transporter.sendMail({
+    //         from: `"${this.configService.get('MAIL_FROM_NAME')}" <${this.configService.get(
+    //             'MAIL_FROM_ADDRESS',
+    //         )}>`,
+    //         to: email,
+    //         subject: 'Reset Password',
+    //         html,
+    //     });
+    // }
+    async sendPasswordReset(
+    email: string,
+    token: string,
+    frontendUrl: string,
+) {
+    const resetLink =
+        `${frontendUrl}/reset-password` +
+        `?token=${encodeURIComponent(token)}` +
+        `&email=${encodeURIComponent(email)}`;
+
+    const templatePath = path.join(
+        process.cwd(),
+        'src',
+        'mail',
+        'templates',
+        'password-reset.template.html',
+    );
+
+    let html = fs.readFileSync(templatePath, 'utf-8');
+
+    html = html.replace('{{RESET_LINK}}', resetLink);
+
+    await this.transporter.sendMail({
+        from: `"${this.configService.get(
+            'MAIL_FROM_NAME',
+        )}" <${this.configService.get('MAIL_FROM_ADDRESS')}>`,
+        to: email,
+        subject: 'Reset Password',
+        html,
+    });
+}
 
     async sendEmailVerification(email: string, token: string, username: string) {
         const verifyLink = `${this.configService.get(

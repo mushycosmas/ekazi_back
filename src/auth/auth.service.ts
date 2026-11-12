@@ -390,6 +390,81 @@ export class AuthService {
     }
 
 
+    // async forgotPassword(email: string) {
+    //     try {
+    //         console.log('[FORGOT PASSWORD] Request received:', {
+    //             email,
+    //             time: new Date().toISOString(),
+    //         });
+
+    //         const user = await this.usersRepository.findOne({
+    //             where: { email },
+    //         });
+
+    //         // Prevent email enumeration
+    //         if (!user) {
+    //             console.log('[FORGOT PASSWORD] User not found:', email);
+
+    //             return {
+    //                 success: true,
+    //                 message:
+    //                     'If the email exists, a password reset code has been sent.',
+    //             };
+    //         }
+
+    //         console.log('[FORGOT PASSWORD] User found:', {
+    //             id: user.id,
+    //             email: user.email,
+    //         });
+
+    //         // Generate plain token
+    //         const plainToken = randomBytes(32).toString('hex');
+
+    //         // Hash before saving
+    //         const hashedToken = createHash('sha256')
+    //             .update(plainToken)
+    //             .digest('hex');
+
+    //         console.log('[FORGOT PASSWORD] Generated token');
+
+    //         // Remove old tokens
+    //         await this.passwordResetRepository.delete({ email });
+
+    //         console.log('[FORGOT PASSWORD] Old reset tokens cleared');
+
+    //         // Save hashed token
+    //         await this.passwordResetRepository.save({
+    //             email,
+    //             token: hashedToken,
+    //             expires_at: new Date(Date.now() + 15 * 60 * 1000),
+    //         });
+
+    //         console.log('[FORGOT PASSWORD] Token saved');
+
+    //         // Send plain token to email
+    //         await this.mailService.sendPasswordReset(email, plainToken);
+
+    //         console.log('[FORGOT PASSWORD] Email sent successfully');
+
+    //         return {
+    //             success: true,
+    //             message:
+    //                 'A password reset link has been sent to your email.',
+    //         };
+    //     } catch (error) {
+    //         console.error('[FORGOT PASSWORD ERROR]', {
+    //             message: error.message,
+    //             stack: error.stack,
+    //             email,
+    //         });
+
+    //         return {
+    //             success: false,
+    //             message: 'Failed to process forgot password request',
+    //             error: error.message,
+    //         };
+    //     }
+    // }
     async forgotPassword(email: string) {
         try {
             console.log('[FORGOT PASSWORD] Request received:', {
@@ -403,8 +478,6 @@ export class AuthService {
 
             // Prevent email enumeration
             if (!user) {
-                console.log('[FORGOT PASSWORD] User not found:', email);
-
                 return {
                     success: true,
                     message:
@@ -415,6 +488,7 @@ export class AuthService {
             console.log('[FORGOT PASSWORD] User found:', {
                 id: user.id,
                 email: user.email,
+                role_id: user.role_id,
             });
 
             // Generate plain token
@@ -425,26 +499,61 @@ export class AuthService {
                 .update(plainToken)
                 .digest('hex');
 
-            console.log('[FORGOT PASSWORD] Generated token');
-
             // Remove old tokens
             await this.passwordResetRepository.delete({ email });
 
-            console.log('[FORGOT PASSWORD] Old reset tokens cleared');
-
-            // Save hashed token
+            // Save token
             await this.passwordResetRepository.save({
                 email,
                 token: hashedToken,
                 expires_at: new Date(Date.now() + 15 * 60 * 1000),
             });
 
-            console.log('[FORGOT PASSWORD] Token saved');
+            // ==========================
+            // DETERMINE FRONTEND
+            // ==========================
 
-            // Send plain token to email
-            await this.mailService.sendPasswordReset(email, plainToken);
+            let frontendUrl: string;
 
-            console.log('[FORGOT PASSWORD] Email sent successfully');
+            switch (Number(user.role_id)) {
+                // Applicant
+                case 12:
+                    frontendUrl =
+                        this.configService.get<string>('FRONTEND_URL_2') ??
+                        this.configService.get<string>('FRONTEND_URL_2') ??
+                        '';
+                    break;
+
+                // Recruiter / Employer
+                case 9:
+                    frontendUrl =
+                        this.configService.get<string>('FRONTEND_URL') ?? '';
+                    break;
+
+                // Admin
+                case 2:
+                    frontendUrl =
+                        this.configService.get<string>('FRONTEND_URL') ?? '';
+                    break;
+
+                // Default
+                default:
+                    frontendUrl =
+                        this.configService.get<string>('FRONTEND_URL') ?? '';
+                    break;
+            }
+
+            if (!frontendUrl) {
+                throw new Error(
+                    `Frontend URL is not configured for role ${user.role_id}`,
+                );
+            }
+
+            await this.mailService.sendPasswordReset(
+                email,
+                plainToken,
+                frontendUrl,
+            );
 
             return {
                 success: true,
