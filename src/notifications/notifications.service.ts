@@ -3,6 +3,7 @@ import {
     Logger,
     OnModuleInit,
     OnModuleDestroy,
+    NotFoundException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -404,6 +405,39 @@ export class NotificationsService implements OnModuleInit, OnModuleDestroy {
             success: true,
             message: 'All notifications marked as read',
             updated: result.affected ?? 0,
+        };
+    }
+
+    async deleteNotification(
+        notificationId: number,
+        userId: number,
+    ) {
+        const notification = await this.notificationRepo.findOne({
+            where: {
+                id: notificationId,
+                user_to_notify: userId,
+            },
+        });
+
+        if (!notification) {
+            throw new NotFoundException(
+                'Notification not found.',
+            );
+        }
+        await this.notificationRepo.remove(notification);
+        return {
+            success: true,
+            message: 'Notification deleted successfully.',
+        };
+    }
+
+    async deleteAllNotifications(userId: number) {
+        await this.notificationRepo.delete({
+            user_to_notify: userId,
+        });
+        return {
+            success: true,
+            message: 'All notifications deleted successfully.',
         };
     }
 }

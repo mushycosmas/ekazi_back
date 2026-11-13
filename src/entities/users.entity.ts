@@ -9,7 +9,8 @@ import {
   JoinColumn, // Add this import
   ValueTransformer,
   CreateDateColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
+  DeleteDateColumn
 } from 'typeorm';
 import { Applicants } from './applicants/applicants.entity';
 import { Role } from './role.entity';
@@ -74,6 +75,12 @@ export class Users {
   @Column({ type: 'boolean', default: false })
   hide: boolean;
 
+  @DeleteDateColumn({
+    type: 'datetime',
+    nullable: true,
+  })
+  deleted_at: Date | null;
+
   // @Column({ type: 'boolean', nullable: true })
   // verified: boolean | null;
   // @Column({ default: 0 })
@@ -96,7 +103,7 @@ export class Users {
     },
   })
   verified: boolean | null
-  
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   verify_key: string | null;
 

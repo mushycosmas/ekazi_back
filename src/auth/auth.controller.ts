@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Get, Query, Delete } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SanctumGuard } from './guards/sanctum.guard';
@@ -10,6 +10,8 @@ import { Users } from 'src/entities/users.entity';
 import { CreateEmployerDto } from 'src/employer/dto/create-employer.dto';
 import { BadRequestException } from '@nestjs/common';
 import { RegisterApplicantDto } from './dto/register-applicant.dto';
+import { DeactivateAccountDto } from './dto/deactivate-account.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -156,6 +158,41 @@ export class AuthController {
             parsedLimit,
             search,
             verifiedFilter,
+        );
+    }
+
+    @Post('deactivate')
+    @UseGuards(SanctumGuard)
+    async deactivateAccount(
+        @CurrentUser() user: Users,
+        @Body() dto: DeactivateAccountDto,
+    ) {
+        return this.authService.deactivateAccount(
+            user.id,
+            dto.password,
+        );
+    }
+
+    @Post('reactivate')
+    @UseGuards(SanctumGuard)
+    async reactivateAccount(
+        @CurrentUser() user: Users,
+    ) {
+        return this.authService.reactivateAccount(user.id);
+    }
+
+    @Delete('account')
+    @UseGuards(SanctumGuard)
+    async deleteAccount(
+        @CurrentUser() user: Users,
+        @Body() dto: DeleteAccountDto,
+    ) {
+        return this.authService.deleteAccount(
+            user.id,
+            dto.password,
+            dto.confirmation,
+            dto.reason,
+            dto.feedback,
         );
     }
 }

@@ -630,66 +630,7 @@ export class AuthService {
     }
 
 
-    // ===============================
-    // SEND VERIFICATION EMAIL (NO DB)
-    // ===============================
-    // async sendVerificationEmail(email: string, username: string) {
-    //     const secret = this.configService.get('APP_KEY');
 
-    //     const token = randomBytes(32).toString('hex');
-
-    //     const signature = createHmac('sha256', secret)
-    //         .update(token + email)
-    //         .digest('hex');
-
-    //     const fullToken = `${token}.${signature}`;
-
-    //     const verifyLink = `${this.configService.get(
-    //         'FRONTEND_URL',
-    //     )}/verify-email?token=${fullToken}&email=${email}`;
-
-    //     await this.mailService.sendMail({
-    //         from: `"${this.configService.get('APP_NAME')}" <${this.configService.get(
-    //             'MAIL_FROM_ADDRESS',
-    //         )}>`,
-    //         to: 'ibrahim@exactmanpower.co.tz',
-    //         cc: ['halidiselemani94@gmail.com'],
-    //         subject: 'New Employer Registered',
-    //         html: `
-    //     <h2>📣 New Employer Registered</h2>
-
-    //     <p>A new employer has successfully registered on the <strong>eKazi Portal</strong>.</p>
-
-    //     <table cellpadding="6" cellspacing="0" border="0">
-    //         <tr>
-    //             <td><strong>Name:</strong></td>
-    //             <td>${username}</td>
-    //         </tr>
-    //         <tr>
-    //             <td><strong>Email:</strong></td>
-    //             <td>${email}</td>
-    //         </tr>
-    //         <tr>
-    //             <td><strong>Registered At:</strong></td>
-    //             <td>${new Date().toLocaleString()}</td>
-    //         </tr>
-    //     </table>
-
-    //     <br>
-
-    //     <p>The employer can verify their email using the link below:</p>
-
-    //     <a href="${verifyLink}"
-    //        style="display:inline-block;padding:12px 20px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:6px;">
-    //         Verify Email
-    //     </a>
-
-    //     <br><br>
-
-    //     <p>Regards,<br><strong>eKazi Portal System</strong></p>
-    // `,
-    //     });
-    // }
     async sendVerificationEmail(email: string, username: string) {
         const verificationCode = Math.floor(
             100000 + Math.random() * 900000,
@@ -1396,16 +1337,7 @@ export class AuthService {
 
                     const savedUser: Users = await usersRepo.save(user);
 
-                    // 5. Format applicant names.
-                    // const capitalizeName = (value: string): string => {
-                    //     return value
-                    //         .trim()
-                    //         .toLowerCase()
-                    //         .replace(
-                    //             /\b\p{L}/gu,
-                    //             (letter) => letter.toUpperCase(),
-                    //         );
-                    // };
+
 
                     // 6. Create applicant profile.
                     const applicant: Applicants = applicantsRepo.create({
@@ -1529,6 +1461,117 @@ export class AuthService {
                 'Failed to register applicant',
             );
         }
+    }
+
+    async deactivateAccount(userId: number, password: string) {
+        const user = await this.usersRepository.findOne({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        if (!user.password || !bcrypt.compareSync(password, user.password)) {
+            throw new UnauthorizedException('Incorrect password');
+        }
+
+        user.hide = true;
+
+        await this.usersRepository.save(user);
+
+        return {
+            success: true,
+            message: 'Account deactivated successfully',
+        };
+    }
+
+    async reactivateAccount(userId: number) {
+        const user = await this.usersRepository.findOne({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        user.hide = false;
+
+        await this.usersRepository.save(user);
+
+        return {
+            success: true,
+            message: 'Account reactivated successfully',
+        };
+    }
+    async deleteAccount(
+        userId: number,
+        password: string,
+        confirmation: string,
+        reason?: string,
+        feedback?: string,
+    ) {
+        if (confirmation !== 'DELETE') {
+            throw new BadRequestException(
+                'Please type DELETE to confirm account deletion.',
+            );
+        }
+
+        const user = await this.usersRepository.findOne({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        if (!user.password) {
+            throw new UnauthorizedException(
+                'This account does not have a password.',
+            );
+        }
+
+        const passwordValid = await bcrypt.compare(
+            password,
+            user.password,
+        );
+
+        if (!passwordValid) {
+            throw new UnauthorizedException(
+                'The provided password is incorrect.',
+            );
+        }
+
+        if (!passwordValid) {
+            throw new UnauthorizedException(
+                'The provided password is incorrect.',
+            );
+        }
+
+        await this.dataSource.transaction(async (manager) => {
+
+            // Store deletion information if you have DeletedAccount entity
+            // await manager.save(DeletedAccount, {
+            //     user_id: user.id,
+            //     email: user.email,
+            //     reason: reason ?? null,
+            //     feedback: feedback ?? null,
+            //     deleted_at: new Date(),
+            // });
+
+            // Hide account
+            user.hide = true;
+
+            await manager.save(user);
+
+            // Soft delete
+            await manager.softRemove(user);
+        });
+
+        return {
+            success: true,
+            message: 'Your account has been deleted successfully.',
+        };
     }
 
 }

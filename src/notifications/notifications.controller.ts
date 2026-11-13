@@ -9,6 +9,7 @@ import {
     Param,
     ParseIntPipe,
     UseGuards,
+    Delete,
 } from '@nestjs/common';
 
 import type { Request, Response } from 'express';
@@ -43,7 +44,7 @@ export class NotificationsController {
     }
 
     @Patch('applicant/notifications/:id/read')
-      @UseGuards(SanctumGuard)
+    @UseGuards(SanctumGuard)
     async markAsRead(
         @CurrentUser() user: Users,
         @Param('id', ParseIntPipe) id: number,
@@ -58,9 +59,31 @@ export class NotificationsController {
     @UseGuards(SanctumGuard)
     async markAllAsRead(
         @CurrentUser() user: Users,
-        ) 
-        {
+    ) {
         return this.notifications.markAllAsRead(
+            user.id,
+        );
+    }
+
+    @Delete('applicant/notifications/:id')
+    @UseGuards(SanctumGuard)
+    async deleteNotification(
+        @Param('id', ParseIntPipe) id: number,
+        @CurrentUser() user: Users,
+    ) {
+        return this.notifications.deleteNotification(
+            id,
+            user.id,
+        );
+    }
+
+    @Delete('applicant/notifications')
+    @UseGuards(SanctumGuard)
+    async deleteAllNotifications
+        (
+            @CurrentUser() user: Users,
+        ) {
+        return this.notifications.deleteAllNotifications(
             user.id,
         );
     }
