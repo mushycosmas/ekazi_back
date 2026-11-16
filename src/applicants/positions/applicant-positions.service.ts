@@ -393,6 +393,8 @@ export class ApplicantPositionsService {
             responsibility: dto.responsibility.trim(),
             remark: dto.remark.trim(),
 
+            experience_type_id: dto.experience_type_id,
+
             start_salary_id: dto.start_salary_id,
             end_salary_id: dto.end_salary_id,
 
@@ -534,7 +536,11 @@ export class ApplicantPositionsService {
             record.remark = dto.remark.trim();
         }
 
-        if (dto.start_salary_id !== undefined) {
+        if (dto.experience_type_id !== undefined) {
+            record.experience_type_id = dto.experience_type_id;
+        }
+
+            if (dto.start_salary_id !== undefined) {
             record.start_salary_id = dto.start_salary_id;
         }
 

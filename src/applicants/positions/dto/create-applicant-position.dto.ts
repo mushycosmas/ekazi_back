@@ -1,4 +1,4 @@
- import { Transform } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   Allow,
   IsDate,
@@ -98,6 +98,11 @@ export class CreateApplicantPositionDto {
   @IsInt()
   @Min(1)
   start_salary_id: number;
+
+  @Transform(parseNumber)
+  @IsInt()
+  @Min(1)
+  experience_type_id: number;
 
   @Transform(parseNumber)
   @IsInt()

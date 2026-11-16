@@ -39,15 +39,16 @@ export class ApplicantPositions {
   @Column({ type: 'int', unsigned: true, nullable: true })
   salary_id: number | null;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 10000 })
   responsibility: string;
 
-  @Column({ type: 'varchar', length: 200 })
+  @Column({ type: 'varchar', length: 2000 })
   remark: string;
 
   @Column({ type: 'int' })
   start_salary_id: number;
 
+  
   @Column({ type: 'int' })
   end_salary_id: number;
 

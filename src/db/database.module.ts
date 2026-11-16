@@ -169,6 +169,11 @@ import { NonUserApplicationFile } from 'src/entities/applicants/non-user-applica
 import { ApplicantFeaturedView } from 'src/entities/applicants/applicant-featured-view.entity';
 import { PositionCategories } from 'src/entities/position-categories.entity';
 import { Email } from 'src/entities/e-mail.entity';
+import { Correspondence } from 'src/entities/correspondence.entity';
+import { CorrespondenceAttachment } from 'src/entities/correspondence-attachment.entity';
+import { CorrespondenceParticipant } from 'src/entities/correspondence-participant.entity';
+import { CorrespondenceThread } from 'src/entities/correspondence-thread.entity';
+ 
  
  
 
@@ -340,7 +345,13 @@ const allEntities = [
   ApplicantFeaturedView,
   PositionCategories,
   Email,
-  Notification
+  Notification,
+  Correspondence,
+  CorrespondenceAttachment,
+  CorrespondenceParticipant,
+  CorrespondenceThread,
+  
+
 
   // TaskAttachment,
   // TaskMessageAttachment,

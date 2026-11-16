@@ -104,6 +104,7 @@ import { SocialMediaModule } from './social-media/social-media.module';
 import { BlogPostsModule } from './articles/blog-posts.module';
 import { ApplicationModule } from './applications/application.module';
 import { PositionCategoriesModule } from './position-categories/position-categories.module';
+import { CorrespondenceModule } from './correspondence/correspondence.module';
  
 
 
@@ -138,6 +139,7 @@ import { PositionCategoriesModule } from './position-categories/position-categor
     ApplicantTrainingsModule,ApplicantProficienciesModule,ApplicantPositionsModule,ApplicantAddressesModule,ApplicantIndustryTagsModule,
     ApplicantJobsModule,ApplicantDashboardModule,BookmarksModule,ApplicantSavedResumesModule, TaxCalculationModule,ApplicantEmployersModule,
     ExperienceTypesModule,ApplicantProfilePrivacyModule,HomepageModule,SocialMediaModule, BlogPostsModule,ApplicationModule,PositionCategoriesModule,
+    CorrespondenceModule,
     
 
   ],
