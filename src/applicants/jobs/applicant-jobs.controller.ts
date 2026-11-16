@@ -113,14 +113,14 @@ export class ApplicantJobsController {
         @Query('limit') limit?: string,
         @Query('search') search?: string,
         @Query('industryId') industryId?: string,
-        @Query('onlyActive') onlyActive?: string,
+        // @Query('onlyActive') onlyActive?: string,
     ) {
         return this.JobsService.findAll(
             Number(page) || 1,
             Number(limit) || 20,
             search,
             industryId ? Number(industryId) : undefined,
-            onlyActive === 'true',
+            // onlyActive === 'true',
         );
     }
 
