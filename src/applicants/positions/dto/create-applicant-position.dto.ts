@@ -111,14 +111,14 @@ export class CreateApplicantPositionDto {
 
   @Transform(emptyToUndefined)
   @IsString()
-  @MaxLength(100)
+  @MaxLength(10000)
   responsibility: string;
 
 
   @IsOptional()
   @Transform(emptyToUndefined)
   @IsString()
-  @MaxLength(200)
+  @MaxLength(2000)
   remark: string;
 
   @Transform(parseDate)
