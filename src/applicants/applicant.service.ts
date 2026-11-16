@@ -145,12 +145,41 @@ export class ApplicantService {
       .leftJoinAndSelect('language.write', 'writeLevel')
       .leftJoinAndSelect('language.speak', 'speakLevel')
       .leftJoinAndSelect('language.understand', 'understandLevel')
+      .leftJoin(
+        'applicant.featuredPlanSubscriptions',
+        'featuredSubscription',
+        'featuredSubscription.verify = :verify',
+        { verify: 1 },
+      )
+      .addSelect(
+        `CASE
+      WHEN featuredSubscription.id IS NOT NULL THEN 1
+      ELSE 0
+    END`,
+        'featured_status',
+      )
       .where('applicant.id = :id', { id: applicantId })
       .getOne();
 
     if (!applicant) {
       return null;
     }
+    const featuredSubscription =
+      await this.applicantsRepo
+        .createQueryBuilder('applicant')
+        .innerJoin(
+          'applicant.featuredPlanSubscriptions',
+          'featuredSubscription',
+          'featuredSubscription.verify = :verify',
+          { verify: 1 },
+        )
+        .where('applicant.id = :id', {
+          id: applicantId,
+        })
+        .select('featuredSubscription.id', 'id')
+        .getRawOne();
+
+    const featured_status = !!featuredSubscription;
 
     // 2. Load work experience and its related entities
     const positions = await this.applicantPositionsRepo
@@ -176,6 +205,7 @@ export class ApplicantService {
       // =============================================
       // BASIC INFORMATION
       // =============================================
+      featured_status,
       applicant_profile: {
         id: applicant.id,
         user_id: applicant.user?.id ?? null,
@@ -189,6 +219,7 @@ export class ApplicantService {
         picture: applicant.picture,
         background_picture: applicant.background_picture,
         email: applicant.user?.email ?? null,
+       
 
         marital_status: applicant.marital
           ? {
@@ -3070,16 +3101,16 @@ END
     const totalMatched =
       matchedRequirements.length;
 
-  const matchPercentage =
-  totalRequired > 0
-    ? Math.round(
-        (totalMatched / totalRequired) * 100,
-      )
-    : 100;
+    const matchPercentage =
+      totalRequired > 0
+        ? Math.round(
+          (totalMatched / totalRequired) * 100,
+        )
+        : 100;
 
- 
 
-   
+
+
 
     // =========================================================
     // 20. MISSING REQUIREMENTS
@@ -3144,7 +3175,7 @@ END
             requiredExperienceYears,
         },
 
-       
+
 
         match: {
           percentage: matchPercentage,
