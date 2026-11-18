@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards, Get, Query, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Get, Query, Delete, Patch, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SanctumGuard } from './guards/sanctum.guard';
@@ -12,6 +12,9 @@ import { BadRequestException } from '@nestjs/common';
 import { RegisterApplicantDto } from './dto/register-applicant.dto';
 import { DeactivateAccountDto } from './dto/deactivate-account.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { UpdateUserAuthDto } from './dto/update-user-auth.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from 'src/common/upload/multer.config';
 
 @Controller('auth')
 export class AuthController {
@@ -193,6 +196,36 @@ export class AuthController {
             dto.confirmation,
             dto.reason,
             dto.feedback,
+        );
+    }
+
+    @Patch('user')
+    @UseGuards(SanctumGuard)
+    async updateUser(
+        @CurrentUser() user: Users,
+        @Body() dto: UpdateUserAuthDto,
+    ) {
+        return this.authService.updateUser(
+            user.id,
+            dto,
+        );
+    }
+
+    @Patch('user/profile-picture')
+    @UseGuards(SanctumGuard)
+    @UseInterceptors(
+        FileInterceptor(
+            'attachment',
+            multerConfig('profile'),
+        ),
+    )
+    async updateProfilePicture(
+        @CurrentUser() user: Users,
+        @UploadedFile() file: any,
+    ) {
+        return this.authService.updateProfilePicture(
+            user.id,
+            file,
         );
     }
 }

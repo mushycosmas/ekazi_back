@@ -23,6 +23,8 @@ import { Applicants } from 'src/entities/applicants/applicants.entity';
 import { ApplicantPhones } from 'src/entities/applicants/applicant-phones.entity';
 import { ApplicantAddresses } from 'src/entities/applicants/applicant-addresses.entity';
 import { RegisterApplicantDto } from './dto/register-applicant.dto';
+import { UpdateUserAuthDto } from './dto/update-user-auth.dto';
+import * as path from 'path';
 
 
 
@@ -856,138 +858,151 @@ export class AuthService {
         };
     }
 
-    async myaccount(user: Users) {
-        try {
-            const account = await this.usersRepository.findOne({
-                where: {
-                    id: user.id,
-                },
-                relations: [
-                    'role',
-                    'role.permissions',
+   async myaccount(user: Users) {
+    try {
+        const account = await this.usersRepository.findOne({
+            where: {
+                id: user.id,
+            },
+            relations: [
+                'role',
+                'role.permissions',
 
-                    // User permissions
-                    'userPermissions',
-                    'userPermissions.permission',
+                // User permissions
+                'userPermissions',
+                'userPermissions.permission',
 
-                    // Client staff + position
-                    'clientStaff',
-                    'clientStaff.position',
-                ],
-            });
+                // Client staff + position
+                'clientStaff',
+                'clientStaff.position',
+            ],
+        });
 
-            if (!account) {
-                throw new NotFoundException({
-                    success: false,
-                    message: 'User account not found',
-                });
-            }
-
-            // ========================================================
-            // ROLE PERMISSIONS
-            // ========================================================
-
-            const rolePermissions =
-                account.role?.permissions?.map(permission => ({
-                    id: permission.id,
-                    name: permission.name,
-                })) || [];
-
-            // ========================================================
-            // USER PERMISSIONS
-            // ========================================================
-
-            const userPermissions =
-                account.userPermissions?.map(userPermission => ({
-                    id: userPermission.id,
-                    permission_id: userPermission.permission_id,
-
-                    permission: userPermission.permission
-                        ? {
-                            id: userPermission.permission.id,
-                            name: userPermission.permission.name,
-                        }
-                        : null,
-                })) || [];
-
-            // ========================================================
-            // CLIENT STAFF
-            // ========================================================
-
-            const clientStaff =
-                account.clientStaff?.map(staff => ({
-                    id: staff.id,
-
-                    client_id: staff.client_id,
-                    user_id: staff.user_id,
-
-                    prefix_id: staff.prefix_id,
-
-                    first_name: staff.first_name,
-                    middle_name: staff.middle_name,
-                    last_name: staff.last_name,
-
-                    phone_number: staff.phone_number,
-
-                    client_staff_position_id:
-                        staff.client_staff_position_id,
-
-                    position: staff.position
-                        ? {
-                            id: staff.position.id,
-                            position_name:
-                                staff.position.position_name,
-                        }
-                        : null,
-
-                    created_at: staff.created_at,
-                    updated_at: staff.updated_at,
-                })) || [];
-
-            // ========================================================
-            // RESPONSE
-            // ========================================================
-
-            return {
-                success: true,
-                message: 'Successfully retrieved user account',
-
-                data: {
-                    id: account.id,
-                    username: account.username,
-                    email: account.email,
-                    verified: account.verified,
-
-                    role_id: account.role_id,
-
-                    role: account.role
-                        ? {
-                            id: account.role.id,
-                            name: account.role.name,
-                        }
-                        : null,
-
-                    role_permissions: rolePermissions,
-
-                    user_permissions: userPermissions,
-
-                    client_staff: clientStaff,
-                },
-            };
-
-        } catch (error) {
-
-            if (error instanceof HttpException) {
-                throw error;
-            }
-
-            throw new InternalServerErrorException({
+        if (!account) {
+            throw new NotFoundException({
                 success: false,
-                message: 'Failed to fetch employer account',
-                error: error.message,
+                message: 'User account not found',
             });
         }
+
+        // ========================================================
+        // ROLE PERMISSIONS
+        // ========================================================
+
+        const rolePermissions =
+            account.role?.permissions?.map(permission => ({
+                id: permission.id,
+                name: permission.name,
+            })) || [];
+
+        // ========================================================
+        // USER PERMISSIONS
+        // ========================================================
+
+        const userPermissions =
+            account.userPermissions?.map(userPermission => ({
+                id: userPermission.id,
+                permission_id: userPermission.permission_id,
+
+                permission: userPermission.permission
+                    ? {
+                        id: userPermission.permission.id,
+                        name: userPermission.permission.name,
+                    }
+                    : null,
+            })) || [];
+
+        // ========================================================
+        // CLIENT STAFF
+        // ========================================================
+
+        const clientStaff =
+            account.clientStaff?.map(staff => ({
+                id: staff.id,
+
+                client_id: staff.client_id,
+                user_id: staff.user_id,
+
+                prefix_id: staff.prefix_id,
+
+                first_name: staff.first_name,
+                middle_name: staff.middle_name,
+                last_name: staff.last_name,
+
+                phone_number: staff.phone_number,
+
+                client_staff_position_id:
+                    staff.client_staff_position_id,
+
+                position: staff.position
+                    ? {
+                        id: staff.position.id,
+                        position_name:
+                            staff.position.position_name,
+                    }
+                    : null,
+
+                created_at: staff.created_at,
+                updated_at: staff.updated_at,
+            })) || [];
+
+        // ========================================================
+        // PROFILE PICTURE URL
+        // ========================================================
+
+        const profilePictureUrl =
+            account.profile_picture
+                ? `${process.env.APP_URL}/${account.profile_picture}`
+                : null;
+
+        // ========================================================
+        // RESPONSE
+        // ========================================================
+
+        return {
+            success: true,
+            message: 'Successfully retrieved user account',
+
+            data: {
+                id: account.id,
+                username: account.username,
+                email: account.email,
+                verified: account.verified,
+
+                // Profile picture
+                profile_picture: account.profile_picture || null,
+                profile_picture_url: profilePictureUrl,
+
+                role_id: account.role_id,
+
+                role: account.role
+                    ? {
+                        id: account.role.id,
+                        name: account.role.name,
+                    }
+                    : null,
+
+                role_permissions: rolePermissions,
+
+                user_permissions: userPermissions,
+
+                client_staff: clientStaff,
+            },
+        };
+
+    } catch (error) {
+
+        if (error instanceof HttpException) {
+            throw error;
+        }
+
+        throw new InternalServerErrorException({
+            success: false,
+            message: 'Failed to fetch employer account',
+            error: error.message,
+        });
     }
+}
 
     /**
  * Get users with verification statistics
@@ -1571,6 +1586,118 @@ export class AuthService {
         return {
             success: true,
             message: 'Your account has been deleted successfully.',
+        };
+    }
+
+    // auth.service.ts
+
+    async updateUser(
+        userId: number,
+        dto: UpdateUserAuthDto,
+    ) {
+        const user = await this.usersRepository.findOne({
+            where: {
+                id: userId,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Check username uniqueness
+        if (dto.username && dto.username !== user.username) {
+            const existingUsername =
+                await this.usersRepository.findOne({
+                    where: {
+                        username: dto.username,
+                    },
+                });
+
+            if (existingUsername && existingUsername.id !== userId) {
+                throw new ConflictException(
+                    'Username is already taken',
+                );
+            }
+
+            user.username = dto.username;
+        }
+
+        // Check email uniqueness
+        if (dto.email && dto.email !== user.email) {
+            const existingEmail =
+                await this.usersRepository.findOne({
+                    where: {
+                        email: dto.email,
+                    },
+                });
+
+            if (existingEmail && existingEmail.id !== userId) {
+                throw new ConflictException(
+                    'Email is already registered',
+                );
+            }
+
+            user.email = dto.email;
+        }
+
+        const updatedUser =
+            await this.usersRepository.save(user);
+
+        return {
+            success: true,
+            message: 'User updated successfully',
+            data: {
+                id: updatedUser.id,
+                username: updatedUser.username,
+                email: updatedUser.email,
+            },
+        };
+    }
+
+
+
+    async updateProfilePicture(
+        userId: number,
+        file?: any,
+    ) {
+        if (!file) {
+            throw new BadRequestException(
+                'Profile picture is required',
+            );
+        }
+
+        const user = await this.usersRepository.findOne({
+            where: {
+                id: userId,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException(
+                'User not found',
+            );
+        }
+
+        const picture = path
+            .relative(process.cwd(), file.path)
+            .split(path.sep)
+            .join('/');
+
+        user.profile_picture = picture;
+
+        const updatedUser =
+            await this.usersRepository.save(user);
+
+        return {
+            success: true,
+            message: 'Profile picture updated successfully',
+            data: {
+                id: updatedUser.id,
+                profile_picture: updatedUser.profile_picture,
+                profile_picture_url:
+                    `${process.env.APP_URL}/${updatedUser.profile_picture}`,
+            },
         };
     }
 
