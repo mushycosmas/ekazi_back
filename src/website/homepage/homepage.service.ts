@@ -213,38 +213,71 @@ export class HomepageService {
         };
     }
     
-    async jobCountByCategory() {
-        const sql = `
-    SELECT
-      i.id AS category_id,
-      i.industry_name AS category_name,
-      COUNT(j.id) AS total_positions
-    FROM industries i
-    INNER JOIN clients c
-      ON c.industry_id = i.id
-    INNER JOIN jobs j
-      ON j.client_id = c.id
-    WHERE
-      j.hide = 0
-      AND j.published = 1
-      AND j.dead_line >= CURDATE()
-    GROUP BY
-      i.id,
-      i.industry_name
-    ORDER BY
-      total_positions DESC
-  `;
+//     async jobCountByCategory() {
+//         const sql = `
+//     SELECT
+//       i.id AS category_id,
+//       i.industry_name AS category_name,
+//       COUNT(j.id) AS total_positions
+//     FROM industries i
+//     INNER JOIN clients c
+//       ON c.industry_id = i.id
+//     INNER JOIN jobs j
+//       ON j.client_id = c.id
+//     WHERE
+//       j.hide = 0
+//       AND j.published = 1
+    
+//     GROUP BY
+//       i.id,
+//       i.industry_name
+//     ORDER BY
+//       total_positions DESC
+//   `;
 
-        const rows = await this.dataSource.query(sql);
+//         const rows = await this.dataSource.query(sql);
 
-        return {
-            success: true,
-            message: 'Job counts by category retrieved successfully.',
-            data: rows.map((row: any) => ({
-                category_id: Number(row.category_id),
-                category_name: row.category_name,
-                total_positions: Number(row.total_positions),
-            })),
-        };
-    }
+//         return {
+//             success: true,
+//             message: 'Job counts by category retrieved successfully.',
+//             data: rows.map((row: any) => ({
+//                 category_id: Number(row.category_id),
+//                 category_name: row.category_name,
+//                 total_positions: Number(row.total_positions),
+//             })),
+//         };
+//     }
+async jobCountByCategory() {
+    const sql = `
+        SELECT
+            i.id AS category_id,
+            i.industry_name AS category_name,
+            COUNT(j.id) AS total_positions
+        FROM industries i
+        INNER JOIN jobs j
+            ON j.industry_id = i.id
+        WHERE
+            j.hide = 0
+            AND j.published = 1
+            AND j.dead_line >= CURDATE()
+        GROUP BY
+            i.id,
+            i.industry_name
+        ORDER BY
+            total_positions DESC
+    `;
+
+    const rows = await this.dataSource.query(sql);
+
+    return {
+        success: true,
+        message: 'Job counts by category retrieved successfully.',
+        data: rows.map((row: any) => ({
+            category_id: Number(row.category_id),
+            category_name: row.category_name,
+            total_positions: Number(row.total_positions),
+        })),
+    };
 }
+}
+
