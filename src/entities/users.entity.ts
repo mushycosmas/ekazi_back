@@ -69,6 +69,13 @@ export class Users {
   @Column({ type: 'varchar', length: 100, nullable: true })
   email: string | null;
 
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  profile_picture: string | null;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   password: string | null;
 

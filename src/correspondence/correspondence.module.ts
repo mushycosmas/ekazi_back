@@ -10,6 +10,7 @@ import { CorrespondenceAttachment } from 'src/entities/correspondence-attachment
 import { CorrespondenceGateway } from './correspondence.gateway';
 import { Users } from 'src/entities/users.entity';
 import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
+import { Jobs } from 'src/jobs/entities/job.entity';
  
  
 
@@ -22,6 +23,7 @@ import { PersonalAccessToken } from 'src/entities/personal-access-token.entity';
       CorrespondenceAttachment,
       Users,
       PersonalAccessToken,
+      Jobs,
     ]),
   ],
 

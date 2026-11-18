@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 
 import { CorrespondenceThread } from './correspondence-thread.entity';
+import { Users } from './users.entity';
 
 @Entity('correspondence_participants')
 @Index(['thread_id', 'user_id'], { unique: true })
@@ -50,4 +51,11 @@ export class CorrespondenceParticipant {
   )
   @JoinColumn({ name: 'thread_id' })
   thread: CorrespondenceThread;
+
+    // User relation
+  @ManyToOne(() => Users, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'user_id' })
+  user: Users;
 }

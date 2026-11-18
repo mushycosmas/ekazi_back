@@ -150,7 +150,6 @@ export class CorrespondenceGateway
     const result =
       await this.correspondenceService.sendMessage(
         Number(data.user_id),
-        data.sender_type,
         data.message,
       );
 

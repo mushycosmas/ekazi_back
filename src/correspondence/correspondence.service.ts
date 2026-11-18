@@ -1,8 +1,8 @@
- import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
+import {
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,645 +13,1012 @@ import { Correspondence } from 'src/entities/correspondence.entity';
 import { Repository } from 'typeorm';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { SendMessageDto } from './dto/send-message.dto';
-import { AddParticipantDto } from './dto/add-participant.dto';
+import { Jobs } from 'src/jobs/entities/job.entity';
+import { UpdateMessageDto } from './dto/update-message.dto';
+import * as path from 'path';
 
 
 @Injectable()
 export class CorrespondenceService {
-  constructor(
-    @InjectRepository(CorrespondenceThread)
-    private readonly threadRepository: Repository<CorrespondenceThread>,
+    constructor(
+        @InjectRepository(CorrespondenceThread)
+        private readonly threadRepository: Repository<CorrespondenceThread>,
+        @InjectRepository(Jobs)
+        private readonly jobsRepository: Repository<Jobs>,
 
-    @InjectRepository(Correspondence)
-    private readonly correspondenceRepository: Repository<Correspondence>,
+        @InjectRepository(Correspondence)
+        private readonly correspondenceRepository: Repository<Correspondence>,
 
-    @InjectRepository(CorrespondenceParticipant)
-    private readonly participantRepository: Repository<CorrespondenceParticipant>,
+        @InjectRepository(CorrespondenceParticipant)
+        private readonly participantRepository: Repository<CorrespondenceParticipant>,
 
-    @InjectRepository(CorrespondenceAttachment)
-    private readonly attachmentRepository: Repository<CorrespondenceAttachment>,
-  ) {}
+        @InjectRepository(CorrespondenceAttachment)
+        private readonly attachmentRepository: Repository<CorrespondenceAttachment>,
+    ) { }
 
-  // =========================================================
-  // CREATE THREAD
-  // =========================================================
-async createThread(
-  userId: number,
-  senderType:
-    | 'admin'
-    | 'employer'
-    | 'applicant'
-    | 'system',
-  dto: CreateThreadDto,
-) {
-  if (!dto.participants || dto.participants.length === 0) {
-    throw new BadRequestException(
-      'At least one receiver is required',
-    );
-  }
+    // =========================================================
+    // CREATE THREAD
+    // =========================================================
+    async createThread(
+        userId: number,
+        dto: CreateThreadDto,
+    ) {
+        if (!dto.participants || dto.participants.length === 0) {
+            throw new BadRequestException(
+                'At least one participant is required',
+            );
+        }
 
-  // Prevent sending to yourself
-  const receiverExists = dto.participants.some(
-    (participant) => participant.user_id !== userId,
-  );
+        const participant = dto.participants[0];
 
-  if (!receiverExists) {
-    throw new BadRequestException(
-      'You cannot create a conversation with yourself',
-    );
-  }
+        // Determine current user's type from the participant type
+        const currentUserType =
+            participant.participant_type === 'applicant'
+                ? 'employer'
+                : 'applicant';
 
-  // 1. Create thread
-  const thread = this.threadRepository.create({
-    subject: dto.subject,
-    job_id: dto.job_id ?? null,
+        // Prevent sending to yourself
+        if (participant.user_id === userId) {
+            throw new BadRequestException(
+                'You cannot create a conversation with yourself',
+            );
+        }
 
-    // Current authenticated user
-    created_by: userId,
+        const thread = this.threadRepository.create({
+            subject: dto.subject,
+            job_id: dto.job_id ?? null,
+            created_by: userId,
+            status: 'open',
+            last_message_at: null,
+            last_sender_id: null,
+            last_sender_type: null,
+        });
 
-    status: 'open',
+        const savedThread =
+            await this.threadRepository.save(thread);
 
-    last_message_at: null,
-    last_sender_id: null,
-    last_sender_type: null,
-  });
+        const participants: CorrespondenceParticipant[] = [];
 
-  const savedThread =
-    await this.threadRepository.save(thread);
+        // CURRENT USER
+        participants.push(
+            this.participantRepository.create({
+                thread_id: savedThread.id,
+                user_id: userId,
+                participant_type: currentUserType,
+                is_active: true,
+                last_read_message_id: null,
+            }),
+        );
 
-  // 2. Create participants
-  const participants: CorrespondenceParticipant[] = [];
+        // TARGET USER
+        participants.push(
+            this.participantRepository.create({
+                thread_id: savedThread.id,
+                user_id: participant.user_id,
+                participant_type: participant.participant_type,
+                is_active: true,
+                last_read_message_id: null,
+            }),
+        );
 
-  // Sender = current authenticated user
-  participants.push(
-    this.participantRepository.create({
-      thread_id: savedThread.id,
-      user_id: userId,
-      participant_type: senderType,
-      is_active: true,
-      last_read_message_id: null,
-    }),
-  );
+        await this.participantRepository.save(participants);
 
-  // Receiver(s) = frontend
-  for (const participant of dto.participants) {
-    if (participant.user_id === userId) {
-      continue;
+        return {
+            success: true,
+            message: 'Conversation thread created successfully',
+            data: await this.getThread(
+                savedThread.id,
+                userId,
+            ),
+        };
     }
 
-    participants.push(
-      this.participantRepository.create({
-        thread_id: savedThread.id,
-        user_id: participant.user_id,
-        participant_type: participant.participant_type,
-        is_active: true,
-        last_read_message_id: null,
-      }),
-    );
-  }
 
-  // 3. Save participants
-  await this.participantRepository.save(participants);
+    // =========================================================
+    // GET THREAD
+    // =========================================================
 
-  return {
-    success: true,
-    message: 'Conversation thread created successfully',
-    data: await this.getThread(
-      savedThread.id,
-      userId,
-    ),
-  };
-}
-//   async createThread(
-//     userId: number,
-//     dto: CreateThreadDto,
-//   ) {
-//     if (!dto.participants || dto.participants.length === 0) {
-//       throw new BadRequestException(
-//         'At least one participant is required',
-//       );
-//     }
+    async getThread(
+        threadId: number,
+        userId: number,
+    ) {
+        await this.checkParticipant(
+            threadId,
+            userId,
+        );
 
-//     const thread = this.threadRepository.create({
-//       subject: dto.subject,
-//       job_id: dto.job_id ?? null,
-//       created_by: userId,
-//       status: 'open',
-//       last_message_at: null,
-//       last_sender_id: null,
-//       last_sender_type: null,
-//     });
+        const thread =
+            await this.threadRepository.findOne({
+                where: {
+                    id: threadId,
+                },
+                relations: [
+                    'participants',
+                ],
+            });
 
-//     const savedThread =
-//       await this.threadRepository.save(thread);
+        if (!thread) {
+            throw new NotFoundException(
+                'Conversation thread not found',
+            );
+        }
 
-//     const participants = dto.participants.map((participant) =>
-//       this.participantRepository.create({
-//         thread_id: savedThread.id,
-//         user_id: participant.user_id,
-//         participant_type: participant.participant_type,
-//         is_active: true,
-//         last_read_message_id: null,
-//       }),
-//     );
-
-//     // Add creator automatically if not included
-//     const creatorExists = participants.some(
-//       (participant) =>
-//         participant.user_id === userId,
-//     );
-
-//     if (!creatorExists) {
-//       participants.push(
-//         this.participantRepository.create({
-//           thread_id: savedThread.id,
-//           user_id: userId,
-//           participant_type: 'system',
-//           is_active: true,
-//           last_read_message_id: null,
-//         }),
-//       );
-//     }
-
-//     await this.participantRepository.save(participants);
-
-//     return {
-//       success: true,
-//       message: 'Conversation thread created successfully',
-//       data: await this.getThread(
-//         savedThread.id,
-//         userId,
-//       ),
-//     };
-//   }
-
-  // =========================================================
-  // GET THREAD
-  // =========================================================
-
-  async getThread(
-    threadId: number,
-    userId: number,
-  ) {
-    await this.checkParticipant(
-      threadId,
-      userId,
-    );
-
-    const thread =
-      await this.threadRepository.findOne({
-        where: {
-          id: threadId,
-        },
-        relations: [
-          'participants',
-        ],
-      });
-
-    if (!thread) {
-      throw new NotFoundException(
-        'Conversation thread not found',
-      );
+        return thread;
     }
 
-    return thread;
-  }
+    async getUserThreads(userId: number) {
+        const threads = await this.threadRepository
+            .createQueryBuilder('thread')
 
-  // =========================================================
-  // GET USER THREADS
-  // =========================================================
+            .innerJoin(
+                'thread.participants',
+                'myParticipant',
+                'myParticipant.user_id = :userId',
+                { userId },
+            )
 
-  async getUserThreads(userId: number) {
-    const participants =
-      await this.participantRepository.find({
-        where: {
-          user_id: userId,
-          is_active: true,
-        },
-        relations: [
-          'thread',
-        ],
-        order: {
-          updated_at: 'DESC',
-        },
-      });
+            .leftJoinAndSelect(
+                'thread.participants',
+                'participant',
+                'participant.is_active = :active',
+                { active: 1 },
+            )
 
-    return {
-      success: true,
-      message: 'Conversation threads fetched successfully',
-      data: participants.map(
-        (participant) => participant.thread,
-      ),
-    };
-  }
+            .leftJoinAndSelect(
+                'participant.user',
+                'participantUser',
+            )
 
-  // =========================================================
-  // SEND MESSAGE
-  // =========================================================
+            .where('thread.status = :status', {
+                status: 'open',
+            })
 
-  async sendMessage(
-    userId: number,
-    senderType:
-      | 'admin'
-      | 'employer'
-      | 'applicant'
-      | 'system',
-    dto: SendMessageDto,
-  ) {
-    await this.checkParticipant(
-      dto.thread_id,
-      userId,
-    );
+            .orderBy(
+                'thread.last_message_at',
+                'DESC',
+            )
 
-    const thread =
-      await this.threadRepository.findOne({
-        where: {
-          id: dto.thread_id,
-        },
-      });
+            .addOrderBy(
+                'thread.created_at',
+                'DESC',
+            )
 
-    if (!thread) {
-      throw new NotFoundException(
-        'Conversation thread not found',
-      );
+            .getMany();
+
+        const data = await Promise.all(
+            threads.map(async (thread) => {
+
+                // ==========================================
+                // GET JOB + POSITION
+                // ==========================================
+
+                let job: any = null;
+
+                if (thread.job_id) {
+                    const jobData =
+                        await this.jobsRepository
+                            .createQueryBuilder('job')
+                            .leftJoinAndSelect(
+                                'job.position',
+                                'position',
+                            )
+                            .where(
+                                'job.id = :jobId',
+                                {
+                                    jobId: Number(
+                                        thread.job_id,
+                                    ),
+                                },
+                            )
+                            .getOne();
+
+                    if (jobData) {
+                        job = {
+                            id: jobData.id,
+
+                            title:
+                                jobData.title,
+
+                            position:
+                                jobData.position
+                                    ? jobData.position.position_name
+                                    : null,
+                        };
+                    }
+                }
+
+                // ==========================================
+                // OTHER PARTICIPANTS
+                // ==========================================
+
+                const otherParticipants =
+                    (thread.participants || []).filter(
+                        (participant) =>
+                            participant.user_id !== userId,
+                    );
+
+                // ==========================================
+                // LAST MESSAGE
+                // ==========================================
+
+                const lastMessage =
+                    await this.correspondenceRepository
+                        .createQueryBuilder('message')
+                        .where(
+                            'message.thread_id = :threadId',
+                            {
+                                threadId: thread.id,
+                            },
+                        )
+                        .orderBy(
+                            'message.id',
+                            'DESC',
+                        )
+                        .getOne();
+
+                // ==========================================
+                // RETURN THREAD
+                // ==========================================
+
+                return {
+                    id:
+                        thread.id,
+
+                    created_by:
+                        thread.created_by,
+
+                    job_id:
+                        thread.job_id,
+
+                    job: job,
+
+                    subject:
+                        thread.subject,
+
+                    chat_with:
+                        otherParticipants.map(
+                            (participant) => ({
+                                user_id:
+                                    participant.user_id,
+
+                                username:
+                                    participant.user
+                                        ?.username ??
+                                    null,
+
+                                profile_picture:
+                                    participant.user
+                                        ?.profile_picture ??
+                                    null,
+
+                                email:
+                                    participant.user
+                                        ?.email ??
+                                    null,
+
+                                participant_type:
+                                    participant.participant_type,
+                            }),
+                        ),
+
+                    last_message:
+                        lastMessage
+                            ? {
+                                id:
+                                    lastMessage.id,
+
+                                message:
+                                    lastMessage.message,
+
+                                category:
+                                    lastMessage.category,
+
+                                sender_id:
+                                    lastMessage.sender_id,
+
+                                sender_type:
+                                    lastMessage.sender_type,
+
+                                created_at:
+                                    lastMessage.created_at,
+
+                                is_mine:
+                                    lastMessage.sender_id ===
+                                    userId,
+                            }
+                            : null,
+
+                    last_message_at:
+                        thread.last_message_at,
+
+                    last_sender_type:
+                        thread.last_sender_type,
+
+                    last_sender_id:
+                        thread.last_sender_id,
+
+                    applicant_unread_count:
+                        thread.applicant_unread_count,
+
+                    employer_unread_count:
+                        thread.employer_unread_count,
+
+                    status:
+                        thread.status,
+                };
+            }),
+        );
+
+        return {
+            success: true,
+
+            message:
+                'Conversation threads fetched successfully',
+
+            data,
+        };
     }
 
-    if (thread.status === 'closed') {
-      throw new BadRequestException(
-        'This conversation is closed',
-      );
+    
+    private getUnreadCount(
+        thread: CorrespondenceThread,
+        userId: number,
+    ): number {
+        const participant = thread.participants?.find(
+            (p) => p.user_id === userId,
+        );
+
+        if (!participant) {
+            return 0;
+        }
+
+        if (participant.participant_type === 'applicant') {
+            return thread.applicant_unread_count ?? 0;
+        }
+
+        if (participant.participant_type === 'employer') {
+            return thread.employer_unread_count ?? 0;
+        }
+
+        return 0;
     }
 
-    const message =
-      this.correspondenceRepository.create({
-        applicant_id:
-          this.getLegacyApplicantId(thread),
+    // =========================================================
+    // SEND MESSAGE
+    // =========================================================
+    async getMessage(
+        threadId: number,
+        userId: number,
+        page = 1,
+        limit = 30,
+    ) {
+        // 1. Check if current user belongs to the thread
+        const currentParticipant =
+            await this.participantRepository.findOne({
+                where: {
+                    thread_id: threadId,
+                    user_id: userId,
+                    is_active: true,
+                },
+            });
 
-        thread_id: dto.thread_id,
+        if (!currentParticipant) {
+            throw new ForbiddenException(
+                'You are not a participant in this conversation',
+            );
+        }
 
-        reply_to_id:
-          dto.reply_to_id ?? null,
+        // 2. Get thread
+        const thread = await this.threadRepository.findOne({
+            where: {
+                id: threadId,
+            },
+        });
 
-        sender_type: senderType,
+        if (!thread) {
+            throw new NotFoundException(
+                'Conversation thread not found',
+            );
+        }
 
-        sender_id: userId,
+        // 3. Get participants
+        const participants =
+            await this.participantRepository
+                .createQueryBuilder('participant')
+                .leftJoinAndSelect(
+                    'participant.user',
+                    'user',
+                )
+                .where(
+                    'participant.thread_id = :threadId',
+                    { threadId },
+                )
+                .andWhere(
+                    'participant.is_active = :active',
+                    { active: true },
+                )
+                .getMany();
 
-        category:
-          dto.category ?? 'general',
+        // 4. Get Job
+        let job: any = null;
 
-        subject:
-          dto.subject ?? thread.subject,
+        if (thread.job_id) {
+            const jobData = await this.jobsRepository
+                .createQueryBuilder('job')
+                .leftJoinAndSelect(
+                    'job.position',
+                    'position',
+                )
+                .where('job.id = :jobId', {
+                    jobId: thread.job_id,
+                })
+                .getOne();
 
-        message: dto.message,
+            if (jobData) {
+                job = {
+                    id: jobData.id,
+                    title: jobData.title,
+                    position: jobData.position
+                        ? jobData.position.position_name
+                        : null,
+                };
+            }
+        }
 
-        meta: dto.meta
-          ? JSON.stringify(dto.meta)
-          : null,
+        // 5. Pagination
+        const skip = (page - 1) * limit;
 
-        visible_to_applicant: true,
+        const [
+            messages,
+            total,
+        ] = await this.correspondenceRepository
+            .createQueryBuilder('message')
+            .leftJoinAndSelect(
+                'message.attachments',
+                'attachments',
+            )
+            .where(
+                'message.thread_id = :threadId',
+                { threadId },
+            )
+            .andWhere(
+                'message.is_deleted = :isDeleted',
+                {
+                    isDeleted: false,
+                },
+            )
 
-        visible_to_employer: true,
+            .orderBy('message.created_at', 'ASC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount();
 
-        is_read: false,
+        // 6. Format participants
+        const formattedParticipants =
+            participants.map((participant) => ({
+                user_id: participant.user_id,
 
-        status: null,
+                participant_type:
+                    participant.participant_type,
 
-        rejection_reason: null,
-      });
+                username:
+                    participant.user?.username ??
 
-    const savedMessage =
-      await this.correspondenceRepository.save(
-        message,
-      );
+                    null,
 
-    thread.last_message_at =
-      new Date();
+                profile_picture:
+                    participant.user?.profile_picture ??
+                    null,
+            }));
 
-    thread.last_sender_id =
-      userId;
+        // 7. Format messages
+        const formattedMessages = messages.map(
+            (message) => ({
+                id: message.id,
 
-    thread.last_sender_type =
-      senderType;
+                sender_type:
+                    message.sender_type,
 
-    await this.threadRepository.save(
-      thread,
-    );
+                sender_id:
+                    message.sender_id,
 
-    return this.getMessage(
-      savedMessage.id,
-    );
-  }
+                category:
+                    message.category,
 
-  // =========================================================
-  // GET MESSAGE
-  // =========================================================
+                message:
+                    message.message,
 
-  async getMessage(messageId: number) {
-    const message =
-      await this.correspondenceRepository.findOne({
-        where: {
-          id: messageId,
-        },
-        relations: [
-          'attachments',
-        ],
-      });
+                created_at:
+                    message.created_at,
 
-    if (!message) {
-      throw new NotFoundException(
-        'Message not found',
-      );
+                attachments:
+                    (message.attachments || []).map(
+                        (attachment) => ({
+                            id: attachment.id,
+                            original_name:
+                                attachment.original_name,
+                            file_name:
+                                attachment.file_name,
+                            file_path:
+                                attachment.file_path,
+                            mime_type:
+                                attachment.mime_type,
+                            file_size:
+                                attachment.file_size,
+                        }),
+                    ),
+            }),
+        );
+
+        // 8. Return response
+        return {
+            success: true,
+
+            message:
+                'Messages fetched successfully',
+
+            data: {
+                thread: {
+                    id: thread.id,
+
+                    job: job,
+
+                    subject:
+                        thread.subject,
+
+                    participants:
+                        formattedParticipants,
+                },
+
+                messages:
+                    formattedMessages,
+
+                page,
+
+                limit,
+
+                total,
+
+                totalPages:
+                    Math.ceil(total / limit),
+            },
+        };
+    }
+    async sendMessage(
+        userId: number,
+        dto: SendMessageDto,
+        file?: any,
+    ) {
+        // Get current user's participation in this thread
+        const participant =
+            await this.participantRepository.findOne({
+                where: {
+                    thread_id: dto.thread_id,
+                    user_id: userId,
+                    is_active: true,
+                },
+            });
+
+        if (!participant) {
+            throw new ForbiddenException(
+                'You are not a participant in this conversation',
+            );
+        }
+
+        // Get sender type from correspondence_participants
+        const senderType =
+            participant.participant_type;
+
+        const thread =
+            await this.threadRepository.findOne({
+                where: {
+                    id: dto.thread_id,
+                },
+            });
+
+        if (!thread) {
+            throw new NotFoundException(
+                'Conversation thread not found',
+            );
+        }
+
+        if (thread.status === 'closed') {
+            throw new BadRequestException(
+                'This conversation is closed',
+            );
+        }
+
+        const message =
+            this.correspondenceRepository.create({
+                applicant_id:
+                    this.getLegacyApplicantId(thread),
+
+                thread_id: dto.thread_id,
+
+                reply_to_id:
+                    dto.reply_to_id ?? null,
+
+                sender_type: senderType,
+
+                sender_id: userId,
+
+                category:
+                    dto.category ?? 'general',
+
+                subject:
+                    dto.subject ?? thread.subject,
+
+                message: dto.message,
+
+                meta: dto.meta
+                    ? JSON.stringify(dto.meta)
+                    : null,
+
+                visible_to_applicant: true,
+
+                visible_to_employer: true,
+
+                is_read: false,
+
+                status: null,
+
+                rejection_reason: null,
+            });
+
+        const savedMessage =
+            await this.correspondenceRepository.save(
+                message,
+            );
+        if (file) {
+            const picture = path
+                .relative(process.cwd(), file.path)
+                .split(path.sep)
+                .join('/');
+
+            const attachment =
+                this.attachmentRepository.create({
+                    correspondence_id: savedMessage.id,
+
+                    original_name:
+                        file.originalname,
+
+                    file_name:
+                        file.filename,
+
+                    file_path:
+                        picture,
+
+                    mime_type:
+                        file.mimetype,
+
+                    file_size:
+                        file.size,
+                });
+
+            await this.attachmentRepository.save(
+                attachment,
+            );
+        }
+        // Update thread
+        thread.last_message_at =
+            savedMessage.created_at ?? new Date();
+
+        thread.last_sender_id =
+            userId;
+
+        thread.last_sender_type =
+            senderType;
+
+        // Optional but recommended if you added this column
+        // thread.last_message_id =
+        //     savedMessage.id;
+
+        // Update unread count
+        if (senderType === 'employer') {
+            thread.applicant_unread_count =
+                (thread.applicant_unread_count ?? 0) + 1;
+        }
+
+        if (senderType === 'applicant') {
+            thread.employer_unread_count =
+                (thread.employer_unread_count ?? 0) + 1;
+        }
+
+        await this.threadRepository.save(
+            thread,
+        );
+
+        return this.getMessages(
+            savedMessage.id,
+        );
     }
 
-    return message;
-  }
+    // =========================================================
+    // GET MESSAGE
+    // =========================================================
 
-  // =========================================================
-  // GET THREAD MESSAGES
-  // =========================================================
+    async getMessages(messageId: number) {
+        const message =
+            await this.correspondenceRepository.findOne({
+                where: {
+                    id: messageId,
+                },
+                relations: [
+                    'attachments',
+                ],
+            });
 
-  async getMessages(
-    threadId: number,
-    userId: number,
-    page = 1,
-    limit = 30,
-  ) {
-    await this.checkParticipant(
-      threadId,
-      userId,
-    );
+        if (!message) {
+            throw new NotFoundException(
+                'Message not found',
+            );
+        }
 
-    page = Math.max(
-      1,
-      Number(page) || 1,
-    );
-
-    limit = Math.min(
-      100,
-      Math.max(
-        1,
-        Number(limit) || 30,
-      ),
-    );
-
-    const [messages, total] =
-      await this.correspondenceRepository.findAndCount(
-        {
-          where: {
-            thread_id: threadId,
-          },
-          relations: [
-            'attachments',
-          ],
-          order: {
-            created_at: 'ASC',
-          },
-          skip: (page - 1) * limit,
-          take: limit,
-        },
-      );
-
-    return {
-      success: true,
-      message: 'Messages fetched successfully',
-      data: messages,
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(
-        total / limit,
-      ),
-    };
-  }
-
-  // =========================================================
-  // ADD PARTICIPANT
-  // =========================================================
-
-  async addParticipant(
-    threadId: number,
-    currentUserId: number,
-    dto: AddParticipantDto,
-  ) {
-    await this.checkParticipant(
-      threadId,
-      currentUserId,
-    );
-
-    const existing =
-      await this.participantRepository.findOne({
-        where: {
-          thread_id: threadId,
-          user_id: dto.user_id,
-        },
-      });
-
-    if (existing) {
-      existing.is_active = true;
-      existing.participant_type =
-        dto.participant_type;
-
-      await this.participantRepository.save(
-        existing,
-      );
-
-      return {
-        success: true,
-        message: 'Participant restored successfully',
-        data: existing,
-      };
+        return message;
     }
 
-    const participant =
-      this.participantRepository.create({
-        thread_id: threadId,
-        user_id: dto.user_id,
-        participant_type:
-          dto.participant_type,
-        is_active: true,
-        last_read_message_id: null,
-      });
+    async updateMessage(
+        messageId: number,
+        userId: number,
+        dto: UpdateMessageDto,
+    ) {
+        const message =
+            await this.correspondenceRepository.findOne({
+                where: {
+                    id: messageId,
+                },
+            });
 
-    const saved =
-      await this.participantRepository.save(
-        participant,
-      );
+        if (!message) {
+            throw new NotFoundException(
+                'Message not found',
+            );
+        }
 
-    return {
-      success: true,
-      message: 'Participant added successfully',
-      data: saved,
-    };
-  }
+        // Only message owner can edit
+        if (message.sender_id !== userId) {
+            throw new ForbiddenException(
+                'You can only update your own message',
+            );
+        }
 
-  // =========================================================
-  // REMOVE PARTICIPANT
-  // =========================================================
+        // Make sure message belongs to a thread
+        if (!message.thread_id) {
+            throw new BadRequestException(
+                'Message is not associated with a conversation',
+            );
+        }
 
-  async removeParticipant(
-    threadId: number,
-    currentUserId: number,
-    participantUserId: number,
-  ) {
-    await this.checkParticipant(
-      threadId,
-      currentUserId,
-    );
+        const participant =
+            await this.participantRepository.findOne({
+                where: {
+                    thread_id: message.thread_id,
+                    user_id: userId,
+                    is_active: true,
+                },
+            });
 
-    const participant =
-      await this.participantRepository.findOne({
-        where: {
-          thread_id: threadId,
-          user_id: participantUserId,
-        },
-      });
+        if (!participant) {
+            throw new ForbiddenException(
+                'You are not a participant in this conversation',
+            );
+        }
 
-    if (!participant) {
-      throw new NotFoundException(
-        'Participant not found',
-      );
+        message.message = dto.message;
+
+        if (dto.category) {
+            message.category = dto.category;
+        }
+
+        const updatedMessage =
+            await this.correspondenceRepository.save(
+                message,
+            );
+
+        return {
+            success: true,
+            message: 'Message updated successfully',
+            data: await this.getMessages(
+                updatedMessage.id,
+            ),
+        };
     }
 
-    participant.is_active = false;
+    async deleteMessage(
+        messageId: number,
+        userId: number,
+    ) {
+        const message =
+            await this.correspondenceRepository.findOne({
+                where: {
+                    id: messageId,
+                },
+            });
 
-    await this.participantRepository.save(
-      participant,
-    );
+        if (!message) {
+            throw new NotFoundException(
+                'Message not found',
+            );
+        }
 
-    return {
-      success: true,
-      message: 'Participant removed successfully',
-    };
-  }
+        // Only owner can delete
+        if (message.sender_id !== userId) {
+            throw new ForbiddenException(
+                'You can only delete your own message',
+            );
+        }
 
-  // =========================================================
-  // MARK AS READ
-  // =========================================================
+        if (message.is_deleted) {
+            throw new BadRequestException(
+                'Message has already been deleted',
+            );
+        }
 
-  async markAsRead(
-    threadId: number,
-    userId: number,
-    messageId: number,
-  ) {
-    const participant =
-      await this.participantRepository.findOne({
-        where: {
-          thread_id: threadId,
-          user_id: userId,
-          is_active: true,
-        },
-      });
+        // Make sure user is still a participant
+        if (message.thread_id) {
+            const participant =
+                await this.participantRepository.findOne({
+                    where: {
+                        thread_id: message.thread_id,
+                        user_id: userId,
+                        is_active: true,
+                    },
+                });
 
-    if (!participant) {
-      throw new ForbiddenException(
-        'You are not a participant in this conversation',
-      );
+            if (!participant) {
+                throw new ForbiddenException(
+                    'You are not a participant in this conversation',
+                );
+            }
+        }
+
+        message.is_deleted = true;
+        message.deleted_at = new Date();
+
+        await this.correspondenceRepository.save(
+            message,
+        );
+
+        return {
+            success: true,
+            message: 'Message deleted successfully',
+            data: {
+                id: message.id,
+                is_deleted: true,
+                deleted_at: message.deleted_at,
+            },
+        };
     }
 
-    participant.last_read_message_id =
-      messageId;
 
-    await this.participantRepository.save(
-      participant,
-    );
+    // =========================================================
+    // MARK AS READ
+    // =========================================================
 
-    await this.correspondenceRepository
-      .createQueryBuilder()
-      .update(Correspondence)
-      .set({
-        is_read: true,
-      })
-      .where(
-        'thread_id = :threadId',
-        { threadId },
-      )
-      .andWhere(
-        'sender_id != :userId',
-        { userId },
-      )
-      .andWhere(
-        'id <= :messageId',
-        { messageId },
-      )
-      .execute();
+    async markAsRead(
+        threadId: number,
+        userId: number,
+        messageId: number,
+    ) {
+        const participant =
+            await this.participantRepository.findOne({
+                where: {
+                    thread_id: threadId,
+                    user_id: userId,
+                    is_active: true,
+                },
+            });
 
-    return {
-      success: true,
-      message: 'Messages marked as read',
-    };
-  }
+        if (!participant) {
+            throw new ForbiddenException(
+                'You are not a participant in this conversation',
+            );
+        }
 
-  // =========================================================
-  // CLOSE THREAD
-  // =========================================================
+        participant.last_read_message_id =
+            messageId;
 
-  async closeThread(
-    threadId: number,
-    userId: number,
-  ) {
-    await this.checkParticipant(
-      threadId,
-      userId,
-    );
+        await this.participantRepository.save(
+            participant,
+        );
 
-    const thread =
-      await this.threadRepository.findOne({
-        where: {
-          id: threadId,
-        },
-      });
+        await this.correspondenceRepository
+            .createQueryBuilder()
+            .update(Correspondence)
+            .set({
+                is_read: true,
+            })
+            .where(
+                'thread_id = :threadId',
+                { threadId },
+            )
+            .andWhere(
+                'sender_id != :userId',
+                { userId },
+            )
+            .andWhere(
+                'id <= :messageId',
+                { messageId },
+            )
+            .execute();
 
-    if (!thread) {
-      throw new NotFoundException(
-        'Conversation not found',
-      );
+        return {
+            success: true,
+            message: 'Messages marked as read',
+        };
     }
 
-    thread.status = 'closed';
+    // =========================================================
+    // CLOSE THREAD
+    // =========================================================
 
-    await this.threadRepository.save(
-      thread,
-    );
+    async closeThread(
+        threadId: number,
+        userId: number,
+    ) {
+        await this.checkParticipant(
+            threadId,
+            userId,
+        );
 
-    return {
-      success: true,
-      message: 'Conversation closed successfully',
-    };
-  }
+        const thread =
+            await this.threadRepository.findOne({
+                where: {
+                    id: threadId,
+                },
+            });
 
-  // =========================================================
-  // PRIVATE PARTICIPANT CHECK
-  // =========================================================
+        if (!thread) {
+            throw new NotFoundException(
+                'Conversation not found',
+            );
+        }
 
-  private async checkParticipant(
-    threadId: number,
-    userId: number,
-  ) {
-    const participant =
-      await this.participantRepository.findOne({
-        where: {
-          thread_id: threadId,
-          user_id: userId,
-          is_active: true,
-        },
-      });
+        thread.status = 'closed';
 
-    if (!participant) {
-      throw new ForbiddenException(
-        'You are not a participant in this conversation',
-      );
+        await this.threadRepository.save(
+            thread,
+        );
+
+        return {
+            success: true,
+            message: 'Conversation closed successfully',
+        };
     }
 
-    return participant;
-  }
+    // =========================================================
+    // PRIVATE PARTICIPANT CHECK
+    // =========================================================
 
-  // =========================================================
-  // LEGACY APPLICANT ID
-  // =========================================================
+    private async checkParticipant(
+        threadId: number,
+        userId: number,
+    ) {
+        const participant =
+            await this.participantRepository.findOne({
+                where: {
+                    thread_id: threadId,
+                    user_id: userId,
+                    is_active: true,
+                },
+            });
 
-  private getLegacyApplicantId(
-    thread: CorrespondenceThread,
-  ): number {
-    return thread.applicant_id ?? 0;
-  }
+        if (!participant) {
+            throw new ForbiddenException(
+                'You are not a participant in this conversation',
+            );
+        }
+
+        return participant;
+    }
+
+    // =========================================================
+    // LEGACY APPLICANT ID
+    // =========================================================
+
+    private getLegacyApplicantId(
+        thread: CorrespondenceThread,
+    ): number {
+        return thread.applicant_id ?? 0;
+    }
 }
