@@ -82,7 +82,7 @@ export class ApplicantAddressesController {
     findAll(@CurrentUser() user: Users) {
         return this.applicantAddressesService.findAll(user.id);
     }
-    @Patch('applicant/addresses/picture')
+    @Patch('applicant/profile-picture')
     @UseInterceptors(
         FileInterceptor('picture', multerConfig('picture')),
     )
