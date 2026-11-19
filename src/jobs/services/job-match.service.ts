@@ -1364,7 +1364,7 @@ export class JobMatchService {
     ) {
         // Set this to 50 if you only want jobs with at least a 50% match.
         // Zero returns all visible published jobs, ranked from best match to lowest.
-        const MIN_MATCH = 0;
+        const MIN_MATCH = 60;
         const currentPage = Math.max(1, Number(page) || 1);
         const perPage = Math.min(100, Math.max(1, Number(limit) || 20));
 
