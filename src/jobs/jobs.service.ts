@@ -30,6 +30,7 @@ import { Users } from 'src/entities/users.entity';
 import { ApplicantApplication } from 'src/entities/applicants/applicant-applicantions.entity';
 import { JobStatistics } from './entities/job-statistics.entity';
 import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
+import { Applicants } from 'src/entities/applicants/applicants.entity';
 
 @Injectable()
 export class JobsService {
@@ -66,6 +67,9 @@ export class JobsService {
         @InjectRepository(ApplicantApplication)
         private readonly applicationRepository: Repository<ApplicantApplication>,
 
+        @InjectRepository(Applicants)
+        private readonly   applicantRepo: Repository<Applicants>,
+      
         @InjectRepository(JobAddresses)
         private readonly jobAddressRepository: Repository<JobAddresses>,
 
@@ -196,183 +200,107 @@ export class JobsService {
     // =========================
     // FIND ALL
     // =========================
-async findAll(
-    page = 1,
-    limit = 20,
-    search?: string,
-    industryId?: number,
-) {
-    try {
-        page = Math.max(1, Number(page) || 1);
-        limit = Math.max(1, Number(limit) || 20);
-
-        // ======================
-        // MAIN QUERY
-        // ======================
-        const query = this.jobsRepository
-            .createQueryBuilder('job')
-            .leftJoinAndSelect('job.client', 'client')
-            .leftJoinAndSelect('job.country', 'country')
-            .leftJoinAndSelect('job.region', 'region')
-            .leftJoinAndSelect('job.industry', 'industry')
-            .leftJoinAndSelect('job.position', 'position')
-            .leftJoinAndSelect('job.jobMetas', 'jobMetas')
-            .leftJoinAndSelect('job.addresses', 'addresses')
-            .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
-            .leftJoinAndSelect(
-                'job.jobUniversalType',
-                'jobUniversalType',
-            )
-            .leftJoinAndSelect(
-                'job.externalUrls',
-                'externalUrls',
-            )
-            .leftJoinAndSelect(
-                'job.jobEmails',
-                'jobEmails',
-            )
+    async findAll(
+        page = 1,
+        limit = 20,
+        search?: string,
+        industryId?: number,
+    ) {
+        try {
+            page = Math.max(1, Number(page) || 1);
+            limit = Math.max(1, Number(limit) || 20);
 
             // ======================
-            // SELECT
+            // MAIN QUERY
             // ======================
-            .select([
-                'job.id',
-                'job.title',
-                'job.status',
-                'job.published',
-                'job.dead_line',
-                'job.quantity',
-                'job.featured',
-                'job.publish_date',
+            const query = this.jobsRepository
+                .createQueryBuilder('job')
+                .leftJoinAndSelect('job.client', 'client')
+                .leftJoinAndSelect('job.country', 'country')
+                .leftJoinAndSelect('job.region', 'region')
+                .leftJoinAndSelect('job.industry', 'industry')
+                .leftJoinAndSelect('job.position', 'position')
+                .leftJoinAndSelect('job.jobMetas', 'jobMetas')
+                .leftJoinAndSelect('job.addresses', 'addresses')
+                .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
+                .leftJoinAndSelect(
+                    'job.jobUniversalType',
+                    'jobUniversalType',
+                )
+                .leftJoinAndSelect(
+                    'job.externalUrls',
+                    'externalUrls',
+                )
+                .leftJoinAndSelect(
+                    'job.jobEmails',
+                    'jobEmails',
+                )
 
-                'client.id',
-                'client.client_name',
-                'client.logo',
+                // ======================
+                // SELECT
+                // ======================
+                .select([
+                    'job.id',
+                    'job.title',
+                    'job.status',
+                    'job.published',
+                    'job.dead_line',
+                    'job.quantity',
+                    'job.featured',
+                    'job.publish_date',
 
-                'country.id',
-                'country.name',
+                    'client.id',
+                    'client.client_name',
+                    'client.logo',
 
-                'region.id',
-                'region.region_name',
+                    'country.id',
+                    'country.name',
 
-                'industry.id',
-                'industry.industry_name',
+                    'region.id',
+                    'region.region_name',
 
-                'position.id',
-                'position.position_name',
+                    'industry.id',
+                    'industry.industry_name',
 
-                'jobStatistics.id',
-                'jobStatistics.job_views',
+                    'position.id',
+                    'position.position_name',
 
-                'jobUniversalType.id',
-                'jobUniversalType.type_name',
+                    'jobStatistics.id',
+                    'jobStatistics.job_views',
 
-                'addresses.id',
-                'addresses.sub_location',
+                    'jobUniversalType.id',
+                    'jobUniversalType.type_name',
 
-                'externalUrls.id',
-                'externalUrls.external_url',
+                    'addresses.id',
+                    'addresses.sub_location',
 
-                'jobEmails.id',
-                'jobEmails.email',
-            ]);
+                    'externalUrls.id',
+                    'externalUrls.external_url',
 
-        // ======================
-        // ALWAYS ACTIVE JOBS
-        // ======================
+                    'jobEmails.id',
+                    'jobEmails.email',
+                ]);
 
-        // Only published jobs
-        query.andWhere('job.published = :published', {
-            published: '1',
-        });
+            // ======================
+            // ALWAYS ACTIVE JOBS
+            // ======================
 
-        // Deadline has not passed
-       query.andWhere('job.dead_line > CURDATE()');
-
-        // ======================
-        // SEARCH FILTER
-        // ======================
-        if (search?.trim()) {
-            const keyword = `%${search.trim()}%`;
-
-            query.andWhere(
-                `(
-                    job.title LIKE :keyword OR
-                    client.client_name LIKE :keyword OR
-                    country.name LIKE :keyword OR
-                    region.region_name LIKE :keyword OR
-                    industry.industry_name LIKE :keyword OR
-                    position.position_name LIKE :keyword OR
-                    jobUniversalType.type_name LIKE :keyword OR
-                    addresses.sub_location LIKE :keyword
-                )`,
-                {
-                    keyword,
-                },
-            );
-        }
-
-        // ======================
-        // INDUSTRY FILTER
-        // ======================
-        if (industryId) {
-            query.andWhere(
-                'job.industry_id = :industryId',
-                {
-                    industryId,
-                },
-            );
-        }
-
-        // ======================
-        // ORDER
-        // ======================
-        query.orderBy('job.id', 'DESC');
-
-        // ======================
-        // COUNT QUERY
-        // SAME FILTERS AS MAIN QUERY
-        // ======================
-        const totalQuery = this.jobsRepository
-            .createQueryBuilder('job')
-            .leftJoin('job.client', 'client')
-            .leftJoin('job.country', 'country')
-            .leftJoin('job.region', 'region')
-            .leftJoin('job.industry', 'industry')
-            .leftJoin('job.position', 'position')
-            .leftJoin('job.addresses', 'addresses')
-            .leftJoin(
-                'job.jobUniversalType',
-                'jobUniversalType',
-            );
-
-        // ======================
-        // PUBLISHED
-        // ======================
-        totalQuery.andWhere(
-            'job.published = :published',
-            {
+            // Only published jobs
+            query.andWhere('job.published = :published', {
                 published: '1',
-            },
-        );
+            });
 
-        // ======================
-        // ACTIVE DEADLINE
-        // IMPORTANT:
-        // MUST MATCH MAIN QUERY
-        // ======================
-        totalQuery.andWhere(
-            'job.dead_line > CURDATE()',
-        );
+            // Deadline has not passed
+            query.andWhere('job.dead_line > CURDATE()');
 
-        // ======================
-        // SEARCH COUNT
-        // ======================
-        if (search?.trim()) {
-            const keyword = `%${search.trim()}%`;
+            // ======================
+            // SEARCH FILTER
+            // ======================
+            if (search?.trim()) {
+                const keyword = `%${search.trim()}%`;
 
-            totalQuery.andWhere(
-                `(
+                query.andWhere(
+                    `(
                     job.title LIKE :keyword OR
                     client.client_name LIKE :keyword OR
                     country.name LIKE :keyword OR
@@ -382,762 +310,245 @@ async findAll(
                     jobUniversalType.type_name LIKE :keyword OR
                     addresses.sub_location LIKE :keyword
                 )`,
-                {
-                    keyword,
-                },
-            );
-        }
+                    {
+                        keyword,
+                    },
+                );
+            }
 
-        // ======================
-        // INDUSTRY COUNT
-        // ======================
-        if (industryId) {
+            // ======================
+            // INDUSTRY FILTER
+            // ======================
+            if (industryId) {
+                query.andWhere(
+                    'job.industry_id = :industryId',
+                    {
+                        industryId,
+                    },
+                );
+            }
+
+            // ======================
+            // ORDER
+            // ======================
+            query.orderBy('job.id', 'DESC');
+
+            // ======================
+            // COUNT QUERY
+            // SAME FILTERS AS MAIN QUERY
+            // ======================
+            const totalQuery = this.jobsRepository
+                .createQueryBuilder('job')
+                .leftJoin('job.client', 'client')
+                .leftJoin('job.country', 'country')
+                .leftJoin('job.region', 'region')
+                .leftJoin('job.industry', 'industry')
+                .leftJoin('job.position', 'position')
+                .leftJoin('job.addresses', 'addresses')
+                .leftJoin(
+                    'job.jobUniversalType',
+                    'jobUniversalType',
+                );
+
+            // ======================
+            // PUBLISHED
+            // ======================
             totalQuery.andWhere(
-                'job.industry_id = :industryId',
+                'job.published = :published',
                 {
-                    industryId,
+                    published: '1',
                 },
             );
-        }
 
-        // ======================
-        // TOTAL
-        // ======================
-        const totalResult = await totalQuery
-            .select(
-                'COUNT(DISTINCT job.id)',
-                'count',
-            )
-            .getRawOne();
+            // ======================
+            // ACTIVE DEADLINE
+            // IMPORTANT:
+            // MUST MATCH MAIN QUERY
+            // ======================
+            totalQuery.andWhere(
+                'job.dead_line > CURDATE()',
+            );
 
-        const total = Number(
-            totalResult?.count ?? 0,
-        );
+            // ======================
+            // SEARCH COUNT
+            // ======================
+            if (search?.trim()) {
+                const keyword = `%${search.trim()}%`;
 
-        // ======================
-        // PAGINATION
-        // ======================
-        const jobs = await query
-            .skip((page - 1) * limit)
-            .take(limit)
-            .getMany();
+                totalQuery.andWhere(
+                    `(
+                    job.title LIKE :keyword OR
+                    client.client_name LIKE :keyword OR
+                    country.name LIKE :keyword OR
+                    region.region_name LIKE :keyword OR
+                    industry.industry_name LIKE :keyword OR
+                    position.position_name LIKE :keyword OR
+                    jobUniversalType.type_name LIKE :keyword OR
+                    addresses.sub_location LIKE :keyword
+                )`,
+                    {
+                        keyword,
+                    },
+                );
+            }
 
-        // ======================
-        // FORMAT JOBS
-        // ======================
-        const formattedJobs = jobs.map((job) => ({
-            id: job.id,
-            title: job.title,
-            quantity: job.quantity,
-            published: job.published,
-            status: job.status,
-            featured: job.featured,
-            publish_date: job.publish_date,
-            dead_line: job.dead_line,
+            // ======================
+            // INDUSTRY COUNT
+            // ======================
+            if (industryId) {
+                totalQuery.andWhere(
+                    'job.industry_id = :industryId',
+                    {
+                        industryId,
+                    },
+                );
+            }
 
-            client: job.client
-                ? {
-                      id: job.client.id,
-                      name: job.client.client_name,
-                      logo: job.client.logo,
-                  }
-                : null,
+            // ======================
+            // TOTAL
+            // ======================
+            const totalResult = await totalQuery
+                .select(
+                    'COUNT(DISTINCT job.id)',
+                    'count',
+                )
+                .getRawOne();
 
-            industry: job.industry
-                ? {
-                      id: job.industry.id,
-                      name:
-                          job.industry.industry_name,
-                  }
-                : null,
+            const total = Number(
+                totalResult?.count ?? 0,
+            );
 
-            position: job.position
-                ? {
-                      id: job.position.id,
-                      name:
-                          job.position.position_name,
-                  }
-                : null,
+            // ======================
+            // PAGINATION
+            // ======================
+            const jobs = await query
+                .skip((page - 1) * limit)
+                .take(limit)
+                .getMany();
 
-            country: job.country
-                ? {
-                      id: job.country.id,
-                      name: job.country.name,
-                  }
-                : null,
+            // ======================
+            // FORMAT JOBS
+            // ======================
+            const formattedJobs = jobs.map((job) => ({
+                id: job.id,
+                title: job.title,
+                quantity: job.quantity,
+                published: job.published,
+                status: job.status,
+                featured: job.featured,
+                publish_date: job.publish_date,
+                dead_line: job.dead_line,
 
-            region: job.region
-                ? {
-                      id: job.region.id,
-                      name:
-                          job.region.region_name,
-                  }
-                : null,
-
-            addresses: (job.addresses || []).map(
-                (address) => ({
-                    id: address.id,
-                    sub_location:
-                        address.sub_location,
-                }),
-            ),
-
-            statistics:
-                job.jobStatistics || [],
-
-            type: job.jobUniversalType
-                ? {
-                      id:
-                          job.jobUniversalType.id,
-                      name:
-                          job.jobUniversalType
-                              .type_name,
-                  }
-                : null,
-
-            metas: job.jobMetas || [],
-
-            job_email: job?.jobEmails
-                ? {
-                      id: job.jobEmails.id,
-                      name:
-                          job.jobEmails.email,
-                  }
-                : null,
-
-            job_externalUrl:
-                job?.externalUrls
+                client: job.client
                     ? {
-                          id:
-                              job.externalUrls.id,
-                          name:
-                              job.externalUrls
-                                  .external_url,
-                      }
+                        id: job.client.id,
+                        name: job.client.client_name,
+                        logo: job.client.logo,
+                    }
                     : null,
-        }));
 
-        // ======================
-        // RESPONSE
-        // ======================
-        return {
-            success: true,
-            message: 'Jobs fetched successfully',
-            data: formattedJobs,
-            page,
-            limit,
-            totalPages: Math.ceil(
-                total / limit,
-            ),
-            total,
-        };
-    } catch (error) {
-        if (error instanceof HttpException) {
-            throw error;
+                industry: job.industry
+                    ? {
+                        id: job.industry.id,
+                        name:
+                            job.industry.industry_name,
+                    }
+                    : null,
+
+                position: job.position
+                    ? {
+                        id: job.position.id,
+                        name:
+                            job.position.position_name,
+                    }
+                    : null,
+
+                country: job.country
+                    ? {
+                        id: job.country.id,
+                        name: job.country.name,
+                    }
+                    : null,
+
+                region: job.region
+                    ? {
+                        id: job.region.id,
+                        name:
+                            job.region.region_name,
+                    }
+                    : null,
+
+                addresses: (job.addresses || []).map(
+                    (address) => ({
+                        id: address.id,
+                        sub_location:
+                            address.sub_location,
+                    }),
+                ),
+
+                statistics:
+                    job.jobStatistics || [],
+
+                type: job.jobUniversalType
+                    ? {
+                        id:
+                            job.jobUniversalType.id,
+                        name:
+                            job.jobUniversalType
+                                .type_name,
+                    }
+                    : null,
+
+                metas: job.jobMetas || [],
+
+                job_email: job?.jobEmails
+                    ? {
+                        id: job.jobEmails.id,
+                        name:
+                            job.jobEmails.email,
+                    }
+                    : null,
+
+                job_externalUrl:
+                    job?.externalUrls
+                        ? {
+                            id:
+                                job.externalUrls.id,
+                            name:
+                                job.externalUrls
+                                    .external_url,
+                        }
+                        : null,
+            }));
+
+            // ======================
+            // RESPONSE
+            // ======================
+            return {
+                success: true,
+                message: 'Jobs fetched successfully',
+                data: formattedJobs,
+                page,
+                limit,
+                totalPages: Math.ceil(
+                    total / limit,
+                ),
+                total,
+            };
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch jobs',
+                error: error.message,
+            });
         }
-
-        throw new InternalServerErrorException({
-            success: false,
-            message: 'Failed to fetch jobs',
-            error: error.message,
-        });
     }
-}
 
-// async findAll(
-//     page = 1,
-//     limit = 20,
-//     search?: string,
-//     industryId?: number,
-// ) {
-//     const skip = (page - 1) * limit;
-
-//     // =========================
-//     // MAIN QUERY
-//     // =========================
-//     const query = this.jobsRepository
-//         .createQueryBuilder('job')
-
-//         // Client
-//         .leftJoinAndSelect('job.client', 'client')
-
-//         // Location
-//         .leftJoinAndSelect('job.country', 'country')
-//         .leftJoinAndSelect('job.region', 'region')
-
-//         // Industry
-//         .leftJoinAndSelect('job.industry', 'industry')
-
-//         // Position
-//         .leftJoinAndSelect('job.position', 'position')
-
-//         // Job meta
-//         .leftJoinAndSelect('job.jobMetas', 'jobMeta')
-
-//         // Addresses
-//         .leftJoinAndSelect('job.addresses', 'jobAddress')
-
-//         // Statistics
-//         .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
-
-//         // Universal type
-//         .leftJoinAndSelect(
-//             'job.jobUniversalType',
-//             'jobUniversalType',
-//         )
-
-//         // External URLs
-//         .leftJoinAndSelect(
-//             'job.externalUrls',
-//             'externalUrl',
-//         )
-
-//         // Emails
-//         .leftJoinAndSelect(
-//             'job.jobEmails',
-//             'jobEmail',
-//         )
-
-//         // =========================
-//         // SELECT
-//         // =========================
-//         .select([
-//             'job.id',
-//             'job.title',
-//             'job.position_id',
-//             'job.client_id',
-//             'job.industry_id',
-//             'job.country_id',
-//             'job.region_id',
-//             'job.published',
-//             'job.dead_line',
-//             'job.created_at',
-//             'job.updated_at',
-
-//             // Client
-//             'client.id',
-//             'client.client_name',
-
-//             // Country
-//             'country.id',
-//             'country.name',
-
-//             // Region
-//             'region.id',
-//             'region.region_name',
-
-//             // Industry
-//             'industry.id',
-//             'industry.industry_name',
-
-//             // Position
-//             'position.id',
-//             'position.position_name',
-
-         
-
-//             // Address
-//             'jobAddress.id',
-//             'jobAddress.sub_location',
-
-//             // Statistics
-//             'jobStatistics.id',
-//             'jobStatistics.job_id',
-//             'jobStatistics.job_views',
-          
-
-//             // Universal type
-//             'jobUniversalType.id',
-//             'jobUniversalType.type_name',
-
-//             // External URL
-//             'externalUrl.id',
-//             'externalUrl.external_url',
-
-//             // Email
-//             'jobEmail.id',
-//             'jobEmail.email',
-//         ])
-
-//         // =========================
-//         // ONLY PUBLISHED JOBS
-//         // =========================
-//         .where('job.published = :published', {
-//             published: '1',
-//         })
-
-//         // =========================
-//         // ONLY ACTIVE JOBS
-//         // Deadline must not have passed
-//         // =========================
-//      //   .andWhere('job.dead_line >= CURDATE()');
-
-//     // =========================
-//     // SEARCH
-//     // =========================
-//     if (search) {
-//         query.andWhere(
-//             `(
-//                 job.title LIKE :search
-//                 OR position.position_name LIKE :search
-//                 OR client.client_name LIKE :search
-//                 OR industry.industry_name LIKE :search
-//             )`,
-//             {
-//                 search: `%${search}%`,
-//             },
-//         );
-//     }
-
-//     // =========================
-//     // INDUSTRY FILTER
-//     // =========================
-//     if (industryId) {
-//         query.andWhere(
-//             'job.industry_id = :industryId',
-//             {
-//                 industryId,
-//             },
-//         );
-//     }
-
-//     // =========================
-//     // PAGINATION
-//     // =========================
-//     query
-//         .orderBy('job.id', 'DESC')
-//         .skip(skip)
-//         .take(limit);
-
-//     const jobs = await query.getMany();
-
-//     // =========================
-//     // COUNT QUERY
-//     // IMPORTANT:
-//     // Use exactly the same filters
-//     // as the main query.
-//     // =========================
-//     const totalQuery = this.jobsRepository
-//         .createQueryBuilder('job')
-
-//         .leftJoin(
-//             'job.position',
-//             'position',
-//         )
-
-//         .leftJoin(
-//             'job.client',
-//             'client',
-//         )
-
-//         .leftJoin(
-//             'job.industry',
-//             'industry',
-//         )
-
-//         .where('job.published = :published', {
-//             published: '1',
-//         })
-
-//         // SAME ACTIVE DEADLINE CONDITION
-//       //  .andWhere('job.dead_line >= CURDATE()');
-
-//     // =========================
-//     // SEARCH COUNT
-//     // =========================
-//     if (search) {
-//         totalQuery.andWhere(
-//             `(
-//                 job.title LIKE :search
-//                 OR position.position_name LIKE :search
-//                 OR client.client_name LIKE :search
-//                 OR industry.industry_name LIKE :search
-//             )`,
-//             {
-//                 search: `%${search}%`,
-//             },
-//         );
-//     }
-
-//     // =========================
-//     // INDUSTRY COUNT
-//     // =========================
-//     if (industryId) {
-//         totalQuery.andWhere(
-//             'job.industry_id = :industryId',
-//             {
-//                 industryId,
-//             },
-//         );
-//     }
-
-//     const total = await totalQuery.getCount();
-
-//     // =========================
-//     // PAGINATION INFO
-//     // =========================
-//     const totalPages = Math.ceil(total / limit);
-
-//     // =========================
-//     // RESPONSE DATA
-//     // =========================
-//     const data = jobs.map((job) => ({
-//         id: job.id,
-//         title: job.title,
-
-//         position: job.position
-//             ? {
-//                   id: job.position.id,
-//                   name: job.position.position_name,
-//               }
-//             : null,
-
-//         company: job.client
-//             ? {
-//                   id: job.client.id,
-//                   name: job.client.client_name,
-//               }
-//             : null,
-
-//         industry: job.industry
-//             ? {
-//                   id: job.industry.id,
-//                   name: job.industry.industry_name,
-//               }
-//             : null,
-
-//         country: job.country
-//             ? {
-//                   id: job.country.id,
-//                   name: job.country.name,
-//               }
-//             : null,
-
-//         region: job.region
-//             ? {
-//                   id: job.region.id,
-//                   name: job.region.region_name,
-//               }
-//             : null,
-
-//         published: job.published,
-//         deadline: job.dead_line,
-//         created_at: job.created_at,
-//         updated_at: job.updated_at,
-
-//         jobMetas: job.jobMetas ?? [],
-//         addresses: job.addresses ?? [],
-//         statistics: job.jobStatistics ?? [],
-//         universalType: job.jobUniversalType ?? null,
-//         externalUrls: job.externalUrls ?? [],
-//         emails: job.jobEmails ?? [],
-//     }));
-
-//     // =========================
-//     // RESPONSE
-//     // =========================
-//     return {
-//         success: true,
-//         message: 'Jobs fetched successfully',
-//         data,
-
-//         page,
-//         limit,
-
-//         total,
-//         totalPages,
-
-//         hasNextPage: page < totalPages,
-//         hasPreviousPage: page > 1,
-//     };
-// }
-
-
-
-    // async findAll(
-    //     page = 1,
-    //     limit = 20,
-    //     search?: string,
-    //     industryId?: number,
-    //     onlyActive: boolean = true,
-    // ) {
-    //     try {
-    //         page = Math.max(1, Number(page) || 1);
-    //         limit = Math.max(1, Number(limit) || 20);
-
-    //         // ======================
-    //         // MAIN QUERY
-    //         // ======================
-    //         const query = this.jobsRepository
-    //             .createQueryBuilder('job')
-    //             .leftJoinAndSelect('job.client', 'client')
-    //             .leftJoinAndSelect('job.country', 'country')
-    //             .leftJoinAndSelect('job.region', 'region')
-    //             .leftJoinAndSelect('job.industry', 'industry')
-    //             .leftJoinAndSelect('job.position', 'position')
-    //             .leftJoinAndSelect('job.jobMetas', 'jobMetas')
-    //             .leftJoinAndSelect('job.addresses', 'addresses')
-    //             .leftJoinAndSelect('job.jobStatistics', 'jobStatistics')
-    //             .leftJoinAndSelect('job.jobUniversalType', 'jobUniversalType')
-    //             .leftJoinAndSelect('job.externalUrls', 'externalUrls')
-    //             .leftJoinAndSelect('job.jobEmails', 'jobEmails')
-
-    //             .select([
-    //                 'job.id',
-    //                 'job.status',
-    //                 'job.published',
-    //                 'job.dead_line',
-    //                 'job.quantity',
-    //                 'job.featured',
-    //                 'job.publish_date',
-
-    //                 'client.id',
-    //                 'client.client_name',
-    //                 'client.logo',
-
-    //                 'country.id',
-    //                 'country.name',
-
-    //                 'region.id',
-    //                 'region.region_name',
-
-    //                 'industry.id',
-    //                 'industry.industry_name',
-
-    //                 'position.id',
-    //                 'position.position_name',
-
-    //                 'jobStatistics.id',
-    //                 'jobStatistics.job_views',
-
-    //                 'jobUniversalType.id',
-    //                 'jobUniversalType.type_name',
-
-    //                 'addresses.id',
-    //                 'addresses.sub_location',
-
-    //                 'externalUrls .id',
-    //                 'externalUrls.external_url',
-
-    //                 'jobEmails.id',
-    //                 'jobEmails.email'
-
-    //             ]);
-
-    //         // ======================
-    //         // FILTER ACTIVE JOBS
-    //         // ======================
-    //         // // if (onlyActive) {
-    //         // query
-    //         //     .andWhere('job.published = :published', {
-    //         //         published: '1',
-    //         //     })
-    //         //     // .andWhere('job.dead_line > CURDATE()');
-    //         // // }
-    //         query.andWhere('job.published = :published', {
-    //             published: '1',
-    //         });
-
-    //         // if (onlyActive) {
-    //          query.andWhere('job.dead_line > CURDATE()');
-    //         // }
-
-    //         // ======================
-    //         // SEARCH FILTER
-    //         // ======================
-    //         if (search?.trim()) {
-    //             const keyword = `%${search.trim()}%`;
-
-    //             query.andWhere(
-    //                 `(
-    //                 job.title LIKE :keyword OR
-    //                 client.client_name LIKE :keyword OR
-    //                 country.name LIKE :keyword OR
-    //                 region.region_name LIKE :keyword OR
-    //                 industry.industry_name LIKE :keyword OR
-    //                 position.position_name LIKE :keyword OR
-    //                 jobUniversalType.type_name LIKE :keyword OR
-    //                 addresses.sub_location LIKE :keyword
-    //             )`,
-    //                 { keyword },
-    //             );
-    //         }
-
-    //         // ======================
-    //         // INDUSTRY FILTER
-    //         // ======================
-    //         if (industryId) {
-    //             query.andWhere('job.industry_id = :industryId', {
-    //                 industryId,
-    //             });
-    //         }
-
-    //         query.orderBy('job.id', 'DESC');
-
-    //         // ======================
-    //         // COUNT QUERY
-    //         // Apply exactly the same filters
-    //         // ======================
-    //         const totalQuery = this.jobsRepository
-    //             .createQueryBuilder('job')
-    //             .leftJoin('job.client', 'client')
-    //             .leftJoin('job.country', 'country')
-    //             .leftJoin('job.region', 'region')
-    //             .leftJoin('job.industry', 'industry')
-    //             .leftJoin('job.position', 'position')
-    //             .leftJoin('job.addresses', 'addresses')
-    //             .leftJoin('job.jobUniversalType', 'jobUniversalType');
-
-    //         // Count active jobs only
-    //         // totalQuery
-    //         //     .andWhere('job.published = :published', {
-    //         //         published: '1',
-    //         //     })
-    //         //     .andWhere('job.dead_line > CURDATE()');
-    //         totalQuery.andWhere('job.published = :published', {
-    //             published: '1',
-    //         });
-
-    //         // if (onlyActive) {
-    //         // totalQuery.andWhere('job.dead_line > CURDATE()');
-    //         // }
-
-    //         if (search?.trim()) {
-    //             const keyword = `%${search.trim()}%`;
-
-    //             totalQuery.andWhere(
-    //                 `(
-    //         job.title LIKE :keyword OR
-    //         client.client_name LIKE :keyword OR
-    //         country.name LIKE :keyword OR
-    //         region.region_name LIKE :keyword OR
-    //         industry.industry_name LIKE :keyword OR
-    //         position.position_name LIKE :keyword OR
-    //         jobUniversalType.type_name LIKE :keyword OR
-    //         addresses.sub_location LIKE :keyword
-    //     )`,
-    //                 { keyword },
-    //             );
-    //         }
-
-    //         if (industryId) {
-    //             totalQuery.andWhere('job.industry_id = :industryId', {
-    //                 industryId,
-    //             });
-    //         }
-
-    //         const totalResult = await totalQuery
-    //             .select('COUNT(DISTINCT job.id)', 'count')
-    //             .getRawOne();
-
-    //         const total = Number(totalResult?.count ?? 0);
-
-    //         // ======================
-    //         // PAGINATION
-    //         // ======================
-
-    //         const jobs = await query
-    //             .skip((page - 1) * limit)
-    //             .take(limit)
-    //             .getMany();
-
-    //         const formattedJobs = jobs.map((job) => ({
-    //             id: job.id,
-    //             title: job.title,
-    //             quantity: job.quantity,
-    //             published: job.published,
-    //             status: job.status,
-    //             featured: job.featured,
-    //             publish_date: job.publish_date,
-    //             dead_line: job.dead_line,
-
-    //             client: job.client
-    //                 ? {
-    //                     id: job.client.id,
-    //                     name: job.client.client_name,
-    //                     logo: job.client.logo,
-    //                 }
-    //                 : null,
-
-    //             industry: job.industry
-    //                 ? {
-    //                     id: job.industry.id,
-    //                     name: job.industry.industry_name,
-    //                 }
-    //                 : null,
-
-    //             position: job.position
-    //                 ? {
-    //                     id: job.position.id,
-    //                     name: job.position.position_name,
-    //                 }
-    //                 : null,
-
-    //             country: job.country
-    //                 ? {
-    //                     id: job.country.id,
-    //                     name: job.country.name,
-    //                 }
-    //                 : null,
-
-    //             region: job.region
-    //                 ? {
-    //                     id: job.region.id,
-    //                     name: job.region.region_name,
-    //                 }
-    //                 : null,
-
-    //             addresses: (job.addresses || []).map((address) => ({
-    //                 id: address.id,
-    //                 sub_location: address.sub_location,
-    //             })),
-
-    //             statistics: job.jobStatistics || [],
-
-    //             type: job.jobUniversalType
-    //                 ? {
-    //                     id: job.jobUniversalType.id,
-    //                     name: job.jobUniversalType.type_name,
-    //                 }
-    //                 : null,
-
-    //             metas: job.jobMetas || [],
-
-    //             job_email: job?.jobEmails ? {
-    //                 id: job.jobEmails.id,
-    //                 name: job.jobEmails.email,
-    //             } : null,
-
-    //             job_externalUrl: job?.externalUrls ? {
-    //                 id: job.externalUrls.id,
-    //                 name: job.externalUrls.external_url,
-    //             } : null,
-
-    //         }));
-
-    //         return {
-    //             success: true,
-    //             message: 'Jobs fetched successfully',
-    //             data: formattedJobs,
-    //             page,
-    //             limit,
-    //             totalPages: Math.ceil(total / limit),
-    //             total,
-    //         };
-
-    //     } catch (error) {
-    //         if (error instanceof HttpException) {
-    //             throw error;
-    //         }
-
-    //         throw new InternalServerErrorException({
-    //             success: false,
-    //             message: 'Failed to fetch jobs',
-    //             error: error.message,
-    //         });
-    //     }
-    // }
-
+    
 
     // =========================
     // FIND ONE
@@ -1223,6 +634,74 @@ async findAll(
             data: job,
         };
     }
+
+    async JobDetailForApplicant(
+        jobId: number,
+        userId: number,
+    ) {
+        try {
+            // =========================
+            // FIND APPLICANT
+            // =========================
+            const applicant = await this.applicantRepo.findOne({
+                where: {
+                    user_id: Number(userId),
+                },
+                select: ['id', 'user_id'],
+            });
+
+            if (!applicant) {
+                throw new NotFoundException(
+                    'Applicant profile not found for this user',
+                );
+            }
+
+            // =========================
+            // GET JOB DETAIL
+            // =========================
+            const jobDetail = await this.JobDetail(jobId);
+
+            // =========================
+            // CHECK APPLICATION
+            // =========================
+            const existingApplication =
+                await this.applicationRepository.findOne({
+                    where: {
+                        applicant_id: applicant.id,
+                        job_id: jobId,
+                    },
+                });
+
+            const applicationStatus = existingApplication
+                ? 'Applied'
+                : 'Not Applied';
+
+            // =========================
+            // ADD APPLICATION STATUS
+            // =========================
+            return {
+                ...jobDetail,
+                data: {
+                    ...jobDetail.data,
+                    application_status: applicationStatus,
+                    applied: !!existingApplication,
+                    application_id: existingApplication?.id ?? null,
+                },
+            };
+
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+
+            throw new InternalServerErrorException({
+                success: false,
+                message: 'Failed to fetch applicant job details',
+                error: error.message,
+            });
+        }
+    }
+
     async JobDetail(jobId: number) {
         try {
 

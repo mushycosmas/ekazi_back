@@ -132,6 +132,18 @@ export class ApplicantJobsController {
         return this.JobsService.JobDetail(id);
     }
 
+    @Get('applicant/jobs/:id')
+    @UseGuards(SanctumGuard)
+    async myJobDetailForApplicants(
+        @Param('id', ParseIntPipe) id: number,
+        @CurrentUser() user: Users,
+    ) {
+        return this.JobsService.JobDetailForApplicant(
+            id,
+            user.id,
+        );
+    }
+
     @Get('applicant/my-application')
     @UseGuards(SanctumGuard)
     async myApplication(
@@ -140,8 +152,8 @@ export class ApplicantJobsController {
         @Query('limit') limit = '20',
         @Query('search') search?: string,
     ) {
-        
- 
+
+
 
         return this.applicantJobsService.myApplication(
             user.id,
@@ -150,6 +162,6 @@ export class ApplicantJobsController {
             search,
         );
     }
-    
+
 
 }
