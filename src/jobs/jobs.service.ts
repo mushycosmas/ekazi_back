@@ -31,6 +31,7 @@ import { ApplicantApplication } from 'src/entities/applicants/applicant-applican
 import { JobStatistics } from './entities/job-statistics.entity';
 import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
 import { Applicants } from 'src/entities/applicants/applicants.entity';
+import { JobCarts } from './entities/job-carts.entity';
 
 @Injectable()
 export class JobsService {
@@ -69,6 +70,8 @@ export class JobsService {
 
         @InjectRepository(Applicants)
         private readonly   applicantRepo: Repository<Applicants>,
+          @InjectRepository(JobCarts)
+        private readonly   jobCartsRepository: Repository<JobCarts>,
       
         @InjectRepository(JobAddresses)
         private readonly jobAddressRepository: Repository<JobAddresses>,
@@ -635,72 +638,96 @@ export class JobsService {
         };
     }
 
-    async JobDetailForApplicant(
-        jobId: number,
-        userId: number,
-    ) {
-        try {
-            // =========================
-            // FIND APPLICANT
-            // =========================
-            const applicant = await this.applicantRepo.findOne({
-                where: {
-                    user_id: Number(userId),
-                },
-                select: ['id', 'user_id'],
-            });
+  async JobDetailForApplicant(
+    jobId: number,
+    userId: number,
+) {
+    try {
+        // =========================
+        // FIND APPLICANT
+        // =========================
+        const applicant = await this.applicantRepo.findOne({
+            where: {
+                user_id: Number(userId),
+            },
+            select: ['id', 'user_id'],
+        });
 
-            if (!applicant) {
-                throw new NotFoundException(
-                    'Applicant profile not found for this user',
-                );
-            }
+        if (!applicant) {
+            throw new NotFoundException(
+                'Applicant profile not found for this user',
+            );
+        }
 
-            // =========================
-            // GET JOB DETAIL
-            // =========================
-            const jobDetail = await this.JobDetail(jobId);
+        // =========================
+        // GET JOB DETAIL
+        // =========================
+        const jobDetail = await this.JobDetail(jobId);
 
-            // =========================
-            // CHECK APPLICATION
-            // =========================
-            const existingApplication =
-                await this.applicationRepository.findOne({
+        // =========================
+        // CHECK APPLICATION + SAVED JOB
+        // =========================
+        const [existingApplication, cartItem] =
+            await Promise.all([
+                this.applicationRepository.findOne({
                     where: {
                         applicant_id: applicant.id,
                         job_id: jobId,
                     },
-                });
+                }),
 
-            const applicationStatus = existingApplication
-                ? 'Applied'
-                : 'Not Applied';
+                this.jobCartsRepository.findOne({
+                    where: {
+                        applicant_id: applicant.id,
+                        job_id: jobId,
+                    },
+                }),
+            ]);
 
-            // =========================
-            // ADD APPLICATION STATUS
-            // =========================
-            return {
-                ...jobDetail,
-                data: {
-                    ...jobDetail.data,
-                    application_status: applicationStatus,
-                    applied: !!existingApplication,
-                    application_id: existingApplication?.id ?? null,
-                },
-            };
+        // =========================
+        // STATUS
+        // =========================
+        const applicationStatus = existingApplication
+            ? 'Applied'
+            : 'Not Applied';
 
-        } catch (error) {
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
+        const savedStatus = cartItem
+            ? 'Saved'
+            : 'Not Saved';
 
-            throw new InternalServerErrorException({
-                success: false,
-                message: 'Failed to fetch applicant job details',
-                error: error.message,
-            });
+        // =========================
+        // RESPONSE
+        // =========================
+        return {
+            ...jobDetail,
+
+            data: {
+                ...jobDetail.data,
+
+                // Application
+                application_status: applicationStatus,
+                applied: !!existingApplication,
+                application_id: existingApplication?.id ?? null,
+
+                // Saved job
+                saved_status: savedStatus,
+                saved: !!cartItem,
+                saved_id: cartItem?.id ?? null,
+            },
+        };
+
+    } catch (error) {
+        if (error instanceof NotFoundException) {
+            throw error;
         }
+
+        throw new InternalServerErrorException({
+            success: false,
+            message: 'Failed to fetch applicant job details',
+            error: error.message,
+        });
     }
+}
 
     async JobDetail(jobId: number) {
         try {

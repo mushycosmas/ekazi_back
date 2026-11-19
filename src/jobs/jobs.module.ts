@@ -16,6 +16,7 @@ import { ApplicantApplication } from 'src/entities/applicants/applicant-applican
 import { JobStatistics } from './entities/job-statistics.entity';
 import { NonUserApplication } from 'src/entities/applicants/non-user-application.entity';
 import { Applicants } from 'src/entities/applicants/applicants.entity';
+import { JobCarts } from './entities/job-carts.entity';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -31,6 +32,7 @@ import { Applicants } from 'src/entities/applicants/applicants.entity';
         JobStatistics,
         NonUserApplication,
         Applicants,
+        JobCarts,
     ])
 
     ],
