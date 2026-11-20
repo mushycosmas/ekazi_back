@@ -50,7 +50,7 @@ async function bootstrap() {
             
             'https://test.ekazi.co.tz',
 
-            'https://www.ekazi.co.tz/'
+            'https://www.ekazi.co.tz'
 
         ],
 
