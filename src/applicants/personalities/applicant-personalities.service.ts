@@ -75,72 +75,100 @@ export class ApplicantPersonalitiesService {
     // =========================================================
     // SAVE MULTIPLE PERSONALITIES
     // =========================================================
-    async savePersonalities(
-        userId: number,
-        dto: SaveApplicantPersonalitiesDto,
-    ) {
-        const applicant = await this.getApplicantByUserId(userId);
+async savePersonalities(
+    userId: number,
+    dto: SaveApplicantPersonalitiesDto,
+) {
+    const applicant = await this.getApplicantByUserId(userId);
 
-        if (!dto.personalities || dto.personalities.length === 0) {
-            throw new BadRequestException(
-                'At least one personality is required.',
-            );
-        }
+    if (!dto.personalities || dto.personalities.length === 0) {
+        throw new BadRequestException(
+            'At least one personality is required.',
+        );
+    }
 
-        // Normalize and remove duplicate names
-        const personalityNames = [
-            ...new Set(
-                dto.personalities
-                    .filter(
-                        (personality) =>
-                            personality && personality.trim(),
-                    )
-                    .map((personality) =>
-                        this.normalizePersonalityName(personality),
-                    ),
-            ),
-        ];
+    // ============================================================
+    // 1. NORMALIZE AND REMOVE DUPLICATES
+    // ============================================================
 
-        if (personalityNames.length === 0) {
-            throw new BadRequestException(
-                'At least one valid personality is required.',
-            );
-        }
+    const uniquePersonalityNames = [
+        ...new Set(
+            dto.personalities
+                .map((personality) =>
+                    this.normalizePersonalityName(personality),
+                )
+                .filter(
+                    (personality) =>
+                        personality.length > 0,
+                ),
+        ),
+    ];
 
-        const savedPersonalities: {
+    if (uniquePersonalityNames.length === 0) {
+        throw new BadRequestException(
+            'At least one valid personality is required.',
+        );
+    }
+
+    // ============================================================
+    // 2. DELETE ALL EXISTING PERSONALITIES FOR THIS APPLICANT
+    // ============================================================
+
+    await this.applicantPersonalitiesRepository.delete({
+        applicant_id: applicant.id,
+    });
+
+    // ============================================================
+    // 3. PREPARE RESPONSE
+    // ============================================================
+
+    const savedPersonalities: {
+        id: number;
+        personality: {
             id: number;
-            personality: {
-                id: number;
-                name: string | null;
-            } | null;
-            created_at: Date | null;
-            updated_at: Date | null;
-        }[] = [];
+            name: string | null;
+        } | null;
+        created_at: Date | null;
+        updated_at: Date | null;
+    }[] = [];
 
-        for (const personalityName of personalityNames) {
-            // =====================================================
-            // 1. CHECK IF PERSONALITY ALREADY EXISTS
-            // =====================================================
-            let personality =
-                await this.personalitiesRepository
-                    .createQueryBuilder('personality')
-                    .where(
-                        'LOWER(personality.personality_name) = LOWER(:personalityName)',
-                        {
-                            personalityName,
-                        },
-                    )
-                    .andWhere('personality.hide = :hide', {
+    // ============================================================
+    // 4. ADD NEW PERSONALITIES
+    // ============================================================
+
+    for (const personalityName of uniquePersonalityNames) {
+
+        // ----------------------------------------------------------
+        // Check if personality already exists globally
+        // ----------------------------------------------------------
+
+        let personality =
+            await this.personalitiesRepository
+                .createQueryBuilder('personality')
+                .where(
+                    'LOWER(personality.personality_name) = LOWER(:personalityName)',
+                    {
+                        personalityName,
+                    },
+                )
+                .andWhere(
+                    'personality.hide = :hide',
+                    {
                         hide: false,
-                    })
-                    .andWhere('personality.deleted_at IS NULL')
-                    .getOne();
+                    },
+                )
+                .andWhere(
+                    'personality.deleted_at IS NULL',
+                )
+                .getOne();
 
-            // =====================================================
-            // 2. CREATE PERSONALITY IF NOT EXISTS
-            // =====================================================
-            if (!personality) {
-                personality = this.personalitiesRepository.create({
+        // ----------------------------------------------------------
+        // Create global personality if it doesn't exist
+        // ----------------------------------------------------------
+
+        if (!personality) {
+            personality =
+                this.personalitiesRepository.create({
                     personality_name: personalityName,
                     hide: false,
                     creator_id: userId,
@@ -148,64 +176,51 @@ export class ApplicantPersonalitiesService {
                     deleted_at: null,
                 });
 
-                personality =
-                    await this.personalitiesRepository.save(
-                        personality,
-                    );
-            }
-
-            // =====================================================
-            // 3. CHECK APPLICANT/PERSONALITY RELATIONSHIP
-            // =====================================================
-            let applicantPersonality =
-                await this.applicantPersonalitiesRepository.findOne({
-                    where: {
-                        applicant_id: applicant.id,
-                        personality_id: personality.id,
-                    },
-                    relations: ['personality'],
-                });
-
-            // =====================================================
-            // 4. CREATE RELATIONSHIP IF NOT EXISTS
-            // =====================================================
-            if (!applicantPersonality) {
-                applicantPersonality =
-                    this.applicantPersonalitiesRepository.create({
-                        applicant_id: applicant.id,
-                        personality_id: personality.id,
-                    });
-
-                applicantPersonality =
-                    await this.applicantPersonalitiesRepository.save(
-                        applicantPersonality,
-                    );
-
-                applicantPersonality.personality = personality;
-            }
-
-            // =====================================================
-            // 5. RESPONSE
-            // =====================================================
-            savedPersonalities.push({
-                id: applicantPersonality.id,
-
-                personality: {
-                    id: personality.id,
-                    name: personality.personality_name,
-                },
-
-                created_at: applicantPersonality.created_at,
-                updated_at: applicantPersonality.updated_at,
-            });
+            personality =
+                await this.personalitiesRepository.save(
+                    personality,
+                );
         }
 
-        return {
-            status: true,
-            message: 'Applicant personalities saved successfully.',
-            data: savedPersonalities,
-        };
+        // ----------------------------------------------------------
+        // Create applicant/personality relationship
+        // ----------------------------------------------------------
+
+        const applicantPersonality =
+            this.applicantPersonalitiesRepository.create({
+                applicant_id: applicant.id,
+                personality_id: personality.id,
+            });
+
+        const saved =
+            await this.applicantPersonalitiesRepository.save(
+                applicantPersonality,
+            );
+
+        // ----------------------------------------------------------
+        // Add to response
+        // ----------------------------------------------------------
+
+        savedPersonalities.push({
+            id: saved.id,
+
+            personality: {
+                id: personality.id,
+                name: personality.personality_name,
+            },
+
+            created_at: saved.created_at,
+            updated_at: saved.updated_at,
+        });
     }
+
+    return {
+        status: true,
+        message: 'Applicant personalities updated successfully.',
+        data: savedPersonalities,
+    };
+}
+
 
     // =========================================================
     // GET ALL MY PERSONALITIES
