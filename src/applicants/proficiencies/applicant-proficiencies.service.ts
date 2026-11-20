@@ -210,7 +210,7 @@ export class ApplicantProficienciesService {
         return proficiency;
     }
 
-    private validateDates(started?: Date | null, ended?: Date | null): void {
+    private validateDates_old(started?: Date | null, ended?: Date | null): void {
         if (started && Number.isNaN(new Date(started).getTime())) {
             throw new BadRequestException('started must be a valid date.');
         }
@@ -220,6 +220,42 @@ export class ApplicantProficienciesService {
         }
 
         if (started && ended && new Date(ended) < new Date(started)) {
+            throw new BadRequestException(
+                'ended cannot be earlier than started.',
+            );
+        }
+    }
+    private validateDates(
+        started?: number | null,
+        ended?: number | null,
+    ): void {
+        if (
+            started !== undefined &&
+            started !== null &&
+            (!Number.isInteger(started) || started < 1900)
+        ) {
+            throw new BadRequestException(
+                'started must be a valid year.',
+            );
+        }
+
+        if (
+            ended !== undefined &&
+            ended !== null &&
+            (!Number.isInteger(ended) || ended < 1900)
+        ) {
+            throw new BadRequestException(
+                'ended must be a valid year.',
+            );
+        }
+
+        if (
+            started !== undefined &&
+            started !== null &&
+            ended !== undefined &&
+            ended !== null &&
+            ended < started
+        ) {
             throw new BadRequestException(
                 'ended cannot be earlier than started.',
             );
@@ -355,7 +391,7 @@ export class ApplicantProficienciesService {
         return {
             success: true,
             data: records.map((record) => this.format(record)),
-         
+
         };
     }
 
@@ -420,7 +456,7 @@ export class ApplicantProficienciesService {
             record.attachment = attachment;
         }
 
-        this.validateDates(record.started, record.ended);
+        // this.validateDates(record.started, record.ended);
 
         const saved = await this.applicantProficienciesRepo.save(record);
 

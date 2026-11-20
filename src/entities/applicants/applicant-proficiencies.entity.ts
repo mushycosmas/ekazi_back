@@ -25,11 +25,17 @@ export class ApplicantProficiencies {
   @Column({ type: 'int', unsigned: true })
   applicant_id: number;
 
-  @Column({ type: 'timestamp', nullable: true })
-  started: Date | null;
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  started: number | null;
 
-  @Column({ type: 'timestamp', nullable: true })
-  ended: Date | null;
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  ended: number | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   course: string | null;
@@ -57,7 +63,7 @@ export class ApplicantProficiencies {
   @JoinColumn({ name: 'organization_id' })
   organization: Organizations;
 
-  
+
 
   @ManyToOne(() => Applicants, (applicant) => applicant.applicant_proficiencies)
   @JoinColumn({ name: 'applicant_id' })
