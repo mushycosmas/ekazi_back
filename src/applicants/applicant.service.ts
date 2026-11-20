@@ -545,8 +545,8 @@ export class ApplicantService {
           }
           : null,
 
-        started: this.formatDate(item.started),
-        ended: this.formatDate(item.ended),
+        started: item.started,
+        ended: item.ended,
         award: item.award,
         attachment: item.attachment,
       })),
