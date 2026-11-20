@@ -482,103 +482,240 @@ export class ApplicantPositionsService {
         };
     }
 
+async update(
+  userId: number,
+  id: number,
+  dto: UpdateApplicantPositionDto,
+) {
+  const applicant = await this.getApplicant(userId);
 
-    async update(
-        userId: number,
-        id: number,
-        dto: UpdateApplicantPositionDto,
-    ) {
-        const applicant = await this.getApplicant(userId);
-        const record = await this.findOwnedRecord(id, applicant.id);
+  const record = await this.findOwnedRecord(id, applicant.id);
 
-        const nextIndustryId = dto.industry_id ?? record.industry_id;
+  const nextIndustryId = dto.industry_id ?? record.industry_id;
 
-        if (dto.position_id !== undefined) {
-            const position = await this.resolvePosition(
-                dto.position_id,
-                userId,
-                nextIndustryId,
-            );
+  // Resolve position
+  if (dto.position_id !== undefined) {
+    const position = await this.resolvePosition(
+      dto.position_id,
+      userId,
+      nextIndustryId,
+    );
 
-            record.position_id = position.id;
-            record.position = position;
-        }
+    record.position_id = position.id;
+  }
 
-        if (dto.applicant_employer_id !== undefined) {
-            // For a new employer name, reuse the existing employment location
-            // unless the request provides updated region/location values.
-            const employer = await this.resolveEmployer(
-                dto.applicant_employer_id,
-                dto.region_id ?? record.region_id,
-                dto.sub_location ?? record.sub_location,
-            );
+  // Resolve employer
+  if (dto.applicant_employer_id !== undefined) {
+    const employer = await this.resolveEmployer(
+      dto.applicant_employer_id,
+      dto.region_id ?? record.region_id,
+      dto.sub_location ?? record.sub_location,
+    );
 
-            record.applicant_employer_id = employer.id;
-            record.applicant_employer = employer;
-        }
+    record.applicant_employer_id = employer.id;
+  }
 
-        if (dto.industry_id !== undefined) {
-            record.industry_id = dto.industry_id;
-        }
+  // Update fields
+  if (dto.industry_id !== undefined) {
+    record.industry_id = dto.industry_id;
+  }
 
-        if (dto.position_level_id !== undefined) {
-            record.position_level_id = dto.position_level_id;
-        }
+  if (dto.position_level_id !== undefined) {
+    record.position_level_id = dto.position_level_id;
+  }
 
-        if (dto.salary_id !== undefined) {
-            record.salary_id = dto.salary_id;
-        }
+  if (dto.salary_id !== undefined) {
+    record.salary_id = dto.salary_id;
+  }
 
-        if (dto.responsibility !== undefined) {
-            record.responsibility = dto.responsibility.trim();
-        }
-        if (dto.remark) {
-            record.remark = dto.remark.trim();
-        }
+  if (dto.start_salary_id !== undefined) {
+    record.start_salary_id = dto.start_salary_id;
+  }
 
-        if (dto.experience_type_id !== undefined) {
-            record.experience_type_id = dto.experience_type_id;
-        }
+  if (dto.end_salary_id !== undefined) {
+    record.end_salary_id = dto.end_salary_id;
+  }
 
-            if (dto.start_salary_id !== undefined) {
-            record.start_salary_id = dto.start_salary_id;
-        }
+  if (dto.responsibility !== undefined) {
+    record.responsibility = dto.responsibility.trim();
+  }
 
-        if (dto.end_salary_id !== undefined) {
-            record.end_salary_id = dto.end_salary_id;
-        }
+  if (dto.remark !== undefined) {
+    record.remark = dto.remark.trim();
+  }
+
+  if (dto.experience_type_id !== undefined) {
+    record.experience_type_id = dto.experience_type_id;
+  }
+
+  if (dto.start_date !== undefined) {
+    record.start_date = new Date(dto.start_date);
+  }
+
+  if (dto.end_date !== undefined) {
+    record.end_date = dto.end_date
+      ? new Date(dto.end_date)
+      : null;
+  }
+
+  if (dto.region_id !== undefined) {
+    record.region_id = dto.region_id;
+  }
+
+  if (dto.sub_location !== undefined) {
+    record.sub_location = dto.sub_location.trim();
+  }
+
+  this.validateDates(
+    record.start_date,
+    record.end_date,
+  );
+
+  console.log('FINAL UPDATE DATA:', {
+    id: record.id,
+    position_id: record.position_id,
+    applicant_employer_id: record.applicant_employer_id,
+    industry_id: record.industry_id,
+    position_level_id: record.position_level_id,
+    salary_id: record.salary_id,
+    start_salary_id: record.start_salary_id,
+    end_salary_id: record.end_salary_id,
+    responsibility: record.responsibility,
+    remark: record.remark,
+    experience_type_id: record.experience_type_id,
+    start_date: record.start_date,
+    end_date: record.end_date,
+    region_id: record.region_id,
+    sub_location: record.sub_location,
+  });
+
+  await this.applicantPositionsRepo.update(
+    { id: record.id },
+    {
+      position_id: record.position_id,
+      applicant_employer_id: record.applicant_employer_id,
+      industry_id: record.industry_id,
+      position_level_id: record.position_level_id,
+      salary_id: record.salary_id,
+      start_salary_id: record.start_salary_id,
+      end_salary_id: record.end_salary_id,
+      responsibility: record.responsibility,
+      remark: record.remark,
+      experience_type_id: record.experience_type_id,
+      start_date: record.start_date,
+      end_date: record.end_date,
+      region_id: record.region_id,
+      sub_location: record.sub_location,
+    },
+  );
+
+  const result = await this.findOwnedRecord(
+    record.id,
+    applicant.id,
+  );
+
+  return {
+    success: true,
+    message: 'Applicant position updated successfully.',
+    data: this.format(result),
+  };
+}
+    // async update(
+    //     userId: number,
+    //     id: number,
+    //     dto: UpdateApplicantPositionDto,
+    // ) {
+    //     const applicant = await this.getApplicant(userId);
+    //     const record = await this.findOwnedRecord(id, applicant.id);
+
+    //     const nextIndustryId = dto.industry_id ?? record.industry_id;
+
+    //     if (dto.position_id !== undefined) {
+    //         const position = await this.resolvePosition(
+    //             dto.position_id,
+    //             userId,
+    //             nextIndustryId,
+    //         );
+
+    //         record.position_id = position.id;
+    //         record.position = position;
+    //     }
+
+    //     if (dto.applicant_employer_id !== undefined) {
+    //         // For a new employer name, reuse the existing employment location
+    //         // unless the request provides updated region/location values.
+    //         const employer = await this.resolveEmployer(
+    //             dto.applicant_employer_id,
+    //             dto.region_id ?? record.region_id,
+    //             dto.sub_location ?? record.sub_location,
+    //         );
+
+    //         record.applicant_employer_id = employer.id;
+    //         record.applicant_employer = employer;
+    //     }
+
+    //     if (dto.industry_id !== undefined) {
+    //         record.industry_id = dto.industry_id;
+    //     }
+
+    //     if (dto.position_level_id !== undefined) {
+    //         record.position_level_id = dto.position_level_id;
+    //     }
+
+    //     if (dto.salary_id !== undefined) {
+    //         record.salary_id = dto.salary_id;
+    //     }
+
+    //     if (dto.responsibility !== undefined) {
+    //         record.responsibility = dto.responsibility.trim();
+    //     }
+    //     if (dto.remark) {
+    //         record.remark = dto.remark.trim();
+    //     }
+
+    //     if (dto.experience_type_id !== undefined) {
+    //         record.experience_type_id = dto.experience_type_id;
+    //     }
+
+    //         if (dto.start_salary_id !== undefined) {
+    //         record.start_salary_id = dto.start_salary_id;
+    //     }
+
+    //     if (dto.end_salary_id !== undefined) {
+    //         record.end_salary_id = dto.end_salary_id;
+    //     }
 
 
-        if (dto.start_date !== undefined) {
-            record.start_date = new Date(dto.start_date);
-        }
+    //     if (dto.start_date !== undefined) {
+    //         record.start_date = new Date(dto.start_date);
+    //     }
 
-        if (dto.end_date !== undefined) {
-            record.end_date = dto.end_date
-                ? new Date(dto.end_date)
-                : null;
-        }
+    //     if (dto.end_date !== undefined) {
+    //         record.end_date = dto.end_date
+    //             ? new Date(dto.end_date)
+    //             : null;
+    //     }
 
 
-        if (dto.region_id !== undefined) {
-            record.region_id = dto.region_id;
-        }
+    //     if (dto.region_id !== undefined) {
+    //         record.region_id = dto.region_id;
+    //     }
 
-        if (dto.sub_location !== undefined) {
-            record.sub_location = dto.sub_location.trim();
-        }
+    //     if (dto.sub_location !== undefined) {
+    //         record.sub_location = dto.sub_location.trim();
+    //     }
 
-        this.validateDates(record.start_date, record.end_date);
+    //     this.validateDates(record.start_date, record.end_date);
 
-        const saved = await this.applicantPositionsRepo.save(record);
-        const result = await this.findOwnedRecord(saved.id, applicant.id);
+    //     const saved = await this.applicantPositionsRepo.save(record);
+    //     const result = await this.findOwnedRecord(saved.id, applicant.id);
 
-        return {
-            success: true,
-            message: 'Applicant position updated successfully.',
-            data: this.format(result),
-        };
-    }
+    //     return {
+    //         success: true,
+    //         message: 'Applicant position updated successfully.',
+    //         data: this.format(result),
+    //     };
+    // }
 
     async remove(userId: number, id: number) {
         const applicant = await this.getApplicant(userId);

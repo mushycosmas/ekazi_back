@@ -5,6 +5,8 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 import { Applicants } from './applicants.entity';
@@ -48,7 +50,7 @@ export class ApplicantPositions {
   @Column({ type: 'int' })
   start_salary_id: number;
 
-  
+
   @Column({ type: 'int' })
   end_salary_id: number;
 
@@ -64,6 +66,11 @@ export class ApplicantPositions {
   @Column({ type: 'text', nullable: true })
   sub_location: string | null;
 
+  // @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  // created_at: Date;
+
+  // @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  // updated_at: Date;
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
