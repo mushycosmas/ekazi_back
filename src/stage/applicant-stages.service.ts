@@ -672,6 +672,46 @@ export class ApplicantStagesService {
                         ]
                     });
                 if (applicant) {
+
+
+                    // ============================
+                    // 1. Notify Applicant
+                    // Employer is the sender
+                    // Applicant is the recipient
+                    // ============================
+                    // const applicantNotification = queryRunner.manager.create(
+                    //     Notification,
+                    //     {
+                    //         user_id: user.id, // Employer / sender
+                    //         applicant_id: applicant.id,
+                    //         user_to_notify: applicant.user.id, // Applicant / recipient
+                    //         data: `You have been shortlisted for ${job.position?.position_name ?? 'this position'}.`,
+                    //         type: 'applicant-shortlisted',
+                    //         job_id: job.id,
+                    //     },
+                    // );
+
+                    // await queryRunner.manager.save(applicantNotification);
+
+
+                    // ============================
+                    // 2. Notify Employer
+                    // Employer is the sender
+                    // Employer receives confirmation
+                    // ============================
+                    // const employerNotification = queryRunner.manager.create(
+                    //     Notification,
+                    //     {
+                    //         user_id: user.id, // Employer / sender
+                    //         applicant_id: applicant.id,
+                    //         user_to_notify: job.client.user_id, // Employer / recipient
+                    //         data: `Applicant has been shortlisted for ${job.position?.position_name ?? 'this position'}.`,
+                    //         type: 'applicant-shortlisted',
+                    //         job_id: job.id,
+                    //     },
+                    // );
+
+                    // await queryRunner.manager.save(employerNotification);
                     await this.sendShortListEmail({
 
                         applicant,

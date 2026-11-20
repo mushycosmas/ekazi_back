@@ -42,11 +42,15 @@ async function bootstrap() {
 
             'https://recruitment.ekazi.co.tz',
 
+            'https://www.recruitment.ekazi.co.tz',
+
             'https://ekazi.co.tz',
 
             'http://localhost:3000',
             
             'https://test.ekazi.co.tz',
+
+            'https://www.ekazi.co.tz/'
 
         ],
 
