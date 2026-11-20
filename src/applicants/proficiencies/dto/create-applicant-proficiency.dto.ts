@@ -36,6 +36,28 @@ function parseIdOrName({ value }: { value: unknown }) {
     return value;
 }
 
+function parseYear({ value }: { value: unknown }) {
+    if (value === undefined || value === null || value === '') {
+        return undefined;
+    }
+
+    if (typeof value === 'number') {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+
+        if (!trimmed) {
+            return undefined;
+        }
+
+        return Number(trimmed);
+    }
+
+    return value;
+}
+
 export class CreateApplicantProficiencyDto {
     // Accept an existing organization ID OR a new organization name.
     @Transform(parseIdOrName)
@@ -47,13 +69,15 @@ export class CreateApplicantProficiencyDto {
     @Allow()
     proficiency_id: number | string;
 
-    // Year only, e.g. 2026
+    // Accept "2026" and convert it to integer 2026.
     @IsOptional()
+    @Transform(parseYear)
     @IsInt()
     started?: number;
 
-    // Year only, e.g. 2027
+    // Accept "2027" and convert it to integer 2027.
     @IsOptional()
+    @Transform(parseYear)
     @IsInt()
     ended?: number;
 
